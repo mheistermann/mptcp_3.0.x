@@ -74,16 +74,6 @@ static struct map_desc exynos5_iodesc[] __initdata = {
 		.length		= SZ_512K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_GIC_CPU,
-		.pfn		= __phys_to_pfn(EXYNOS5_PA_GIC_CPU),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	}, {
-		.virtual	= (unsigned long)S5P_VA_GIC_DIST,
-		.pfn		= __phys_to_pfn(EXYNOS5_PA_GIC_DIST),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	}, {
 		.virtual	= (unsigned long)S5P_VA_GPIO1,
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_GPIO1),
 		.length		= SZ_4K,
@@ -173,6 +163,34 @@ static struct map_desc exynos5_iodesc[] __initdata = {
 	},
 };
 
+static struct map_desc exynos5250_rev_0_iodesc[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_GIC_CPU,
+		.pfn		= __phys_to_pfn(EXYNOS5250_REV0_PA_GIC_CPU),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GIC_DIST,
+		.pfn		= __phys_to_pfn(EXYNOS5250_REV0_PA_GIC_DIST),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	},
+};
+
+static struct map_desc exynos5250_rev_1_iodesc[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_GIC_CPU,
+		.pfn		= __phys_to_pfn(EXYNOS5250_REV1_PA_GIC_CPU),
+		.length		= SZ_8K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GIC_DIST,
+		.pfn		= __phys_to_pfn(EXYNOS5250_REV1_PA_GIC_DIST),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	},
+};
+
 static void exynos5_idle(void)
 {
 	if (!need_resched())
@@ -189,6 +207,15 @@ static void exynos5_idle(void)
 void __init exynos5_map_io(void)
 {
 	iotable_init(exynos5_iodesc, ARRAY_SIZE(exynos5_iodesc));
+
+	if (soc_is_exynos5250()) {
+		if (samsung_rev() >= EXYNOS5250_REV_1_0)
+			iotable_init(exynos5250_rev_1_iodesc,
+				ARRAY_SIZE(exynos5250_rev_1_iodesc));
+		else
+			iotable_init(exynos5250_rev_0_iodesc,
+				ARRAY_SIZE(exynos5250_rev_0_iodesc));
+	}
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 	exynos5_default_sdhci0();
