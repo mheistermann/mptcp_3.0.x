@@ -17,10 +17,21 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/suspend.h>
+#include <linux/io.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+#include <linux/sysdev.h>
+
 #include <plat/cpu.h>
 
-static unsigned int total_num_target_freq;
-static unsigned int ctn_highestlevel_cnt;		/* continuous the highest level count */
+#include <asm/uaccess.h>
+
+static unsigned int ctn_highestlevel_cnt;
+		/* continuous the highest level count */
 static unsigned int ctn_lowestlevel_cnt;
 static unsigned int ctn_nr_running_over2;
 static unsigned int ctn_nr_running_over3;
@@ -33,10 +44,11 @@ static unsigned int freq_in_trg;
 static unsigned int freq_min;
 static unsigned int can_hotplug;
 
-static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
+struct kobject *hotplug_kobject;
+
+static void exynos_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
 {
-	total_num_target_freq++;
 	freq_in_trg = 800000;
 
 	if (nr_running() <= 1) {
@@ -71,21 +83,25 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 
 	if (soc_is_exynos4412()) {
 		if ((cpu_online(3) == 0) && (nr_running() >= 2)) {
-			if (ctn_nr_running_over2 >= 4) {		/* over 400ms, tunnable */
+			if (ctn_nr_running_over2 >= 4) {
+					/* over 400ms, tunnable */
 				cpu_up(3);
 			}
 		} else if ((cpu_online(2) == 0) && (nr_running() >= 3)) {
-			if (ctn_nr_running_over3 >= 4) {		/* over 400ms, tunnable */
+			if (ctn_nr_running_over3 >= 4) {
+					/* over 400ms, tunnable */
 				cpu_up(2);
 			}
 		} else if ((cpu_online(1) == 0) && (nr_running() >= 4)) {
-			if (ctn_nr_running_over4 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_over4 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_up(1);
 			}
 		}
 	} else {
 		if (cpu_online(1) == 0) {
-			if (ctn_nr_running_over2 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_over2 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_up(1);
 				ctn_nr_running_over2 = 0;
 			}
@@ -93,21 +109,25 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	} /* end of else */
 	if (soc_is_exynos4412()) {
 		if ((cpu_online(1) == 1) && (nr_running() < 4)) {
-			if (ctn_nr_running_under4 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_under4 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_down(1);
 			}
 		} else if ((cpu_online(2) == 1) && (nr_running() < 3)) {
-			if (ctn_nr_running_under3 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_under3 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_down(2);
 			}
 		} else if ((cpu_online(3) == 1) && (nr_running() < 2)) {
-			if (ctn_nr_running_under2 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_under2 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_down(3);
 			}
 		}
 	} else {
 		if (cpu_online(1) == 1) {
-			if (ctn_nr_running_under2 >= 8) {		/* over 800ms, tunnable */
+			if (ctn_nr_running_under2 >= 8) {
+					/* over 800ms, tunnable */
 				cpu_down(1);
 				ctn_nr_running_under2 = 0;
 			}
@@ -115,13 +135,65 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	} /* end of else */
 }
 
+/***********************************************************/
+/**** sysfs interface to enable/disable dynamic hotplug ****/
+/***********************************************************/
+static ssize_t show_hotplug_state(struct sys_device *dev,
+			struct sysdev_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Dynamic Hotplug State (on:1  off:0): %u\n",
+							 can_hotplug);
+}
+
+static ssize_t __ref store_hotplug_state(struct sys_device *dev,
+		struct sysdev_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret;
+
+	switch (buf[0]) {
+	case '0':
+		can_hotplug = 0;
+		break;
+	case '1':
+		can_hotplug = 1;
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	if (ret >= 0)
+		ret = count;
+
+	pr_info("Current Dynamic Hotplug State (on:1    off:0): %u\n",
+							 can_hotplug);
+
+	return ret;
+}
+
+static SYSDEV_ATTR(hotplug_state, 0666, show_hotplug_state,
+					store_hotplug_state);
+
+static int __init register_hotplug_control(void)
+{
+	int ret = 0;
+
+	hotplug_kobject = kobject_create_and_add("hotplug_state",
+						&cpu_sysdev_class.kset.kobj);
+	ret = sysfs_create_file(hotplug_kobject, &attr_hotplug_state.attr);
+
+	return ret;
+}
+module_init(register_hotplug_control)
+
+/***** end of sysfs interface *****/
+
 static int hotplug_cpufreq_transition(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
 
 	if ((val == CPUFREQ_POSTCHANGE) && can_hotplug)
-		exynos4_integrated_dvfs_hotplug(freqs->old, freqs->new);
+		exynos_integrated_dvfs_hotplug(freqs->old, freqs->new);
 
 	return 0;
 }
@@ -154,16 +226,15 @@ static struct notifier_block pm_hotplug = {
 
 /*
  * Note : This function should be called after intialization of CPUFreq
- * driver for exynos4. The cpufreq_frequency_table for exynos4 should be
+ * driver for exynos. The cpufreq_frequency_table for exynos should be
  * established before calling this function.
  */
-static int __init exynos4_integrated_dvfs_hotplug_init(void)
+static int __init exynos_integrated_dvfs_hotplug_init(void)
 {
 	int i;
 	struct cpufreq_frequency_table *table;
 	unsigned int freq;
 
-	total_num_target_freq = 0;
 	ctn_highestlevel_cnt = 0;
 	ctn_lowestlevel_cnt = 0;
 	ctn_nr_running_over2 = 0;
@@ -176,9 +247,9 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	can_hotplug = 1;
 
 	table = cpufreq_frequency_get_table(0);
-	if (IS_ERR(table)) {
-		printk(KERN_ERR "%s: Check loading cpufreq before\n", __func__);
-		return PTR_ERR(table);
+	if (table == NULL) {
+		pr_err("%s: Check loading cpufreq before\n", __func__);
+		return -EINVAL;
 	}
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
@@ -196,4 +267,4 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 					 CPUFREQ_TRANSITION_NOTIFIER);
 }
 
-late_initcall(exynos4_integrated_dvfs_hotplug_init);
+late_initcall(exynos_integrated_dvfs_hotplug_init);

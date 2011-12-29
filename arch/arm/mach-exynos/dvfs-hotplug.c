@@ -3,7 +3,7 @@
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
  *
- * EXYNOS4 - Integrated DVFS CPU hotplug
+ * EXYNOS - Integrated DVFS CPU hotplug
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,10 +18,18 @@
 #include <linux/reboot.h>
 #include <linux/suspend.h>
 #include <linux/io.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+#include <linux/sysdev.h>
 
 #include <plat/cpu.h>
 
-static unsigned int total_num_target_freq;
+#include <asm/uaccess.h>
+
 static unsigned int consecutv_highestlevel_cnt;
 static unsigned int consecutv_lowestlevel_cnt;
 
@@ -31,10 +39,11 @@ static unsigned int freq_min = -1UL;
 
 static unsigned int can_hotplug;
 
-static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
+struct kobject *hotplug_kobject;
+
+static void exynos_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
 {
-	total_num_target_freq++;
 	freq_in_trg = 800000;
 
 	if ((freq_old >= freq_in_trg) && (freq_new >= freq_in_trg)) {
@@ -101,13 +110,65 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	}
 }
 
+/***********************************************************/
+/**** sysfs interface to enable/disable dynamic hotplug ****/
+/***********************************************************/
+static ssize_t show_hotplug_state(struct sys_device *dev,
+			struct sysdev_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Dynamic Hotplug State (on:1  off:0): %u\n",
+							can_hotplug);
+}
+
+static ssize_t __ref store_hotplug_state(struct sys_device *dev,
+		struct sysdev_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret;
+
+	switch (buf[0]) {
+	case '0':
+		can_hotplug = 0;
+		break;
+	case '1':
+		can_hotplug = 1;
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	if (ret >= 0)
+		ret = count;
+
+	pr_info("Current Dynamic Hotplug State (on:1    off:0): %u\n",
+							can_hotplug);
+
+	return ret;
+}
+
+static SYSDEV_ATTR(hotplug_state, 0666, show_hotplug_state,
+					store_hotplug_state);
+
+static int __init register_hotplug_control(void)
+{
+	int ret = 0;
+
+	hotplug_kobject = kobject_create_and_add("hotplug_state",
+						&cpu_sysdev_class.kset.kobj);
+	ret = sysfs_create_file(hotplug_kobject, &attr_hotplug_state.attr);
+
+	return ret;
+}
+module_init(register_hotplug_control)
+
+/***** end of sysfs interface *****/
+
 static int hotplug_cpufreq_transition(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
 
 	if ((val == CPUFREQ_POSTCHANGE) && can_hotplug)
-		exynos4_integrated_dvfs_hotplug(freqs->old, freqs->new);
+		exynos_integrated_dvfs_hotplug(freqs->old, freqs->new);
 
 	return 0;
 }
@@ -140,24 +201,23 @@ static struct notifier_block pm_hotplug = {
 
 /*
  * Note : This function should be called after intialization of CPUFreq
- * driver for exynos4. The cpufreq_frequency_table for exynos4 should be
+ * driver for exynos. The cpufreq_frequency_table for exynos should be
  * established before calling this function.
  */
-static int __init exynos4_integrated_dvfs_hotplug_init(void)
+static int __init exynos_integrated_dvfs_hotplug_init(void)
 {
 	int i;
 	struct cpufreq_frequency_table *table;
 	unsigned int freq;
 
-	total_num_target_freq = 0;
 	consecutv_highestlevel_cnt = 0;
 	consecutv_lowestlevel_cnt = 0;
 	can_hotplug = 1;
 
 	table = cpufreq_frequency_get_table(0);
-	if (IS_ERR(table)) {
-		printk(KERN_ERR "%s: Check loading cpufreq before\n", __func__);
-		return PTR_ERR(table);
+	if (table == NULL) {
+		pr_err("%s: Check loading cpufreq before\n", __func__);
+		return -EINVAL;
 	}
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
@@ -169,7 +229,7 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 			freq_min = freq;
 	}
 
-	printk(KERN_INFO "%s, max(%d),min(%d)\n", __func__, freq_max, freq_min);
+	pr_info("%s, max(%d),min(%d)\n", __func__, freq_max, freq_min);
 
 	register_pm_notifier(&pm_hotplug);
 
@@ -177,4 +237,4 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 					 CPUFREQ_TRANSITION_NOTIFIER);
 }
 
-late_initcall(exynos4_integrated_dvfs_hotplug_init);
+late_initcall(exynos_integrated_dvfs_hotplug_init);
