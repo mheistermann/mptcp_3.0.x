@@ -32,12 +32,10 @@ void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable)
 	u32 reg;
 
 	if (enable) {
-		/* Enable Video BIST */
 		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_4);
 		reg |= BIST_EN;
 		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
 	} else {
-		/* Disable Video BIST, Normal operation mode */
 		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_4);
 		reg &= ~BIST_EN;
 		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
@@ -49,12 +47,10 @@ void s5p_dp_enable_video_mute(struct s5p_dp_device *dp, bool enable)
 	u32 reg;
 
 	if (enable) {
-		/* mute on */
 		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_1);
 		reg |= HDCP_VIDEO_MUTE;
 		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_1);
 	} else {
-		/* mute off */
 		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_1);
 		reg &= ~HDCP_VIDEO_MUTE;
 		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_1);
@@ -65,7 +61,6 @@ void s5p_dp_stop_video(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Disable video data input */
 	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_1);
 	reg &= ~VIDEO_EN;
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_1);
@@ -94,14 +89,7 @@ void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable)
 
 void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 {
-	/* Set interrupt registers to initial states */
-
-	/*
-	 * Disable interrupt
-	 * INT pin assertion polarity. It must be configured
-	 * correctly according to ICU setting.
-	 * 1 = assert high, 0 = assert low
-	 */
+	/* Set interrupt pin assertion polarity as high */
 	writel(INT_POL, dp->reg_base + S5P_DP_INT_CTL);
 
 	/* Clear pending regisers */
@@ -126,14 +114,12 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* dp tx sw reset */
 	writel(RESET_DP_TX, dp->reg_base + S5P_DP_TX_SW_RESET);
 
 	s5p_dp_stop_video(dp);
 	s5p_dp_enable_video_bist(dp, 0);
 	s5p_dp_enable_video_mute(dp, 0);
 
-	/* software reset */
 	reg = MASTER_VID_FUNC_EN_N | SLAVE_VID_FUNC_EN_N |
 		AUD_FIFO_FUNC_EN_N | AUD_FUNC_EN_N |
 		HDCP_FUNC_EN_N | SW_FUNC_EN_N;
@@ -146,7 +132,6 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 
 	udelay(20);
 
-	/* Configure Lane mapping as default setting. */
 	s5p_dp_lane_swap(dp, 0);
 
 	writel(0x75, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
@@ -214,12 +199,10 @@ void s5p_dp_set_pll_power_down(struct s5p_dp_device *dp, bool enable)
 	u32 reg;
 
 	if (enable) {
-		/* power down */
 		reg = readl(dp->reg_base + S5P_DP_PLL_CTL);
 		reg |= DP_PLL_PD;
 		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
 	} else {
-		/* power up */
 		reg = readl(dp->reg_base + S5P_DP_PLL_CTL);
 		reg &= ~DP_PLL_PD;
 		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
@@ -235,7 +218,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 	switch (block) {
 	case AUX_BLOCK:
 		if (enable) {
-			/* Aux Channel module power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= AUX_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -247,7 +229,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case CH0_BLOCK:
 		if (enable) {
-			/* Channel 0 serdes power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= CH0_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -259,7 +240,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case CH1_BLOCK:
 		if (enable) {
-			/* Channel 1 serdes power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= CH1_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -271,7 +251,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case CH2_BLOCK:
 		if (enable) {
-			/* Channel 0 serdes power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= CH2_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -283,7 +262,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case CH3_BLOCK:
 		if (enable) {
-			/* Channel 1 serdes power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= CH3_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -295,7 +273,6 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case ANALOG_TOTAL:
 		if (enable) {
-			/* Analog total power down */
 			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
 			reg |= DP_PHY_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
@@ -323,10 +300,8 @@ void s5p_dp_init_analog_func(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Power up all of analog (Aux, CH0, CH1) */
 	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
 
-	/* Clear interrupt for PLL lock state */
 	reg = PLL_LOCK_CHG;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_STA_1);
 
@@ -349,7 +324,6 @@ void s5p_dp_init_hpd(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Clear interrupts releated to Hot Plug Dectect */
 	reg = HOTPLUG_CHG | HPD_LOST | PLUG;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_STA_4);
 
@@ -758,7 +732,7 @@ int s5p_dp_read_bytes_from_i2c(struct s5p_dp_device *dp,
 	unsigned int defer = 0;
 	int retval = 0;
 
-	for (i = 0; i < count; i += 16) { /* use 16 burst */
+	for (i = 0; i < count; i += 16) {
 		for (j = 0; j < 100; j++) {
 			/* Clear AUX CH data buffer */
 			reg = BUF_CLR;
@@ -821,7 +795,6 @@ void s5p_dp_set_link_bandwidth(struct s5p_dp_device *dp, u32 bwtype)
 	u32 reg;
 
 	reg = bwtype;
-	 /* Set bandwidth to 2.7G or 1.62G */
 	if ((bwtype == LINK_RATE_2_70GBPS) || (bwtype == LINK_RATE_1_62GBPS))
 		writel(reg, dp->reg_base + S5P_DP_LINK_BW_SET);
 }
@@ -1030,7 +1003,7 @@ void s5p_dp_reset_macro(struct s5p_dp_device *dp)
 	reg |= MACRO_RST;
 	writel(reg, dp->reg_base + S5P_DP_PHY_TEST);
 
-	/* 10 us is the minimum Macro reset time. */
+	/* 10 us is the minimum reset time. */
 	udelay(10);
 
 	reg &= ~MACRO_RST;
@@ -1063,18 +1036,6 @@ void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
 			u32 stream_clock,
 			enum link_rate_type link_rate)
 {
-	/*
-	 * Based on the equation on user manual v2.6, p213, the M value
-	 * is calculated like this.
-	 * F_STRM_CLK = VideoVTotalLength * VideoHTotalLength * VideoFrameRate
-	 *            = 1650 * 750 * 60 = 74,250,000
-	 * M_VID_MASTER = F_STRM_CLK * N_VID_MASTER / LsClk
-	 *              = 74,250,000 * N_VID_MASTER / 135000000
-	 * where for N_VID_MASTER, 13500 and 8100 are recommended for high link
-	 * rate and low link rate, respectively. LsClk is 135000000 for 2.7Gbps,
-	 * while LsClk is 81000000 for 1.62Gbps
-	 */
-
 	u32 reg;
 	u32 m_vid_master;
 	u32 n_vid_master;
@@ -1085,10 +1046,8 @@ void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
 	else
 		n_vid_master = 81000000;
 
-	/* remove overflow case */
 	m_vid_master = stream_clock;
 
-	/* configure M_vid 0x0824 */
 	writel(m_vid_master, dp->reg_base + S5P_DP_M_VID_MASTER);
 	writel(n_vid_master, dp->reg_base + S5P_DP_N_VID_MASTER);
 	writel(video_filter_th, dp->reg_base + S5P_DP_M_VID_GEN_FILTER_TH);
@@ -1175,10 +1134,6 @@ int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
 		writel((video_info->h_back_porch >> 8) & 0xff,
 			dp->reg_base + S5P_DP_H_B_PORCH_CFG_H);
 
-		/*
-		 * Set SLAVE_I_SCAN_CFG[2], VSYNC_P_CFG[1],
-		 * HSYNC_P_CFG[0] properly
-		 */
 		writel((video_info->interlaced << 2) |
 			(video_info->v_sync_polarity << 1) |
 			(video_info->h_sync_polarity),
@@ -1348,7 +1303,6 @@ void s5p_dp_start_video(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Enable Video input and disable Mute */
 	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_1);
 	reg |= VIDEO_EN;
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_1);
@@ -1375,16 +1329,11 @@ void s5p_dp_config_video_master_mode(struct s5p_dp_device *dp,
 {
 	u32 reg;
 
-	/* Video Master mode setting */
 	reg = readl(dp->reg_base + S5P_DP_FUNC_EN_1);
 	reg &= ~(MASTER_VID_FUNC_EN_N | SLAVE_VID_FUNC_EN_N);
 	reg |= SLAVE_VID_FUNC_EN_N;
 	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_1);
 
-	/*
-	 * Configure timing generation parameters for
-	 * master mode video format
-	 */
 	reg = video_info->h_total;
 	writel(reg, dp->reg_base + S5P_DP_H_TOTAL_MASTER);
 	reg = video_info->v_total;
@@ -1402,19 +1351,10 @@ void s5p_dp_config_video_master_mode(struct s5p_dp_device *dp,
 	reg = video_info->v_active;
 	writel(reg, dp->reg_base + S5P_DP_V_ACTIVE_MASTER);
 
-	/* Configure Interlaced video format */
 	reg = readl(dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
 	reg &= ~MASTER_VIDEO_INTERLACE_EN;
 	reg |= (video_info->interlaced << 4);
 	writel(reg, dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
-
-	/* bInterfaced
-	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_10);
-	reg &= ~INTERACE_SCAN_CFG;
-	reg |= video_info->interlaced);
-	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_10);
-	*/
-
 }
 
 void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
@@ -1422,31 +1362,26 @@ void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
 {
 	u32 reg;
 
-	/* Video Slave mode setting */
 	reg = readl(dp->reg_base + S5P_DP_FUNC_EN_1);
 	reg &= ~(MASTER_VID_FUNC_EN_N|SLAVE_VID_FUNC_EN_N);
 	reg |= MASTER_VID_FUNC_EN_N;
 	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_1);
 
-	/* Configure Interlaced for slave mode video */
 	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_10);
 	reg &= ~INTERACE_SCAN_CFG;
 	reg |= (video_info->interlaced << 2);
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_10);
 
-	/* Configure V sync polarity for slave mode video */
 	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_10);
 	reg &= ~VSYNC_POLARITY_CFG;
 	reg |= (video_info->v_sync_polarity << 1);
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_10);
 
-	/* Configure H sync polarity for slave mode video */
 	reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_10);
 	reg &= ~HSYNC_POLARITY_CFG;
 	reg |= (video_info->h_sync_polarity << 0);
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_10);
 
-	/*Set video mode to slave mode */
 	reg = AUDIO_MODE_SPDIF_MODE | VIDEO_MODE_SLAVE_MODE;
 	writel(reg, dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
 }
