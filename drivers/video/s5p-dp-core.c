@@ -24,11 +24,12 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#include <plat/dp.h>
-#include <plat/regs-dp.h>
+#include <video/s5p-dp.h>
+
 #include <plat/cpu.h>
 
-#include "s5p-dp.h"
+#include "s5p-dp-core.h"
+#include "s5p-dp-reg.h"
 
 static int s5p_dp_init_dp(struct s5p_dp_device *dp)
 {

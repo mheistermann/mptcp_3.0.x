@@ -13,7 +13,6 @@
 #ifndef S5P_DP_H_
 #define S5P_DP_H_
 
-#include <plat/dp.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif

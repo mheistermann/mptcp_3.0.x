@@ -33,6 +33,7 @@
 #include <linux/reboot.h>
 
 #include <video/platform_lcd.h>
+#include <video/s5p-dp.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>

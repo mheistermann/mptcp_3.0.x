@@ -8,8 +8,8 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef __ASM_PLAT_S5P_REGS_DP_H
-#define __ASM_PLAT_S5P_REGS_DP_H __FILE__
+#ifndef _S5P_REGS_DP_H
+#define _S5P_REGS_DP_H __FILE__
 
 #define S5P_DP_TX_SW_RESET			0x14
 #define S5P_DP_FUNC_EN_1			0x18
@@ -525,4 +525,4 @@
 #define TEST_PATTERN_MODE_BALCK_WHITE_V_LINES	(0x2 << 0)
 #define TEST_PATTERN_MODE_COLOR_RAMP		(0x1 << 0)
 
-#endif /* __ASM_ARCH_REGS_DP_H */
+#endif /* _S5P_REGS_DP_H */

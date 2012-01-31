@@ -14,11 +14,12 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 
-#include <plat/dp.h>
-#include <plat/regs-dp.h>
+#include <video/s5p-dp.h>
+
 #include <plat/cpu.h>
 
-#include "s5p-dp.h"
+#include "s5p-dp-core.h"
+#include "s5p-dp-reg.h"
 
 #define COMMON_INT_MASK_1 (0)
 #define COMMON_INT_MASK_2 (0)
