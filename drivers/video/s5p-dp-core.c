@@ -2061,60 +2061,6 @@ static void s5p_dp_enable_scramble(struct s5p_dp_device *dp, bool enable)
 	}
 }
 
-static void s5p_dp_show_video_format(struct s5p_dp_device *dp,
-			struct video_info *video_info)
-{
-	dev_dbg(dp->dev, "Horizontal Total = %d\n", video_info->h_total);
-	dev_dbg(dp->dev, "Horizontal Active, xres = %d\n",
-		video_info->h_active);
-	dev_dbg(dp->dev, "Horizontal SyncWidth, hsync_len = %d\n",
-		video_info->h_sync_width);
-	dev_dbg(dp->dev, "Horizontal BackPorch, left_margin = %d\n",
-		video_info->h_back_porch);
-	dev_dbg(dp->dev, "Horizontal FrontPorch, right_margin = %d\n",
-		video_info->h_front_porch);
-
-	dev_dbg(dp->dev, "Vertical Total = %d\n", video_info->v_total);
-	dev_dbg(dp->dev, "Vertical Active, yres = %d\n", video_info->v_active);
-	dev_dbg(dp->dev, "Vertical SyncWidth, vsync_len = %d\n",
-		video_info->v_sync_width);
-	dev_dbg(dp->dev, "Vertical BackPorch, upper_margin = %d\n",
-		video_info->v_back_porch);
-	dev_dbg(dp->dev, "Vertical FrontPorch, lower_margin = %d\n",
-		video_info->v_front_porch);
-
-	dev_dbg(dp->dev, "Horizontal Sync Polartity: %s is active\n",
-		(video_info->h_sync_polarity == 0) ? "High" : "Low");
-	dev_dbg(dp->dev, "Vertical Sync Polarity: %s is active\n",
-		(video_info->v_sync_polarity == 0) ? "High" : "Low");
-	dev_dbg(dp->dev, "%s Scan\n", (video_info->interlaced == 0) ?
-		"Progressive" : "Interlaced");
-	dev_dbg(dp->dev, "Video VSync Rate = %d Hz\n",
-		video_info->v_sync_rate);
-
-	dev_dbg(dp->dev, "color_space = %s\n", (video_info->color_space == 0) ?
-		"RGB" : (video_info->color_space == 1) ?
-		"YCbCr422" : (video_info->color_space == 2) ?
-		"YCbCr444" : "Unknown");
-	dev_dbg(dp->dev, "dynamic_range = %s\n",
-		(video_info->dynamic_range == 0) ? "VESA" : "CEA");
-	dev_dbg(dp->dev, "ycbcr_coeff = %s\n", (video_info->ycbcr_coeff == 0) ?
-		"ITU601" : "ITU709");
-	dev_dbg(dp->dev, "color_depth = %s\n", (video_info->color_depth == 0) ?
-		"6 bit" : (video_info->color_depth == 1) ?
-		"8 bit" : (video_info->color_depth == 2) ?
-		"10 bit" : (video_info->color_depth == 3) ?
-		"12 bit" : "Unknown");
-	dev_dbg(dp->dev, "Current Field = %s\n",
-		(video_info->even_field == 0) ? "Odd Field" : "Even Field");
-	dev_dbg(dp->dev, "%s\n", (video_info->sync_clock == 0) ?
-		"Asynchronous Clock Mode" : "Synchronous Clock Mode");
-	dev_dbg(dp->dev, "link_rate = %s\n", (video_info->link_rate == 6) ?
-		"1.62Ghz" : (video_info->link_rate == 0xa) ?
-		"2.7Ghz" : "Unknown");
-	dev_dbg(dp->dev, "lane_count = %.2d\n", video_info->lane_count);
-}
-
 static irqreturn_t s5p_dp_irq_handler(int irq, void *arg)
 {
 	struct s5p_dp_device *dp = arg;
@@ -2271,8 +2217,6 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	dp->video_info = pdata->video_info;
 	if (pdata->phy_init)
 		pdata->phy_init();
-
-	s5p_dp_show_video_format(dp, dp->video_info);
 
 	s5p_dp_init_dp(dp);
 
