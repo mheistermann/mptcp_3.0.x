@@ -190,10 +190,16 @@ u32 s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp);
 #define DPCD_TRAINING_PATTERN_DISABLED			(0x0 << 0)
 
 /* DPCD_ADDR_TRAINING_LANE0_SET */
+#define DPCD_MAX_PRE_EMPHASIS_REACHED			(0x1 << 5)
+#define DPCD_PRE_EMPHASIS_SET(x)			(((x) & 0x3) << 3)
+#define DPCD_PRE_EMPHASIS_GET(x)			(((x) >> 3) & 0x3)
 #define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_3		(0x3 << 3)
 #define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_2		(0x2 << 3)
 #define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_1		(0x1 << 3)
 #define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0		(0x0 << 3)
+#define DPCD_MAX_SWING_REACHED				(0x1 << 2)
+#define DPCD_VOLTAGE_SWING_SET(x)			(((x) & 0x3) << 0)
+#define DPCD_VOLTAGE_SWING_GET(x)			(((x) >> 0) & 0x3)
 #define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_3	(0x3 << 0)
 #define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_2	(0x2 << 0)
 #define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_1	(0x1 << 0)
