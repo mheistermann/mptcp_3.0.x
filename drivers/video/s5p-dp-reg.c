@@ -911,7 +911,6 @@ void s5p_dp_set_lane0_link_training(struct s5p_dp_device *dp, u32 training_lane)
 	writel(reg, dp->reg_base + S5P_DP_LN0_LINK_TRAINING_CTL);
 }
 
-
 void s5p_dp_set_lane1_link_training(struct s5p_dp_device *dp, u32 training_lane)
 {
 	u32 reg;

@@ -184,7 +184,7 @@ static int s5p_dp_handle_edid(struct s5p_dp_device *dp)
 	int i;
 	int retval;
 
-	/* Read DPCD 0x0000-0x000b */
+	/* Read DPCD DPCD_ADDR_DPCD_REV~RECEIVE_PORT1_CAP_1 */
 	s5p_dp_read_bytes_from_dpcd(dp,
 		DPCD_ADDR_DPCD_REV,
 		12, buf);
@@ -245,16 +245,40 @@ static void s5p_dp_training_pattern_dis(struct s5p_dp_device *dp)
 		DPCD_TRAINING_PATTERN_DISABLED);
 }
 
+static void s5p_dp_set_lane_lane_pre_emphasis(struct s5p_dp_device *dp,
+					int pre_emphasis, int lane)
+{
+	switch (lane) {
+	case 0:
+		s5p_dp_set_lane0_pre_emphasis(dp, pre_emphasis);
+		break;
+	case 1:
+		s5p_dp_set_lane1_pre_emphasis(dp, pre_emphasis);
+		break;
+
+	case 2:
+		s5p_dp_set_lane2_pre_emphasis(dp, pre_emphasis);
+		break;
+
+	case 3:
+		s5p_dp_set_lane3_pre_emphasis(dp, pre_emphasis);
+		break;
+	}
+}
+
 static void s5p_dp_link_start(struct s5p_dp_device *dp)
 {
 	u8 buf[5];
+	int lane;
+	int lane_count;
+
+	lane_count = dp->link_train.lane_count;
 
 	dp->link_train.lt_state = CLOCK_RECOVERY;
 	dp->link_train.eq_loop = 0;
-	dp->link_train.cr_loop[0] = 0;
-	dp->link_train.cr_loop[1] = 0;
-	dp->link_train.cr_loop[2] = 0;
-	dp->link_train.cr_loop[3] = 0;
+
+	for (lane = 0; lane < lane_count; lane++)
+		dp->link_train.cr_loop[lane] = 0;
 
 	/* Set sink to D0 (Sink Not Ready) mode. */
 	s5p_dp_write_byte_to_dpcd(dp, DPCD_ADDR_SINK_POWER_STATE,
@@ -271,744 +295,268 @@ static void s5p_dp_link_start(struct s5p_dp_device *dp)
 				2, buf);
 
 	/* Set TX pre-emphasis to minimum */
-	s5p_dp_set_lane0_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
-	s5p_dp_set_lane1_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
-	s5p_dp_set_lane2_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
-	s5p_dp_set_lane3_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
+	for (lane = 0; lane < lane_count; lane++)
+		s5p_dp_set_lane_lane_pre_emphasis(dp,
+			PRE_EMPHASIS_LEVEL_0, lane);
 
 	/* Set training pattern 1 */
 	s5p_dp_set_training_pattern(dp, TRAINING_PTN1);
 
 	/* Set RX training pattern */
 	buf[0] = DPCD_SCRAMBLING_DISABLED |
-		DPCD_TRAINING_PATTERN_1;
+		 DPCD_TRAINING_PATTERN_1;
+	s5p_dp_write_byte_to_dpcd(dp,
+		DPCD_ADDR_TRAINING_PATTERN_SET, buf[0]);
 
-	buf[1] = DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0 |
-		DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_0;
-	buf[2] = DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0 |
-		DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_0;
-	buf[3] = DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0 |
-		DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_0;
-	buf[4] = DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0 |
-		DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_0;
-
+	for (lane = 0; lane < lane_count; lane++)
+		buf[lane] = DPCD_PRE_EMPHASIS_PATTERN2_LEVEL0 |
+			    DPCD_VOLTAGE_SWING_PATTERN1_LEVEL0;
 	s5p_dp_write_bytes_to_dpcd(dp,
 		DPCD_ADDR_TRAINING_PATTERN_SET,
-		5, buf);
+		lane_count, buf);
+}
+
+static unsigned char s5p_dp_get_lane_status(u8 link_status[6], int lane)
+{
+	int shift = (lane & 1) * 4;
+	u8 link_value = link_status[lane>>1];
+
+	return (link_value >> shift) & 0xf;
+}
+
+static int s5p_dp_clock_recovery_ok(u8 link_status[6], int lane_count)
+{
+	int lane;
+	u8 lane_status;
+
+	for (lane = 0; lane < lane_count; lane++) {
+		lane_status = s5p_dp_get_lane_status(link_status, lane);
+		if ((lane_status & DPCD_LANE_CR_DONE) == 0)
+			return -EINVAL;
+	}
+	return 0;
+}
+
+static int s5p_dp_channel_eq_ok(u8 link_status[6], int lane_count)
+{
+	int lane;
+	u8 lane_align;
+	u8 lane_status;
+
+	lane_align = link_status[2];
+	if ((lane_align == DPCD_INTERLANE_ALIGN_DONE) == 0)
+		return -EINVAL;
+
+	for (lane = 0; lane < lane_count; lane++) {
+		lane_status = s5p_dp_get_lane_status(link_status, lane);
+		lane_status &= DPCD_CHANNEL_EQ_BITS;
+		if (lane_status != DPCD_CHANNEL_EQ_BITS)
+			return -EINVAL;
+	}
+	return 0;
+}
+
+static unsigned char s5p_dp_get_adjust_request_voltage(u8 adjust_request[2],
+							int lane)
+{
+	int shift = (lane & 1) * 4;
+	u8 link_value = adjust_request[lane>>1];
+
+	return (link_value >> shift) & 0x3;
+}
+
+static unsigned char s5p_dp_get_adjust_request_pre_emphasis(
+					u8 adjust_request[2],
+					int lane)
+{
+	int shift = (lane & 1) * 4;
+	u8 link_value = adjust_request[lane>>1];
+
+	return ((link_value >> shift) & 0xc) >> 2;
+}
+
+static void s5p_dp_set_lane_link_training(struct s5p_dp_device *dp,
+					u8 training_lane_set, int lane)
+{
+	switch (lane) {
+	case 0:
+		s5p_dp_set_lane0_link_training(dp, training_lane_set);
+		break;
+	case 1:
+		s5p_dp_set_lane1_link_training(dp, training_lane_set);
+		break;
+
+	case 2:
+		s5p_dp_set_lane2_link_training(dp, training_lane_set);
+		break;
+
+	case 3:
+		s5p_dp_set_lane3_link_training(dp, training_lane_set);
+		break;
+	}
+}
+
+static unsigned int s5p_dp_get_lane_link_training(struct s5p_dp_device *dp,
+						int lane)
+{
+	u32 reg;
+
+	switch (lane) {
+	case 0:
+		reg = s5p_dp_get_lane0_link_training(dp);
+		break;
+	case 1:
+		reg = s5p_dp_get_lane1_link_training(dp);
+		break;
+	case 2:
+		reg = s5p_dp_get_lane2_link_training(dp);
+		break;
+	case 3:
+		reg = s5p_dp_get_lane3_link_training(dp);
+		break;
+	}
+
+	return reg;
+}
+
+static void s5p_dp_reduce_link_rate(struct s5p_dp_device *dp)
+{
+	if (dp->link_train.link_rate == LINK_RATE_2_70GBPS) {
+		/* set to reduced bit rate */
+		dp->link_train.link_rate = LINK_RATE_1_62GBPS;
+		dev_err(dp->dev, "set to bandwidth %.2x\n",
+			dp->link_train.link_rate);
+		dp->link_train.lt_state = START;
+	} else {
+		s5p_dp_training_pattern_dis(dp);
+		/* set enhanced mode if available */
+		s5p_dp_set_enhanced_mode(dp);
+		dp->link_train.lt_state = FAILED;
+	}
+}
+
+static void s5p_dp_get_adjust_train(struct s5p_dp_device *dp,
+				u8 adjust_request[2])
+{
+	int lane;
+	int lane_count;
+	u8 voltage_swing;
+	u8 pre_emphasis;
+	u8 training_lane;
+
+	lane_count = dp->link_train.lane_count;
+	for (lane = 0; lane < lane_count; lane++) {
+		voltage_swing = s5p_dp_get_adjust_request_voltage(
+						adjust_request, lane);
+		pre_emphasis = s5p_dp_get_adjust_request_pre_emphasis(
+						adjust_request, lane);
+		training_lane = DPCD_VOLTAGE_SWING_SET(voltage_swing) |
+				DPCD_PRE_EMPHASIS_SET(pre_emphasis);
+
+		if (voltage_swing == VOLTAGE_LEVEL_3 ||
+		   pre_emphasis == PRE_EMPHASIS_LEVEL_3) {
+			training_lane |= DPCD_MAX_SWING_REACHED;
+			training_lane |= DPCD_MAX_PRE_EMPHASIS_REACHED;
+		}
+		dp->link_train.training_lane[lane] = training_lane;
+	}
+}
+
+static int s5p_dp_check_max_cr_loop(struct s5p_dp_device *dp, u8 voltage_swing)
+{
+	int lane;
+	int lane_count;
+
+	lane_count = dp->link_train.lane_count;
+	for (lane = 0; lane < lane_count; lane++) {
+		if (voltage_swing == VOLTAGE_LEVEL_3 ||
+			dp->link_train.cr_loop[lane] == MAX_CR_LOOP)
+			return -EINVAL;
+	}
+	return 0;
 }
 
 static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 {
-	u32 reg;
 	u8 data;
-	u8 lane0_1_status;
-	u8 lane2_3_status;
-	u8 adjust_requst_lane0_1;
-	u8 adjust_requst_lane2_3;
-	u8 buf[6];
+	u8 link_status[6];
+	int lane;
+	int lane_count;
+	u8 buf[5];
 
-	u8 all_cr_done0_1 = 0;
-	u8 voltage_swing_lane0 = 0;
-	u8 voltage_swing_lane1 = 0;
-	u8 pre_emphasis_lane0 = 0;
-	u8 pre_emphasis_lane1 = 0;
-	u8 training_lane0_set = 0;
-	u8 training_lane1_set = 0;
-
-	u8 all_cr_done2_3 = 0;
-	u8 voltage_swing_lane2 = 0;
-	u8 voltage_swing_lane3 = 0;
-	u8 pre_emphasis_lane2 = 0;
-	u8 pre_emphasis_lane3 = 0;
-	u8 training_lane2_set = 0;
-	u8 training_lane3_set = 0;
+	u8 *adjust_request;
+	u8 voltage_swing;
+	u8 pre_emphasis;
+	u8 training_lane;
 
 	udelay(100);
 
-	if (dp->link_train.lane_count == 4) {
-		/* lane 0,1,2,3 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		lane2_3_status = buf[1];
-		adjust_requst_lane0_1 = buf[4];
-		adjust_requst_lane2_3 = buf[5];
+	s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
+				6, link_status);
+	lane_count = dp->link_train.lane_count;
 
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
+	if (s5p_dp_clock_recovery_ok(link_status, lane_count) == 0) {
+		/* set training pattern 2 for EQ */
+		s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
 
-		dev_dbg(dp->dev, "Reading lane status: lane2_3_status = %.2x\n",
-			(u32)lane2_3_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane2_3 = %.2x\n",
-			(u32)adjust_requst_lane2_3);
+		adjust_request = link_status + (DPCD_ADDR_ADJUST_REQUEST_LANE0_1
+						- DPCD_ADDR_LANE0_1_STATUS);
 
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
+		s5p_dp_get_adjust_train(dp, adjust_request);
 
-		all_cr_done2_3 = lane2_3_status;
-		all_cr_done2_3 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
+		buf[0] = DPCD_SCRAMBLING_DISABLED |
+			 DPCD_TRAINING_PATTERN_2;
+		s5p_dp_write_byte_to_dpcd(dp,
+			DPCD_ADDR_TRAINING_LANE0_SET,
+			buf[0]);
 
-		/* all channel CR done */
-		if ((all_cr_done0_1 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE)) &&
-		    (all_cr_done2_3 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE))) {
-			dev_dbg(dp->dev, "Clock Recovery training succeed\n");
-
-			/* set training pattern 2 for EQ */
-			s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 1 setting */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			training_lane1_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane1) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane1);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane1_set |= DPCD_MAX_SWING_REACHED;
-				training_lane1_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 2 setting */
-			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
-			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
-
-			training_lane2_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane2) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane2);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane2 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane2_set |= DPCD_MAX_SWING_REACHED;
-				training_lane2_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 3 setting */
-			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
-			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
-
-			training_lane3_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane3) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane3);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane3_set |= DPCD_MAX_SWING_REACHED;
-				training_lane3_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			s5p_dp_set_lane0_link_training(dp, training_lane0_set);
-			s5p_dp_set_lane1_link_training(dp, training_lane1_set);
-			s5p_dp_set_lane2_link_training(dp, training_lane2_set);
-			s5p_dp_set_lane3_link_training(dp, training_lane3_set);
-
-			/* Write TRAINING_PATTERN_SET */
-			buf[0] = DPCD_SCRAMBLING_DISABLED |
-				 DPCD_TRAINING_PATTERN_2;
-			buf[1] = training_lane0_set;
-			buf[2] = training_lane1_set;
-			buf[3] = training_lane2_set;
-			buf[4] = training_lane3_set;
-
-			s5p_dp_write_bytes_to_dpcd(dp,
-				DPCD_ADDR_TRAINING_PATTERN_SET,
-				5, buf);
-
-			dp->link_train.lt_state = EQUALIZER_TRAINING;
-		} else {
-			reg = s5p_dp_get_lane0_link_training(dp);
-			training_lane0_set = (u8)reg;
-			reg = s5p_dp_get_lane1_link_training(dp);
-			training_lane1_set = (u8)reg;
-			reg = s5p_dp_get_lane2_link_training(dp);
-			training_lane2_set = (u8)reg;
-			reg = s5p_dp_get_lane3_link_training(dp);
-			training_lane3_set = (u8)reg;
-			s5p_dp_read_byte_from_dpcd(dp,
-				DPCD_ADDR_ADJUST_REQUEST_LANE0_1,
-				&data);
-			adjust_requst_lane0_1 = data;
-
-			s5p_dp_read_byte_from_dpcd(dp,
-				DPCD_ADDR_ADJUST_REQUEST_LANE2_3,
-				&data);
-			adjust_requst_lane2_3 = data;
-
-			/* lane 0 same voltage count */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane0_set) ==
-			   voltage_swing_lane0) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane0_set) ==
-			   pre_emphasis_lane0))
-				dp->link_train.cr_loop[0]++;
-
-			/* lane 1 same voltage count */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane1_set) ==
-			   voltage_swing_lane1) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane1_set) ==
-			   pre_emphasis_lane1))
-				dp->link_train.cr_loop[1]++;
-
-			/* lane 2 same voltage count */
-			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
-			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane2_set) ==
-			   voltage_swing_lane2) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane2_set) ==
-			   pre_emphasis_lane2))
-				dp->link_train.cr_loop[2]++;
-
-			/* lane 3 same voltage count */
-			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
-			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane3_set) ==
-			   voltage_swing_lane3) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane3_set) ==
-			   pre_emphasis_lane3))
-				dp->link_train.cr_loop[3]++;
-
-			/*
-			 * if max swing reached or same voltage 5 times,
-			 * try reduced bit-rate
-			 */
-			if (((voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   voltage_swing_lane1 == PRE_EMPHASIS_LEVEL_3) ||
-			   (dp->link_train.cr_loop[0] == MAX_CR_LOOP ||
-			   dp->link_train.cr_loop[1] == MAX_CR_LOOP))
-				|| ((voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
-			   voltage_swing_lane3 == PRE_EMPHASIS_LEVEL_3) ||
-			   (dp->link_train.cr_loop[2] == MAX_CR_LOOP ||
-			   dp->link_train.cr_loop[3] == MAX_CR_LOOP))) {
-				/* try reduced bit rate */
-				if (dp->link_train.link_rate ==
-				    LINK_RATE_2_70GBPS) {
-					/* set to reduced bit rate */
-					dp->link_train.link_rate =
-						LINK_RATE_1_62GBPS;
-					dev_err(dp->dev, "set to bandwidth %.2x\n",
-						dp->link_train.link_rate);
-					dp->link_train.lt_state = START;
-				} else {
-					/* bit-rate already reduced */
-					/*
-					 * traing pattern: Set to Normal,
-					 * and enable scramble
-					 */
-					s5p_dp_training_pattern_dis(dp);
-
-					/* set enhanced mode if available */
-					s5p_dp_set_enhanced_mode(dp);
-
-					dp->link_train.lt_state = FAILED;
-				}
-			} else {
-				/*
-				 * increase voltage swing as requested,
-				 * write an updated value
-				 */
-
-				/* Lane 0 setting */
-				voltage_swing_lane0 =
-					DPCD_VOLTAGE_SWING_LANE0(
-						adjust_requst_lane0_1);
-				pre_emphasis_lane0 =
-					DPCD_PRE_EMPHASIS_LANE0(
-						adjust_requst_lane0_1);
-
-				training_lane0_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane0) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane0);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane0_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane0_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				/* Lane 1 setting */
-				voltage_swing_lane1 =
-					DPCD_VOLTAGE_SWING_LANE1(
-						adjust_requst_lane0_1);
-				pre_emphasis_lane1 =
-					DPCD_PRE_EMPHASIS_LANE1(
-						adjust_requst_lane0_1);
-
-				training_lane1_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane1) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane1);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane1_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane1_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				/* Lane 2 setting */
-				voltage_swing_lane2 =
-					DPCD_VOLTAGE_SWING_LANE2(
-						adjust_requst_lane2_3);
-				pre_emphasis_lane2 =
-					DPCD_PRE_EMPHASIS_LANE2(
-						adjust_requst_lane2_3);
-
-				training_lane2_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane2) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane2);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane2 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane2_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane2_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				/* Lane 3 setting */
-				voltage_swing_lane3 =
-					DPCD_VOLTAGE_SWING_LANE3(
-						adjust_requst_lane2_3);
-				pre_emphasis_lane3 =
-					DPCD_PRE_EMPHASIS_LANE3(
-						adjust_requst_lane2_3);
-
-				training_lane3_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane3) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane3);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane3_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane3_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				s5p_dp_set_lane0_link_training(dp,
-					training_lane0_set);
-				s5p_dp_set_lane1_link_training(dp,
-					training_lane1_set);
-				s5p_dp_set_lane2_link_training(dp,
-					training_lane2_set);
-				s5p_dp_set_lane3_link_training(dp,
-					training_lane3_set);
-
-				/*
-				 * Write TRAINING_LANE0_SET
-				 * and TRAINING_LANE1_SET
-				 */
-				buf[0] = training_lane0_set;
-				buf[1] = training_lane1_set;
-				buf[2] = training_lane2_set;
-				buf[3] = training_lane3_set;
-				s5p_dp_write_bytes_to_dpcd(dp,
-					DPCD_ADDR_TRAINING_LANE0_SET,
-					4, buf);
-			}
+		for (lane = 0; lane < lane_count; lane++) {
+			s5p_dp_set_lane_link_training(dp,
+				dp->link_train.training_lane[lane],
+				lane);
+			buf[lane] = dp->link_train.training_lane[lane];
+			s5p_dp_write_byte_to_dpcd(dp,
+				DPCD_ADDR_TRAINING_LANE0_SET + lane,
+				buf[lane]);
 		}
-	} else if (dp->link_train.lane_count == 2) {
-		/* lane 0,1 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		adjust_requst_lane0_1 = buf[4];
-
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
-
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
-
-		/* all channel CR done */
-		if (all_cr_done0_1 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE)) {
-			dev_dbg(dp->dev, "Clock Recovery training succeed\n");
-
-			/* set training pattern 2 for EQ */
-			s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 1 setting */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			training_lane1_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane1) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane1);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane1_set |= DPCD_MAX_SWING_REACHED;
-				training_lane1_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			s5p_dp_set_lane0_link_training(dp, training_lane0_set);
-			s5p_dp_set_lane1_link_training(dp, training_lane1_set);
-
-			/* Write TRAINING_PATTERN_SET */
-			buf[0] = DPCD_SCRAMBLING_DISABLED |
-				 DPCD_TRAINING_PATTERN_2;
-			buf[1] = training_lane0_set;
-			buf[2] = training_lane1_set;
-
-			s5p_dp_write_bytes_to_dpcd(dp,
-				DPCD_ADDR_TRAINING_PATTERN_SET,
-				3, buf);
-
-			dp->link_train.lt_state = EQUALIZER_TRAINING;
-		} else {
-			reg = s5p_dp_get_lane0_link_training(dp);
-			training_lane0_set = (u8)reg;
-			reg = s5p_dp_get_lane1_link_training(dp);
-			training_lane1_set = (u8)reg;
-
-			s5p_dp_read_byte_from_dpcd(dp,
-				DPCD_ADDR_ADJUST_REQUEST_LANE0_1,
-				&data);
-			adjust_requst_lane0_1 = data;
-
-			/* lane 0 same voltage count */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane0_set) ==
-			   voltage_swing_lane0) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane0_set) ==
-			   pre_emphasis_lane0))
-				dp->link_train.cr_loop[0]++;
-
-			/* lane1 same voltage count */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane0_set) ==
-			   voltage_swing_lane1) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane0_set) ==
-			   pre_emphasis_lane1))
-				dp->link_train.cr_loop[1]++;
-
-			/*
-			 * if max swing reached or same voltage 5 times,
-			 * try reduced bit-rate
-			 */
-			if ((voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   voltage_swing_lane1 == PRE_EMPHASIS_LEVEL_3) ||
-			   (dp->link_train.cr_loop[0] == MAX_CR_LOOP ||
-			   dp->link_train.cr_loop[1] == MAX_CR_LOOP)) {
-				/* try reduced bit rate */
-				if (dp->link_train.link_rate ==
-				    LINK_RATE_2_70GBPS) {
-					/* set to reduced bit rate */
-					dp->link_train.link_rate =
-						LINK_RATE_1_62GBPS;
-					dev_err(dp->dev, "set to bandwidth %.2x\n",
-						dp->link_train.link_rate);
-					dp->link_train.lt_state = START;
-				} else {
-					/* bit-rate already reduced */
-					/*
-					 * traing pattern: Set to Normal,
-					 * and enable scramble
-					 */
-					s5p_dp_training_pattern_dis(dp);
-
-					/* set enhanced mode if available */
-					s5p_dp_set_enhanced_mode(dp);
-
-					dp->link_train.lt_state = FAILED;
-				}
-			} else {
-				/*
-				 * increase voltage swing as requested,
-				 * write an updated value
-				 */
-
-				/* Lane 0 setting */
-				voltage_swing_lane0 =
-					DPCD_VOLTAGE_SWING_LANE0(
-						adjust_requst_lane0_1);
-				pre_emphasis_lane0 =
-					DPCD_PRE_EMPHASIS_LANE0(
-						adjust_requst_lane0_1);
-
-				training_lane0_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane0) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane0);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane0_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane0_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				/* Lane 1 setting */
-				voltage_swing_lane1 =
-					DPCD_VOLTAGE_SWING_LANE1(
-						adjust_requst_lane0_1);
-				pre_emphasis_lane1 =
-					DPCD_PRE_EMPHASIS_LANE1(
-						adjust_requst_lane0_1);
-
-				training_lane1_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane1) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane1);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane1_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane1_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				s5p_dp_set_lane0_link_training(dp,
-					training_lane0_set);
-				s5p_dp_set_lane1_link_training(dp,
-					training_lane1_set);
-
-				/*
-				 * Write TRAINING_LANE0_SET
-				 * and TRAINING_LANE1_SET
-				 */
-				buf[0] = training_lane0_set;
-				buf[1] = training_lane1_set;
-				s5p_dp_write_bytes_to_dpcd(dp,
-					DPCD_ADDR_TRAINING_LANE0_SET,
-					2, buf);
-			}
-		}
+		dp->link_train.lt_state = EQUALIZER_TRAINING;
 	} else {
-		/* one lane */
-		/* lane 0,1 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		adjust_requst_lane0_1 = buf[4];
+		s5p_dp_read_byte_from_dpcd(dp,
+			DPCD_ADDR_ADJUST_REQUEST_LANE0_1,
+			&data);
+		adjust_request[0] = data;
 
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
+		s5p_dp_read_byte_from_dpcd(dp,
+			DPCD_ADDR_ADJUST_REQUEST_LANE2_3,
+			&data);
+		adjust_request[1] = data;
 
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE0_CR_DONE;
+		for (lane = 0; lane < lane_count; lane++) {
+			training_lane = s5p_dp_get_lane_link_training(dp, lane);
 
-		/* all channel CR done */
-		if (all_cr_done0_1 == DPCD_LANE0_CR_DONE) {
-			dev_dbg(dp->dev, "Clock Recovery training succeed\n");
+			voltage_swing = s5p_dp_get_adjust_request_voltage(
+							adjust_request, lane);
+			pre_emphasis = s5p_dp_get_adjust_request_pre_emphasis(
+							adjust_request, lane);
+			if ((DPCD_VOLTAGE_SWING_GET(training_lane) == voltage_swing) &&
+			    (DPCD_PRE_EMPHASIS_GET(training_lane) == pre_emphasis))
+				dp->link_train.cr_loop[lane]++;
+			dp->link_train.training_lane[lane] = training_lane;
+		}
 
-			/* set training pattern 2 for EQ */
-			s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			s5p_dp_set_lane0_link_training(dp, training_lane0_set);
-
-			/* Write TRAINING_PATTERN_SET */
-			buf[0] = DPCD_SCRAMBLING_DISABLED |
-				 DPCD_TRAINING_PATTERN_2;
-			buf[1] = training_lane0_set;
-
-			s5p_dp_write_bytes_to_dpcd(dp,
-				DPCD_ADDR_TRAINING_PATTERN_SET,
-				2, buf);
-
-			dp->link_train.lt_state = EQUALIZER_TRAINING;
+		if (s5p_dp_check_max_cr_loop(dp, voltage_swing) != 0) {
+			s5p_dp_reduce_link_rate(dp);
 		} else {
-			reg = s5p_dp_get_lane0_link_training(dp);
-			training_lane0_set = (u8)reg;
+			s5p_dp_get_adjust_train(dp, adjust_request);
 
-			s5p_dp_read_byte_from_dpcd(dp,
-				DPCD_ADDR_ADJUST_REQUEST_LANE0_1,
-				&data);
-			adjust_requst_lane0_1 = data;
-
-			/* lane 0 same voltage count */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			if ((DPCD_VOLTAGE_SWING_GET(training_lane0_set) ==
-			   voltage_swing_lane0) &&
-			   (DPCD_PRE_EMPHASIS_GET(training_lane0_set) ==
-			   pre_emphasis_lane0))
-				dp->link_train.cr_loop[0]++;
-
-			/*
-			 * if max swing reached or same voltage 5 times,
-			 * try reduced bit-rate
-			 */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   dp->link_train.cr_loop[0] == MAX_CR_LOOP) {
-				/* try reduced bit rate */
-				if (dp->link_train.link_rate ==
-				    LINK_RATE_2_70GBPS) {
-					/* set to reduced bit rate */
-					dp->link_train.link_rate =
-						LINK_RATE_1_62GBPS;
-					dev_err(dp->dev, "set to bandwidth %.2x\n",
-						dp->link_train.link_rate);
-					dp->link_train.lt_state = START;
-				} else {
-					/* bit-rate already reduced */
-					/*
-					 * traing pattern: Set to Normal,
-					 * and enable scramble
-					 */
-					s5p_dp_training_pattern_dis(dp);
-
-					/* set enhanced mode if available */
-					s5p_dp_set_enhanced_mode(dp);
-
-					dp->link_train.lt_state = FAILED;
-				}
-			} else {
-				/*
-				 * increase voltage swing as requested,
-				 * write an updated value
-				 */
-
-				/* Lane 0 setting */
-				voltage_swing_lane0 =
-					DPCD_VOLTAGE_SWING_LANE0(
-						adjust_requst_lane0_1);
-				pre_emphasis_lane0 =
-					DPCD_PRE_EMPHASIS_LANE0(
-						adjust_requst_lane0_1);
-
-				training_lane0_set =
-					DPCD_VOLTAGE_SWING_SET(
-						voltage_swing_lane0) |
-					DPCD_PRE_EMPHASIS_SET(
-						pre_emphasis_lane0);
-
-				/* max swing reached or max pre-emphasis */
-				if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-				   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-					training_lane0_set |=
-						DPCD_MAX_SWING_REACHED;
-					training_lane0_set |=
-						DPCD_MAX_PRE_EMPHASIS_REACHED;
-				}
-
-				s5p_dp_set_lane0_link_training(dp,
-					training_lane0_set);
-
-				/* Write TRAINING_LANE0_SET */
-				buf[0] = training_lane0_set;
-				s5p_dp_write_bytes_to_dpcd(dp,
-					DPCD_ADDR_TRAINING_LANE0_SET,
-					1, buf);
+			for (lane = 0; lane < lane_count; lane++) {
+				s5p_dp_set_lane_link_training(dp,
+					dp->link_train.training_lane[lane],
+					lane);
+				buf[lane] = dp->link_train.training_lane[lane];
+				s5p_dp_write_byte_to_dpcd(dp,
+					DPCD_ADDR_TRAINING_LANE0_SET + lane,
+					buf[lane]);
 			}
 		}
 	}
@@ -1018,538 +566,65 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 
 static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 {
-	u32 data;
-	u8 lane0_1_status;
-	u8 lane2_3_status;
-	u8 adjust_requst_lane0_1;
-	u8 adjust_requst_lane2_3;
-	u8 lane_align_status_updated;
-	u8 buf[6];
+	u8 link_status[6];
+	int lane;
+	int lane_count;
+	u8 buf[5];
+	u32 reg;
 
-	u8 all_cr_done0_1 = 0;
-	u8 channel_eq_done0_1 = 0;
-	u8 voltage_swing_lane0 = 0;
-	u8 pre_emphasis_lane0 = 0;
-	u8 voltage_swing_lane1 = 0;
-	u8 pre_emphasis_lane1 = 0;
-	u8 training_lane0_set = 0;
-	u8 training_lane1_set = 0;
-
-	u8 all_cr_done2_3 = 0;
-	u8 channel_eq_done2_3 = 0;
-	u8 voltage_swing_lane2 = 0;
-	u8 pre_emphasis_lane2 = 0;
-	u8 voltage_swing_lane3 = 0;
-	u8 pre_emphasis_lane3 = 0;
-	u8 training_lane2_set = 0;
-	u8 training_lane3_set = 0;
-
-	u8 interlane_aligned = 0;
+	u8 *adjust_request;
 
 	udelay(400);
 
-	if (dp->link_train.lane_count == 4) {
-		/* lane 0,1,2,3 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		lane2_3_status = buf[1];
-		adjust_requst_lane0_1 = buf[4];
-		adjust_requst_lane2_3 = buf[5];
-		lane_align_status_updated = buf[2];
+	s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
+				6, link_status);
+	lane_count = dp->link_train.lane_count;
 
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
+	if (s5p_dp_clock_recovery_ok(link_status, lane_count) == 0) {
+		adjust_request = link_status + (DPCD_ADDR_ADJUST_REQUEST_LANE0_1
+						- DPCD_ADDR_LANE0_1_STATUS);
 
-		dev_dbg(dp->dev, "Reading lane status: lane2_3_status = %.2x\n",
-			(u32)lane2_3_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane2_3 = %.2x\n",
-			(u32)adjust_requst_lane2_3);
-
-		dev_dbg(dp->dev, "Reading lane status: lane_align_status_updated = %.2x\n",
-			(u32)lane_align_status_updated);
-
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
-
-		all_cr_done2_3 = lane2_3_status;
-		all_cr_done2_3 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
-
-		/* all channel CR done */
-		if ((all_cr_done0_1 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE)) &&
-		    (all_cr_done2_3 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE))) {
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 1 setting */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			training_lane1_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane1) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane1);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane1_set |= DPCD_MAX_SWING_REACHED;
-				training_lane1_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 2 setting */
-			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
-			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
-
-			training_lane2_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane2) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane2);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane2 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane2_set |= DPCD_MAX_SWING_REACHED;
-				training_lane2_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			/* Lane 3 setting */
-			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
-			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
-
-			training_lane3_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane3) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane3);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane3_set |= DPCD_MAX_SWING_REACHED;
-				training_lane3_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			channel_eq_done0_1 = lane0_1_status;
-			channel_eq_done0_1 &= DPCD_LANE1_SYMBOL_LOCKED |
-					   DPCD_LANE1_CHANNEL_EQ_DONE |
-					   DPCD_LANE0_SYMBOL_LOCKED |
-					   DPCD_LANE0_CHANNEL_EQ_DONE;
-			channel_eq_done2_3 = lane2_3_status;
-			channel_eq_done2_3 &= DPCD_LANE1_SYMBOL_LOCKED |
-					   DPCD_LANE1_CHANNEL_EQ_DONE |
-					   DPCD_LANE0_SYMBOL_LOCKED |
-					   DPCD_LANE0_CHANNEL_EQ_DONE;
-			interlane_aligned = lane_align_status_updated;
-			interlane_aligned &= DPCD_INTERLANE_ALIGN_DONE;
-
-			if ((channel_eq_done0_1 ==
-			    (DPCD_LANE1_SYMBOL_LOCKED |
-			     DPCD_LANE1_CHANNEL_EQ_DONE |
-			     DPCD_LANE0_SYMBOL_LOCKED |
-			     DPCD_LANE0_CHANNEL_EQ_DONE)) &&
-				(channel_eq_done2_3 ==
-			    (DPCD_LANE1_SYMBOL_LOCKED |
-			     DPCD_LANE1_CHANNEL_EQ_DONE |
-			     DPCD_LANE0_SYMBOL_LOCKED |
-			     DPCD_LANE0_CHANNEL_EQ_DONE)) &&
-			    (interlane_aligned == DPCD_INTERLANE_ALIGN_DONE)) {
-				/* EQ succeed */
-				/* traing pattern Set to Normal */
-				s5p_dp_training_pattern_dis(dp);
-
-				dev_info(dp->dev, "Link Training success!\n");
-
-				s5p_dp_get_link_bandwidth(dp, &data);
-				dp->link_train.link_rate = data;
-				dev_dbg(dp->dev, "final bandwidth = %.2x\n",
-					dp->link_train.link_rate);
-
-				s5p_dp_get_lane_count(dp, &data);
-				dp->link_train.lane_count = data;
-				dev_dbg(dp->dev, "final lane count = %.2x\n",
-					dp->link_train.lane_count);
-
-				/* set enhanced mode if available */
-				s5p_dp_set_enhanced_mode(dp);
-
-				dp->link_train.lt_state = FINISHED;
-			} else {
-				/* not all locked */
-				dp->link_train.eq_loop++;
-
-				if (dp->link_train.eq_loop  > MAX_EQ_LOOP) {
-					/* try reduced bit rate */
-					if (dp->link_train.link_rate ==
-					    LINK_RATE_2_70GBPS) {
-						/* set to reduced bit rate */
-						dp->link_train.link_rate =
-							LINK_RATE_1_62GBPS;
-						dev_err(dp->dev, "set to bandwidth %.2x\n",
-							dp->link_train.
-							link_rate);
-						dp->link_train.lt_state =
-							START;
-					} else {
-						/* bit-rate already reduced*/
-						s5p_dp_training_pattern_dis(dp);
-
-						/*
-						 * set enhanced mode
-						 * if available
-						 */
-						s5p_dp_set_enhanced_mode(dp);
-
-						dp->link_train.lt_state =
-							FAILED;
-					}
-				} else {
-					/* adjust pre-emphasis level */
-					s5p_dp_set_lane0_link_training(dp,
-						training_lane0_set);
-					s5p_dp_set_lane1_link_training(dp,
-						training_lane1_set);
-					s5p_dp_set_lane2_link_training(dp,
-						training_lane2_set);
-					s5p_dp_set_lane3_link_training(dp,
-						training_lane3_set);
-
-					/*
-					 * Write TRAINING_LANE0_SET
-					 * and TRAINING_LANE1_SET
-					 */
-					buf[0] = training_lane0_set;
-					buf[1] = training_lane1_set;
-					buf[2] = training_lane2_set;
-					buf[3] = training_lane3_set;
-
-					s5p_dp_write_bytes_to_dpcd(dp,
-						DPCD_ADDR_TRAINING_LANE0_SET,
-						4, buf);
-				}
-			}
-		} else if (dp->link_train.link_rate == LINK_RATE_2_70GBPS) {
-			/* try reduced bit rate and return to CR training */
-			dp->link_train.link_rate = LINK_RATE_1_62GBPS;
-			dev_err(dp->dev, "set to bandwidth %.2x\n",
-				dp->link_train.link_rate);
-			dp->link_train.lt_state = START;
-		} else {
-			/* bit-rate already reduced */
-			/* traing pattern Set to Normal, and enable scramble */
+		if (s5p_dp_channel_eq_ok(link_status, lane_count) == 0) {
+			/* traing pattern Set to Normal */
 			s5p_dp_training_pattern_dis(dp);
 
+			dev_info(dp->dev, "Link Training success!\n");
+
+			s5p_dp_get_link_bandwidth(dp, &reg);
+			dp->link_train.link_rate = reg;
+			dev_dbg(dp->dev, "final bandwidth = %.2x\n",
+				dp->link_train.link_rate);
+
+			s5p_dp_get_lane_count(dp, &reg);
+			dp->link_train.lane_count = reg;
+			dev_dbg(dp->dev, "final lane count = %.2x\n",
+				dp->link_train.lane_count);
 			/* set enhanced mode if available */
 			s5p_dp_set_enhanced_mode(dp);
 
-			dp->link_train.lt_state = FAILED;
-		}
-	} else if (dp->link_train.lane_count == 2) {
-		/* lane 0,1 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		adjust_requst_lane0_1 = buf[4];
-		lane_align_status_updated = buf[2];
+			dp->link_train.lt_state = FINISHED;
+		} else {
+			/* not all locked */
+			dp->link_train.eq_loop++;
 
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
-
-		dev_dbg(dp->dev, "Reading lane status: lane_align_status_updated = %.2x\n",
-			(u32)lane_align_status_updated);
-
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE;
-
-		/* all channel CR done */
-		if (all_cr_done0_1 ==
-			(DPCD_LANE1_CR_DONE | DPCD_LANE0_CR_DONE)) {
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-			/* Lane 1 setting */
-			voltage_swing_lane1 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
-			pre_emphasis_lane1 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
-
-			training_lane1_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane1) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane1);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane1 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane1 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane1_set |= DPCD_MAX_SWING_REACHED;
-				training_lane1_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			channel_eq_done0_1 = lane0_1_status;
-			channel_eq_done0_1 &= DPCD_LANE1_SYMBOL_LOCKED |
-					   DPCD_LANE1_CHANNEL_EQ_DONE |
-					   DPCD_LANE0_SYMBOL_LOCKED |
-					   DPCD_LANE0_CHANNEL_EQ_DONE;
-			interlane_aligned = lane_align_status_updated;
-			interlane_aligned &= DPCD_INTERLANE_ALIGN_DONE;
-
-			if (channel_eq_done0_1 ==
-			    (DPCD_LANE1_SYMBOL_LOCKED |
-			     DPCD_LANE1_CHANNEL_EQ_DONE |
-			     DPCD_LANE0_SYMBOL_LOCKED |
-			     DPCD_LANE0_CHANNEL_EQ_DONE) &&
-			    (interlane_aligned == DPCD_INTERLANE_ALIGN_DONE)) {
-				/* EQ succeed */
-				/* traing pattern Set to Normal */
-				s5p_dp_training_pattern_dis(dp);
-
-				dev_info(dp->dev, "Link Training success!\n");
-
-				s5p_dp_get_link_bandwidth(dp, &data);
-				dp->link_train.link_rate = data;
-				dev_dbg(dp->dev, "final bandwidth = %.2x\n",
-					dp->link_train.link_rate);
-
-				s5p_dp_get_lane_count(dp, &data);
-				dp->link_train.lane_count = data;
-				dev_dbg(dp->dev, "final lane count = %.2x\n",
-					dp->link_train.lane_count);
-
-				/* set enhanced mode if available */
-				s5p_dp_set_enhanced_mode(dp);
-
-				dp->link_train.lt_state = FINISHED;
+			if (dp->link_train.eq_loop > MAX_EQ_LOOP) {
+				s5p_dp_reduce_link_rate(dp);
 			} else {
-				/* not all locked */
-				dp->link_train.eq_loop++;
+				s5p_dp_get_adjust_train(dp, adjust_request);
 
-				if (dp->link_train.eq_loop  > MAX_EQ_LOOP) {
-					/* try reduced bit rate */
-					if (dp->link_train.link_rate ==
-					    LINK_RATE_2_70GBPS) {
-						/* set to reduced bit rate */
-						dp->link_train.link_rate =
-							LINK_RATE_1_62GBPS;
-						dev_err(dp->dev, "set to bandwidth %.2x\n",
-							dp->link_train.
-							link_rate);
-						dp->link_train.lt_state =
-							START;
-					} else {
-						/* bit-rate already reduced*/
-						s5p_dp_training_pattern_dis(dp);
-
-						/*
-						 * set enhanced mode
-						 * if available
-						 */
-						s5p_dp_set_enhanced_mode(dp);
-
-						dp->link_train.lt_state =
-							FAILED;
-					}
-				} else {
-					/* adjust pre-emphasis level */
-					s5p_dp_set_lane0_link_training(dp,
-						training_lane0_set);
-					s5p_dp_set_lane1_link_training(dp,
-						training_lane1_set);
-
-					/*
-					 * Write TRAINING_LANE0_SET
-					 * and TRAINING_LANE1_SET
-					 */
-					buf[0] = training_lane0_set;
-					buf[1] = training_lane1_set;
-
-					s5p_dp_write_bytes_to_dpcd(dp,
-						DPCD_ADDR_TRAINING_LANE0_SET,
-						2, buf);
+				for (lane = 0; lane < lane_count; lane++) {
+					s5p_dp_set_lane_link_training(dp,
+						dp->link_train.training_lane[lane],
+						lane);
+					buf[lane] = dp->link_train.training_lane[lane];
+					s5p_dp_write_byte_to_dpcd(dp,
+						DPCD_ADDR_TRAINING_LANE0_SET + lane,
+						buf[lane]);
 				}
 			}
-		} else if (dp->link_train.link_rate == LINK_RATE_2_70GBPS) {
-			/* try reduced bit rate and return to CR training */
-			dp->link_train.link_rate = LINK_RATE_1_62GBPS;
-			dev_err(dp->dev, "set to bandwidth %.2x\n",
-				dp->link_train.link_rate);
-			dp->link_train.lt_state = START;
-		} else {
-			/* bit-rate already reduced */
-			/* traing pattern Set to Normal, and enable scramble */
-			s5p_dp_training_pattern_dis(dp);
-
-			/* set enhanced mode if available */
-			s5p_dp_set_enhanced_mode(dp);
-
-			dp->link_train.lt_state = FAILED;
 		}
 	} else {
-		/* one lane */
-		/* lane 0,1 status */
-		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
-					6, buf);
-		lane0_1_status = buf[0];
-		adjust_requst_lane0_1 = buf[4];
-		lane_align_status_updated = buf[2];
-
-		dev_dbg(dp->dev, "Reading lane status: lane0_1_status = %.2x\n",
-			(u32)lane0_1_status);
-		dev_dbg(dp->dev, "Reading lane status: adjust_requst_lane0_1 = %.2x\n",
-			(u32)adjust_requst_lane0_1);
-
-		dev_dbg(dp->dev, "Reading lane status: lane_align_status_updated = %.2x\n",
-			(u32)lane_align_status_updated);
-
-		all_cr_done0_1 = lane0_1_status;
-		all_cr_done0_1 &= DPCD_LANE0_CR_DONE;
-
-		/* all channel CR done */
-		if (all_cr_done0_1 == DPCD_LANE0_CR_DONE) {
-
-			/* Lane 0 setting */
-			voltage_swing_lane0 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane0_1);
-			pre_emphasis_lane0 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane0_1);
-
-			training_lane0_set =
-				DPCD_VOLTAGE_SWING_SET(voltage_swing_lane0) |
-				DPCD_PRE_EMPHASIS_SET(pre_emphasis_lane0);
-
-			/* max swing reached or max pre-emphasis */
-			if (voltage_swing_lane0 == VOLTAGE_LEVEL_3 ||
-			   pre_emphasis_lane0 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane0_set |= DPCD_MAX_SWING_REACHED;
-				training_lane0_set |= DPCD_MAX_PRE_EMPHASIS_REACHED;
-			}
-
-			channel_eq_done0_1 = lane0_1_status;
-			channel_eq_done0_1 &= DPCD_LANE0_SYMBOL_LOCKED |
-					   DPCD_LANE0_CHANNEL_EQ_DONE;
-			interlane_aligned = lane_align_status_updated;
-			interlane_aligned &= DPCD_INTERLANE_ALIGN_DONE;
-
-			if (channel_eq_done0_1 ==
-			    (DPCD_LANE0_SYMBOL_LOCKED |
-			     DPCD_LANE0_CHANNEL_EQ_DONE) &&
-			    (interlane_aligned == DPCD_INTERLANE_ALIGN_DONE)) {
-				/* EQ succeed */
-				/* traing pattern Set to Normal */
-				s5p_dp_training_pattern_dis(dp);
-
-				dev_info(dp->dev, "Link Training success!\n");
-
-				s5p_dp_get_link_bandwidth(dp, &data);
-				dp->link_train.link_rate = data;
-				dev_dbg(dp->dev, "final bandwidth = %.2x\n",
-					dp->link_train.link_rate);
-
-				s5p_dp_get_lane_count(dp, &data);
-				dp->link_train.lane_count = data;
-				dev_dbg(dp->dev, "final lane count = %.2x\n",
-					dp->link_train.lane_count);
-
-				/* set enhanced mode if available */
-				s5p_dp_set_enhanced_mode(dp);
-
-				dp->link_train.lt_state = FINISHED;
-			} else {
-				/* not all locked */
-				dp->link_train.eq_loop++;
-
-				if (dp->link_train.eq_loop  > MAX_EQ_LOOP) {
-					/* try reduced bit rate */
-					if (dp->link_train.link_rate ==
-					    LINK_RATE_2_70GBPS) {
-						/* set to reduced bit rate */
-						dp->link_train.link_rate =
-							LINK_RATE_1_62GBPS;
-						dev_err(dp->dev, "set to bandwidth %.2x\n",
-							dp->link_train.
-							link_rate);
-						dp->link_train.lt_state =
-							START;
-					} else {
-						/* bit-rate already reduced */
-						s5p_dp_training_pattern_dis(dp);
-
-						/*
-						 * set enhanced mode
-						 * if available
-						 */
-						s5p_dp_set_enhanced_mode(dp);
-
-						dp->link_train.lt_state =
-							FAILED;
-					}
-				} else {
-					/* adjust pre-emphasis level */
-					s5p_dp_set_lane0_link_training(dp,
-						training_lane0_set);
-
-					/*
-					 * Write TRAINING_LANE0_SET
-					 * and TRAINING_LANE1_SET
-					 */
-					buf[0] = training_lane0_set;
-
-					s5p_dp_write_bytes_to_dpcd(dp,
-						DPCD_ADDR_TRAINING_LANE0_SET,
-						1, buf);
-				}
-			}
-		} else if (dp->link_train.link_rate == LINK_RATE_2_70GBPS) {
-			/* try reduced bit rate and return to CR training */
-			dp->link_train.link_rate = LINK_RATE_1_62GBPS;
-			dev_err(dp->dev, "set to bandwidth %.2x\n",
-				dp->link_train.link_rate);
-			dp->link_train.lt_state = START;
-		} else {
-			/* bit-rate already reduced */
-			/* traing pattern Set to Normal, and enable scramble */
-			s5p_dp_training_pattern_dis(dp);
-
-			/* set enhanced mode if available */
-			s5p_dp_set_enhanced_mode(dp);
-
-			dp->link_train.lt_state = FAILED;
-		}
+		s5p_dp_reduce_link_rate(dp);
 	}
 
 	return 0;
@@ -1598,11 +673,10 @@ static int s5p_dp_hw_link_training(struct s5p_dp_device *dp,
 
 	s5p_dp_reset_macro(dp);
 
-	/* set minimum PRE-EMPHASIS to TX */
-	s5p_dp_set_lane0_link_training(dp, 0);
-	s5p_dp_set_lane1_link_training(dp, 0);
-	s5p_dp_set_lane2_link_training(dp, 0);
-	s5p_dp_set_lane3_link_training(dp, 0);
+	/* Set TX pre-emphasis to minimum */
+	for (lane = 0; lane < lane_count; lane++)
+		s5p_dp_set_lane_lane_pre_emphasis(dp,
+			PRE_EMPHASIS_LEVEL_0, lane);
 
 	/* All DP analog module power up */
 	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
@@ -1675,7 +749,7 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 		if (retval == 0)
 			break;
 
-		udelay(100);	/* need for H/W link retraining */
+		udelay(100);
 	}
 	return retval;
 }
@@ -1766,7 +840,7 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 		if (retval == 0)
 			break;
 
-		udelay(100);	/* need for H/W link retraining */
+		udelay(100);
 	}
 
 	return retval;
@@ -1817,7 +891,6 @@ static int s5p_dp_get_bpp(enum color_space color_space, int bpc)
 
 	return bpp;
 }
-
 
 static int s5p_dp_config_video(struct s5p_dp_device *dp,
 			struct video_info *video_info)

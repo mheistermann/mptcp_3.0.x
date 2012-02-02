@@ -23,6 +23,7 @@ struct link_train {
 
 	u8 link_rate;
 	u8 lane_count;
+	u8 training_lane[4];
 
 	enum link_training_state lt_state;
 };
@@ -42,7 +43,7 @@ struct s5p_dp_device {
 #endif
 };
 
- /* s5p_dp_reg.c */
+/* s5p_dp_reg.c */
 void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_enable_video_mute(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_stop_video(struct s5p_dp_device *dp);
@@ -118,20 +119,20 @@ u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp);
 void s5p_dp_reset_macro(struct s5p_dp_device *dp);
 int s5p_dp_init_video(struct s5p_dp_device *dp);
 void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
-			u32 stream_clock,
-			enum link_rate_type link_rate);
+				u32 stream_clock,
+				enum link_rate_type link_rate);
 void s5p_dp_set_video_color_format(struct s5p_dp_device *dp,
-			u32 color_depth,
-			u32 color_space,
-			u32 dynamic_range,
-			u32 coeff);
+				u32 color_depth,
+				u32 color_space,
+				u32 dynamic_range,
+				u32 coeff);
 int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
 			struct video_info *video_info);
 int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp);
 void s5p_dp_set_video_cr_mn(struct s5p_dp_device *dp,
-		enum clock_recovery_m_value_type type,
-		u32 m_value,
-		u32 n_value);
+			enum clock_recovery_m_value_type type,
+			u32 m_value,
+			u32 n_value);
 void s5p_dp_set_video_timing_mode(struct s5p_dp_device *dp, u32 type);
 void s5p_dp_enable_video_master(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_start_video(struct s5p_dp_device *dp);
@@ -142,142 +143,84 @@ void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
 			struct video_info *video_info);
 void s5p_dp_enable_scrambling(struct s5p_dp_device *dp);
 void s5p_dp_disable_scrambling(struct s5p_dp_device *dp);
- #ifdef HW_LINK_TRAINING
+#ifdef HW_LINK_TRAINING
 void s5p_dp_start_hw_link_training(struct s5p_dp_device *dp);
 void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp);
 u32 s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp);
 #endif
 
 /* I2C EDID Chip ID, Slave Address */
-#define I2C_EDID_DEVICE_ADDR				0x50
-#define I2C_E_EDID_DEVICE_ADDR				0x30
+#define I2C_EDID_DEVICE_ADDR			0x50
+#define I2C_E_EDID_DEVICE_ADDR			0x30
 
-#define EDID_BLOCK_LENGTH				0x80
-#define EDID_HEADER_PATTERN				0x00
-#define EDID_EXTENSION_FLAG				0x7e
-#define EDID_CHECKSUM					0x7f
+#define EDID_BLOCK_LENGTH			0x80
+#define EDID_HEADER_PATTERN			0x00
+#define EDID_EXTENSION_FLAG			0x7e
+#define EDID_CHECKSUM				0x7f
 
 /* Definition for DPCD Register */
-#define DPCD_ADDR_DPCD_REV				0x0000
-#define DPCD_ADDR_MAX_LINK_RATE				0x0001
-#define DPCD_ADDR_MAX_LANE_COUNT			0x0002
-#define DPCD_ADDR_LINK_BW_SET				0x0100
-#define DPCD_ADDR_LANE_COUNT_SET			0x0101
-#define DPCD_ADDR_TRAINING_PATTERN_SET			0x0102
-#define DPCD_ADDR_TRAINING_LANE0_SET			0x0103
-#define DPCD_ADDR_LANE0_1_STATUS			0x0202
-#define DPCD_ADDR_LANE_ALIGN__STATUS_UPDATED		0x0204
-#define DPCD_ADDR_ADJUST_REQUEST_LANE0_1		0x0206
-#define DPCD_ADDR_ADJUST_REQUEST_LANE2_3		0x0207
-#define DPCD_ADDR_TEST_REQUEST				0x0218
-#define DPCD_ADDR_TEST_RESPONSE				0x0260
-#define DPCD_ADDR_TEST_EDID_CHECKSUM			0x0261
-#define DPCD_ADDR_SINK_POWER_STATE			0x0600
+#define DPCD_ADDR_DPCD_REV			0x0000
+#define DPCD_ADDR_MAX_LINK_RATE			0x0001
+#define DPCD_ADDR_MAX_LANE_COUNT		0x0002
+#define DPCD_ADDR_LINK_BW_SET			0x0100
+#define DPCD_ADDR_LANE_COUNT_SET		0x0101
+#define DPCD_ADDR_TRAINING_PATTERN_SET		0x0102
+#define DPCD_ADDR_TRAINING_LANE0_SET		0x0103
+#define DPCD_ADDR_LANE0_1_STATUS		0x0202
+#define DPCD_ADDR_LANE_ALIGN__STATUS_UPDATED	0x0204
+#define DPCD_ADDR_ADJUST_REQUEST_LANE0_1	0x0206
+#define DPCD_ADDR_ADJUST_REQUEST_LANE2_3	0x0207
+#define DPCD_ADDR_TEST_REQUEST			0x0218
+#define DPCD_ADDR_TEST_RESPONSE			0x0260
+#define DPCD_ADDR_TEST_EDID_CHECKSUM		0x0261
+#define DPCD_ADDR_SINK_POWER_STATE		0x0600
 
 /* DPCD_ADDR_MAX_LANE_COUNT */
-#define DPCD_ENHANCED_FRAME_CAP(x)			(((x) >> 7) & 0x1)
-#define DPCD_MAX_LANE_COUNT(x)				((x) & 0x1f)
+#define DPCD_ENHANCED_FRAME_CAP(x)		(((x) >> 7) & 0x1)
+#define DPCD_MAX_LANE_COUNT(x)			((x) & 0x1f)
 
 /* DPCD_ADDR_LANE_COUNT_SET */
-#define DPCD_ENHANCED_FRAME_EN				(0x1 << 7)
-#define DPCD_LANE_COUNT_SET(x)				((x) & 0x1f)
+#define DPCD_ENHANCED_FRAME_EN			(0x1 << 7)
+#define DPCD_LANE_COUNT_SET(x)			((x) & 0x1f)
 
 /* DPCD_ADDR_TRAINING_PATTERN_SET */
-#define DPCD_SCRAMBLING_DISABLED			(0x1 << 5)
-#define DPCD_SCRAMBLING_ENABLED				(0x0 << 5)
-#define DPCD_TRAINING_PATTERN_2				(0x2 << 0)
-#define DPCD_TRAINING_PATTERN_1				(0x1 << 0)
-#define DPCD_TRAINING_PATTERN_DISABLED			(0x0 << 0)
+#define DPCD_SCRAMBLING_DISABLED		(0x1 << 5)
+#define DPCD_SCRAMBLING_ENABLED			(0x0 << 5)
+#define DPCD_TRAINING_PATTERN_2			(0x2 << 0)
+#define DPCD_TRAINING_PATTERN_1			(0x1 << 0)
+#define DPCD_TRAINING_PATTERN_DISABLED		(0x0 << 0)
 
 /* DPCD_ADDR_TRAINING_LANE0_SET */
-#define DPCD_MAX_PRE_EMPHASIS_REACHED			(0x1 << 5)
-#define DPCD_PRE_EMPHASIS_SET(x)			(((x) & 0x3) << 3)
-#define DPCD_PRE_EMPHASIS_GET(x)			(((x) >> 3) & 0x3)
-#define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_3		(0x3 << 3)
-#define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_2		(0x2 << 3)
-#define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_1		(0x1 << 3)
-#define DPCD_PRE_EMPHASIS_SET_PATTERN_2_LEVEL_0		(0x0 << 3)
-#define DPCD_MAX_SWING_REACHED				(0x1 << 2)
-#define DPCD_VOLTAGE_SWING_SET(x)			(((x) & 0x3) << 0)
-#define DPCD_VOLTAGE_SWING_GET(x)			(((x) >> 0) & 0x3)
-#define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_3	(0x3 << 0)
-#define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_2	(0x2 << 0)
-#define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_1	(0x1 << 0)
-#define DPCD_VOLTAGE_SWING_SET_PATTERN_1_LEVEL_0	(0x0 << 0)
+#define DPCD_MAX_PRE_EMPHASIS_REACHED		(0x1 << 5)
+#define DPCD_PRE_EMPHASIS_SET(x)		(((x) & 0x3) << 3)
+#define DPCD_PRE_EMPHASIS_GET(x)		(((x) >> 3) & 0x3)
+#define DPCD_PRE_EMPHASIS_PATTERN2_LEVEL0	(0x0 << 3)
+#define DPCD_MAX_SWING_REACHED			(0x1 << 2)
+#define DPCD_VOLTAGE_SWING_SET(x)		(((x) & 0x3) << 0)
+#define DPCD_VOLTAGE_SWING_GET(x)		(((x) >> 0) & 0x3)
+#define DPCD_VOLTAGE_SWING_PATTERN1_LEVEL0	(0x0 << 0)
 
 /* DPCD_ADDR_LANE0_1_STATUS */
-#define DPCD_LANE1_SYMBOL_LOCKED			(0x1 << 6)
-#define DPCD_LANE1_CHANNEL_EQ_DONE			(0x1 << 5)
-#define DPCD_LANE1_CR_DONE				(0x1 << 4)
-#define DPCD_LANE0_SYMBOL_LOCKED			(0x1 << 2)
-#define DPCD_LANE0_CHANNEL_EQ_DONE			(0x1 << 1)
-#define DPCD_LANE0_CR_DONE				(0x1 << 0)
+#define DPCD_LANE_SYMBOL_LOCKED			(0x1 << 2)
+#define DPCD_LANE_CHANNEL_EQ_DONE		(0x1 << 1)
+#define DPCD_LANE_CR_DONE			(0x1 << 0)
+#define DPCD_CHANNEL_EQ_BITS			(DPCD_LANE_CR_DONE|	\
+						 DPCD_LANE_CHANNEL_EQ_DONE|\
+						 DPCD_LANE_SYMBOL_LOCKED)
 
 /* DPCD_ADDR_LANE_ALIGN__STATUS_UPDATED */
-#define DPCD_LINK_STATUS_UPDATED			(0x1 << 7)
-#define DPCD_DOWNSTREAM_PORT_STATUS_CHANGED		(0x1 << 6)
-#define DPCD_INTERLANE_ALIGN_DONE			(0x1 << 0)
-
-/* DPCD_ADDR_ADJUST_REQUEST_LANE0_1 */
-#define DPCD_PRE_EMPHASIS_LANE1_MASK			(0x3 << 6)
-#define DPCD_PRE_EMPHASIS_LANE1(x)			(((x) >> 6) & 0x3)
-#define DPCD_PRE_EMPHASIS_LANE1_LEVEL_3			(0x3 << 6)
-#define DPCD_PRE_EMPHASIS_LANE1_LEVEL_2			(0x2 << 6)
-#define DPCD_PRE_EMPHASIS_LANE1_LEVEL_1			(0x1 << 6)
-#define DPCD_PRE_EMPHASIS_LANE1_LEVEL_0			(0x0 << 6)
-#define DPCD_VOLTAGE_SWING_LANE1_MASK			(0x3 << 4)
-#define DPCD_VOLTAGE_SWING_LANE1(x)			(((x) >> 4) & 0x3)
-#define DPCD_VOLTAGE_SWING_LANE1_LEVEL_3		(0x3 << 4)
-#define DPCD_VOLTAGE_SWING_LANE1_LEVEL_2		(0x2 << 4)
-#define DPCD_VOLTAGE_SWING_LANE1_LEVEL_1		(0x1 << 4)
-#define DPCD_VOLTAGE_SWING_LANE1_LEVEL_0		(0x0 << 4)
-#define DPCD_PRE_EMPHASIS_LANE0_MASK			(0x3 << 2)
-#define DPCD_PRE_EMPHASIS_LANE0(x)			(((x) >> 2) & 0x3)
-#define DPCD_PRE_EMPHASIS_LANE0_LEVEL_3			(0x3 << 2)
-#define DPCD_PRE_EMPHASIS_LANE0_LEVEL_2			(0x2 << 2)
-#define DPCD_PRE_EMPHASIS_LANE0_LEVEL_1			(0x1 << 2)
-#define DPCD_PRE_EMPHASIS_LANE0_LEVEL_0			(0x0 << 2)
-#define DPCD_VOLTAGE_SWING_LANE0_MASK			(0x3 << 0)
-#define DPCD_VOLTAGE_SWING_LANE0(x)			(((x) >> 0) & 0x3)
-#define DPCD_VOLTAGE_SWING_LANE0_LEVEL_3		(0x3 << 0)
-#define DPCD_VOLTAGE_SWING_LANE0_LEVEL_2		(0x2 << 0)
-#define DPCD_VOLTAGE_SWING_LANE0_LEVEL_1		(0x1 << 0)
-#define DPCD_VOLTAGE_SWING_LANE0_LEVEL_0		(0x0 << 0)
-
-/* DPCD_ADDR_ADJUST_REQUEST_LANE2_3 */
-#define DPCD_PRE_EMPHASIS_LANE2_MASK			(0x3 << 6)
-#define DPCD_PRE_EMPHASIS_LANE2(x)			(((x) >> 6) & 0x3)
-#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_3			(0x3 << 6)
-#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_2			(0x2 << 6)
-#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_1			(0x1 << 6)
-#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_0			(0x0 << 6)
-#define DPCD_VOLTAGE_SWING_LANE2_MASK			(0x3 << 4)
-#define DPCD_VOLTAGE_SWING_LANE2(x)			(((x) >> 4) & 0x3)
-#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_3		(0x3 << 4)
-#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_2		(0x2 << 4)
-#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_1		(0x1 << 4)
-#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_0		(0x0 << 4)
-#define DPCD_PRE_EMPHASIS_LANE3_MASK			(0x3 << 2)
-#define DPCD_PRE_EMPHASIS_LANE3(x)			(((x) >> 2) & 0x3)
-#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_3			(0x3 << 2)
-#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_2			(0x2 << 2)
-#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_1			(0x1 << 2)
-#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_0			(0x0 << 2)
-#define DPCD_VOLTAGE_SWING_LANE3_MASK			(0x3 << 0)
-#define DPCD_VOLTAGE_SWING_LANE3(x)			(((x) >> 0) & 0x3)
-#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_3		(0x3 << 0)
-#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_2		(0x2 << 0)
-#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_1		(0x1 << 0)
-#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_0		(0x0 << 0)
+#define DPCD_LINK_STATUS_UPDATED		(0x1 << 7)
+#define DPCD_DOWNSTREAM_PORT_STATUS_CHANGED	(0x1 << 6)
+#define DPCD_INTERLANE_ALIGN_DONE		(0x1 << 0)
 
 /* DPCD_ADDR_TEST_REQUEST */
-#define DPCD_TEST_EDID_READ				(0x1 << 2)
+#define DPCD_TEST_EDID_READ			(0x1 << 2)
 
 /* DPCD_ADDR_TEST_RESPONSE */
-#define DPCD_TEST_EDID_CHECKSUM_WRITE			(0x1 << 2)
+#define DPCD_TEST_EDID_CHECKSUM_WRITE		(0x1 << 2)
 
 /* DPCD_ADDR_SINK_POWER_STATE */
-#define DPCD_SET_POWER_STATE_D0				(0x1 << 0)
-#define DPCD_SET_POWER_STATE_D4				(0x2 << 0)
+#define DPCD_SET_POWER_STATE_D0			(0x1 << 0)
+#define DPCD_SET_POWER_STATE_D4			(0x2 << 0)
 
 #endif /* S5P_DP_H_ */
