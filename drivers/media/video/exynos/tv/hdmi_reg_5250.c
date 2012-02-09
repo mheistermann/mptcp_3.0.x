@@ -203,7 +203,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i60 = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -443,7 +443,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i50 = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -884,7 +884,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i59_94 = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -1766,7 +1766,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i60_sb_half = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -1829,7 +1829,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i59_94_sb_half = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -1892,7 +1892,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i50_sb_half = {
 		.width = 1920,
 		.height = 1080,
 		.code = V4L2_MBUS_FMT_FIXED, /* means RGB888 */
-		.field = V4L2_FIELD_NONE,
+		.field = V4L2_FIELD_INTERLACED,
 	},
 };
 
@@ -2904,6 +2904,7 @@ void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix)
 	DUMPREG(HDMI_AVI_HEADER2);
 	DUMPREG(HDMI_AVI_CHECK_SUM);
 	DUMPREG(HDMI_AVI_BYTE(1));
+
 	DUMPREG(HDMI_VSI_CON);
 	DUMPREG(HDMI_VSI_HEADER0);
 	DUMPREG(HDMI_VSI_HEADER1);
