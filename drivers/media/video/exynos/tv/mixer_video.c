@@ -442,6 +442,36 @@ static int mxr_s_ctrl(struct file *file, void *fh, struct v4l2_control *ctrl)
 	return ret;
 }
 
+static int mxr_g_ctrl(struct file *file, void *fh, struct v4l2_control *ctrl)
+{
+	struct mxr_layer *layer = video_drvdata(file);
+	struct mxr_device *mdev = layer->mdev;
+	int num = 0;
+	int ret = 0;
+
+	mxr_dbg(mdev, "%s start\n", __func__);
+
+	if (layer->type == MXR_LAYER_TYPE_VIDEO)
+		num = 0;
+	else if (layer->type == MXR_LAYER_TYPE_GRP && layer->idx == 0)
+		num = 1;
+	else if (layer->type == MXR_LAYER_TYPE_GRP && layer->idx == 1)
+		num = 2;
+
+	ret = mxr_check_ctrl_val(ctrl);
+
+	switch (ctrl->id) {
+	case V4L2_CID_TV_HPD_STATUS:
+		v4l2_subdev_call(to_outsd(mdev), core, g_ctrl, ctrl);
+		break;
+	default:
+		mxr_err(mdev, "invalid control id\n");
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
 static int mxr_enum_dv_presets(struct file *file, void *fh,
 	struct v4l2_dv_enum_preset *preset)
 {
@@ -680,6 +710,7 @@ static const struct v4l2_ioctl_ops mxr_ioctl_ops = {
 	.vidioc_cropcap = mxr_cropcap,
 	/* Alpha blending functions */
 	.vidioc_s_ctrl = mxr_s_ctrl,
+	.vidioc_g_ctrl = mxr_g_ctrl,
 };
 
 static int mxr_video_open(struct file *file)

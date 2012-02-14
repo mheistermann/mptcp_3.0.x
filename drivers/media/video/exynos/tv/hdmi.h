@@ -295,6 +295,9 @@ struct hdmi_device {
 	struct work_struct hpd_work;
 	struct workqueue_struct	*hdcp_wq;
 	struct workqueue_struct *hpd_wq;
+
+	/* HPD releated */
+	bool hpd_user_checked;
 	atomic_t hpd_state;
 	spinlock_t hpd_lock;
 };

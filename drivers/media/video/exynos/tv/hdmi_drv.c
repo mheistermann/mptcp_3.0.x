@@ -340,7 +340,17 @@ int hdmi_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
 	struct device *dev = hdev->dev;
 
-	if (!pm_runtime_suspended(hdev->dev))
+	dev_info(dev, "S_CTRL is not applied yet.\n");
+
+	return 0;
+}
+
+int hdmi_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
+	struct device *dev = hdev->dev;
+
+	if (!pm_runtime_suspended(hdev->dev) && !hdev->hpd_user_checked)
 		ctrl->value = hdmi_hpd_status(hdev);
 	else
 		ctrl->value = atomic_read(&hdev->hpd_state);
@@ -415,6 +425,7 @@ static int hdmi_enum_dv_presets(struct v4l2_subdev *sd,
 static const struct v4l2_subdev_core_ops hdmi_sd_core_ops = {
 	.s_power = hdmi_s_power,
 	.s_ctrl = hdmi_s_ctrl,
+	.g_ctrl = hdmi_g_ctrl,
 };
 
 static const struct v4l2_subdev_video_ops hdmi_sd_video_ops = {
@@ -625,6 +636,8 @@ static void s5p_hpd_kobject_uevent(struct work_struct *work)
 	else
 		envp = disconnected;
 
+	hdev->hpd_user_checked = true;
+
 	kobject_uevent_env(&hdev->dev->kobj, KOBJ_CHANGE, envp);
 	pr_info("%s: sent uevent %s\n", __func__, envp[0]);
 }
@@ -732,10 +745,16 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 		irq_type = 0;
 		s5p_v4l2_int_src_hdmi_hpd();
 	} else {
+		if (s5p_v4l2_hpd_read_gpio())
+			atomic_set(&hdmi_dev->hpd_state, HPD_HIGH);
+		else
+			atomic_set(&hdmi_dev->hpd_state, HPD_LOW);
 		hdmi_dev->curr_irq = hdmi_dev->ext_irq;
 		irq_type = IRQ_TYPE_EDGE_BOTH;
 		s5p_v4l2_int_src_ext_hpd();
 	}
+
+	hdmi_dev->hpd_user_checked = false;
 
 	ret = request_irq(hdmi_dev->curr_irq, hdmi_irq_handler,
 			irq_type, "hdmi", hdmi_dev);
