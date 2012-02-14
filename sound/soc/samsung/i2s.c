@@ -1086,13 +1086,12 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	i2s_fifo(other, FIC_TXFLUSH, 0);
 	i2s_fifo(i2s, FIC_RXFLUSH, 1);
 
-	i2s_reg_save(dai);
-
 	/* Gate CDCLK by default */
 	if (!is_opened(other))
 		i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK,
 				0, SND_SOC_CLOCK_IN);
 
+	i2s_reg_save(dai);
 	i2s_clk_enable(i2s, false);
 
 probe_exit:
