@@ -2632,15 +2632,60 @@ static void __init exynos_reserve_mem(void)
 			.name = "fimc_is",
 			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
 			{
-                .alignment = 1 << 26,
-            },
+				.alignment = 1 << 26,
+			},
 			.start = 0
+		},
+#endif
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_ION_EXYNOS_DRM_MFC_SH
+		{
+			.name = "drm_mfc_sh",
+			.size = SZ_1M,
+		},
+#endif
+#endif
+		{
+			.size = 0
+		},
+	};
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+	static struct cma_region regions_secure[] = {
+#ifdef CONFIG_ION_EXYNOS_DRM_VIDEO
+		{
+			.name = "drm_video",
+			.size = (
+#ifdef CONFIG_ION_EXYNOS_DRM_MEMSIZE_FIMD_VIDEO
+				CONFIG_ION_EXYNOS_DRM_MEMSIZE_FIMD_VIDEO +
+#endif
+#ifdef CONFIG_ION_EXYNOS_DRM_MEMSIZE_GSC
+				CONFIG_ION_EXYNOS_DRM_MEMSIZE_GSC +
+#endif
+#ifdef CONFIG_ION_EXYNOS_DRM_MEMSIZE_MFC_SECURE
+				CONFIG_ION_EXYNOS_DRM_MEMSIZE_MFC_SECURE +
+#endif
+				0) * SZ_1K,
+		},
+#endif
+#ifdef CONFIG_ION_EXYNOS_DRM_MFC_FW
+		{
+			.name = "drm_mfc_fw",
+			.size = SZ_1M,
+		},
+#endif
+#ifdef CONFIG_ION_EXYNOS_DRM_SECTBL
+		{
+			.name = "drm_sectbl",
+			.size = SZ_1M,
 		},
 #endif
 		{
 			.size = 0
 		},
 	};
+#else /* !CONFIG_EXYNOS_CONTENT_PATH_PROTECTION */
+	struct cma_region *regions_secure = NULL;
+#endif /* CONFIG_EXYNOS_CONTENT_PATH_PROTECTION */
 	static const char map[] __initconst =
 #ifdef CONFIG_EXYNOS_C2C
 		"samsung-c2c=c2c_shdmem;"
@@ -2649,6 +2694,12 @@ static void __init exynos_reserve_mem(void)
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"exynos-fimc-lite.0=flite0;exynos-fimc-lite.1=flite1;"
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+		"ion-exynos/mfc_sh=drm_mfc_sh;"
+		"ion-exynos/video=drm_video;"
+		"ion-exynos/mfc_fw=drm_mfc_fw;"
+		"ion-exynos/sectbl=drm_sectbl;"
+#endif
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,flite0,flite1,fimd,fw,b1,rot;"
 		"exynos-rot=rot;"
 		"s5p-mfc-v6/f=fw;"
@@ -2656,7 +2707,7 @@ static void __init exynos_reserve_mem(void)
 		"s5p-mixer=tv;"
 		"exynos5-fimc-is=fimc_is;";
 
-	s5p_cma_region_reserve(regions, NULL, 0, map);
+	s5p_cma_region_reserve(regions, regions_secure, 0, map);
 }
 #else /* !CONFIG_CMA*/
 static inline void exynos_reserve_mem(void)
