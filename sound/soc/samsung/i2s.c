@@ -316,7 +316,7 @@ static inline int get_blc(struct i2s_dai *i2s)
 }
 
 /* TX Channel Control */
-static void i2s_txctrl(struct i2s_dai *i2s, int on, int stream)
+static void i2s_txctrl(struct i2s_dai *i2s, int on)
 {
 	void __iomem *addr = i2s->addr;
 	u32 con = readl(addr + I2SCON);
@@ -395,7 +395,7 @@ static void i2s_rxctrl(struct i2s_dai *i2s, int on)
 }
 
 /* Flush FIFO of an interface */
-static inline void i2s_fifo(struct i2s_dai *i2s, u32 flush, int stream)
+static inline void i2s_fifo(struct i2s_dai *i2s, u32 flush)
 {
 	void __iomem *fic;
 	u32 val;
@@ -946,7 +946,7 @@ static int i2s_trigger(struct snd_pcm_substream *substream,
 		if (capture)
 			i2s_rxctrl(i2s, 1);
 		else
-			i2s_txctrl(i2s, 1, substream->stream);
+			i2s_txctrl(i2s, 1);
 
 		local_irq_restore(flags);
 		break;
@@ -958,13 +958,13 @@ static int i2s_trigger(struct snd_pcm_substream *substream,
 		if (capture)
 			i2s_rxctrl(i2s, 0);
 		else
-			i2s_txctrl(i2s, 0, substream->stream);
+			i2s_txctrl(i2s, 0);
 
 		if (capture)
-			i2s_fifo(i2s, FIC_RXFLUSH, substream->stream);
+			i2s_fifo(i2s, FIC_RXFLUSH);
 		else {
 			if (!srp_active(i2s, IS_RUNNING))
-				i2s_fifo(i2s, FIC_TXFLUSH, substream->stream);
+				i2s_fifo(i2s, FIC_TXFLUSH);
 		}
 		local_irq_restore(flags);
 		break;
@@ -1080,11 +1080,11 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	/* Reset any constraint on RFS and BFS */
 	i2s->rfs = 0;
 	i2s->bfs = 0;
-	i2s_txctrl(i2s, 0, 0);
+	i2s_txctrl(i2s, 0);
 	i2s_rxctrl(i2s, 0);
-	i2s_fifo(i2s, FIC_TXFLUSH, 0);
-	i2s_fifo(other, FIC_TXFLUSH, 0);
-	i2s_fifo(i2s, FIC_RXFLUSH, 1);
+	i2s_fifo(i2s, FIC_TXFLUSH);
+	i2s_fifo(other, FIC_TXFLUSH);
+	i2s_fifo(i2s, FIC_RXFLUSH);
 
 	/* Gate CDCLK by default */
 	if (!is_opened(other))
