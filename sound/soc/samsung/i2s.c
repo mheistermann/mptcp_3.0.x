@@ -746,13 +746,15 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
-	bool other_tx_rx_active = false;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lock, flags);
 
-	i2s->mode |= DAI_OPENED;
+	if (is_opened(i2s))
+		goto startup_exit;
 
+	/* Open dai */
+	i2s->mode |= DAI_OPENED;
 	if (is_manager(other))
 		i2s->mode &= ~DAI_MANAGER;
 	else
@@ -761,19 +763,14 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 	/* Enforce set_sysclk in Master mode */
 	i2s->rclk_srcrate = 0;
 
-	if (other) {
-		if (other->tx_active || other->rx_active)
-			other_tx_rx_active = true;
-	}
-
-	if (!i2s->tx_active && !i2s->rx_active && !other_tx_rx_active
-		&& !srp_active(i2s, IS_OPENED)) {
+	if (!is_opened(other) && !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
 
 		if (i2s->reg_saved)
 			i2s_reg_restore(dai);
 	}
 
+startup_exit:
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		i2s->tx_active = true;
 	else
@@ -789,11 +786,20 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
-	bool other_tx_rx_active = false;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lock, flags);
 
+	/* disable stream_active */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		i2s->tx_active = false;
+	else
+		i2s->rx_active = false;
+
+	if (i2s->tx_active || i2s->rx_active)
+		goto shutdown_exit;
+
+	/* Close dai */
 	i2s->mode &= ~DAI_OPENED;
 	i2s->mode &= ~DAI_MANAGER;
 
@@ -804,18 +810,7 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 	i2s->rfs = 0;
 	i2s->bfs = 0;
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		i2s->tx_active = false;
-	else
-		i2s->rx_active = false;
-
-	if (other) {
-		if (other->tx_active || other->rx_active)
-			other_tx_rx_active = true;
-	}
-
-	if (!i2s->tx_active && !i2s->rx_active && !other_tx_rx_active
-		&& !srp_active(i2s, IS_OPENED)) {
+	if (!is_opened(other) && !srp_active(i2s, IS_OPENED)) {
 		/* Gate CDCLK by default */
 		if (!is_opened(i2s))
 			i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK,
@@ -827,6 +822,7 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 		i2s_clk_enable(i2s, false);
 	}
 
+shutdown_exit:
 	spin_unlock_irqrestore(&lock, flags);
 }
 
