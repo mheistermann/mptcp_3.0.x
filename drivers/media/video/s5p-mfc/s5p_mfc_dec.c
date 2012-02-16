@@ -70,6 +70,14 @@ static struct s5p_mfc_fmt formats[] = {
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
+	/* MFC 6.x only */
+	{
+		.name = "H264/MVC Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_H264_MVC,
+		.codec_mode = S5P_FIMV_CODEC_H264_MVC_DEC,
+		.type = MFC_FMT_DEC,
+		.num_planes = 1,
+	},
 	{
 		.name = "H263 Encoded Stream",
 		.fourcc = V4L2_PIX_FMT_H263,
@@ -1126,7 +1134,8 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		s5p_mfc_clock_off();
 	}
 
-	if (dec->crc_enable && ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
+	if (dec->crc_enable && (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
+				ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC)) {
 		/* CRC related control types should be changed by the codec mode. */
 		mfc_debug(5, "ctx_ctrl is changed for H.264\n");
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {

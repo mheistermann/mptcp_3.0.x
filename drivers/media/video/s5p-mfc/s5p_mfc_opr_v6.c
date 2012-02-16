@@ -101,6 +101,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 	/* Codecs have different memory requirements */
 	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
+	case S5P_FIMV_CODEC_H264_MVC_DEC:
 		ctx->scratch_buf_size = (mb_width * 128) + 65536;
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size =
@@ -204,6 +205,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 
 	switch(ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
+	case S5P_FIMV_CODEC_H264_MVC_DEC:
 		ctx->ctx_buf_size = buf_size->h264_dec_ctx;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
@@ -363,7 +365,8 @@ void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx)
 
 	ctx->luma_size = calc_plane(ctx->img_width, ctx->img_height);
 	ctx->chroma_size = calc_plane(ctx->img_width, (ctx->img_height >> 1));
-	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
+			ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC) {
 		ctx->mv_size = s5p_mfc_dec_mv_size(ctx->img_width,
 				ctx->img_height);
 		ctx->mv_size = ALIGN(ctx->mv_size, 16);
@@ -433,7 +436,8 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	buf_addr1 += ctx->scratch_buf_size;
 	buf_size1 -= ctx->scratch_buf_size;
 
-	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC)
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
+			ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC)
 		WRITEL(ctx->mv_size, S5P_FIMV_D_MV_BUFFER_SIZE);
 
 	frame_size = ctx->luma_size;
@@ -453,7 +457,8 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
 		WRITEL(buf->cookie.raw.chroma, S5P_FIMV_D_CHROMA_DPB + i * 4);
 
-		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
+		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
+				ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC) {
 			/* To test alignment */
 			align_gap = buf_addr1;
 			buf_addr1 = ALIGN(buf_addr1, 16);

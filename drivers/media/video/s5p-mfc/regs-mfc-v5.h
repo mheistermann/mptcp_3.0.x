@@ -345,6 +345,7 @@
 #define S5P_FIMV_R2H_CMD_ERR_RET		32
 
 /* Dummy definition for MFCv6 compatibilty */
+#define S5P_FIMV_CODEC_H264_MVC_DEC		-1
 #define S5P_FIMV_R2H_CMD_FIELD_DONE_RET		-1
 #define S5P_FIMV_MFC_RESET			-1
 #define S5P_FIMV_RISC_ON			-1
