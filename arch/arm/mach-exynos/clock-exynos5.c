@@ -1105,7 +1105,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "gps",
 		.enable		= exynos5_clk_ip_gps_ctrl,
-		.ctrlbit	= ((1 << 3) | (1 << 2) | (1 << 0)),
+		.ctrlbit	= ((1 << 3) | (1 << 2) | (1 << 1) | (1 << 0)),
 	}, {
 		.name		= "nfcon",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
@@ -1162,18 +1162,39 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_gscl_ctrl,
 		.ctrlbit	= (1 << 19),
 	}, {
-		.name		= "ppmuacp",
+		.name		= "acp",
 		.enable		= exynos5_clk_ip_acp_ctrl,
-		.ctrlbit	= (1 << 11),
+		.ctrlbit	= ((1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5)),
 	},
 #ifndef CONFIG_SAMSUNG_C2C
 	{
 		.name		= "c2c",
 		.devname	= "samsung-c2c",
 		.enable		= exynos5_clk_ip_cpu_ctrl,
-		.ctrlbit	= (1 << 11),
+		.ctrlbit	= (0x3f << 11),
 	},
 #endif
+	{
+		.name		= "rtic",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= ((1 << 11) | (1 << 9)),
+	}, {
+		.name		= "disp1",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= ((0x7f << 10) | (1 << 8)),
+	}, {
+		.name		= "mfc",
+		.enable		= exynos5_clk_ip_mfc_ctrl,
+		.ctrlbit	= ((1 << 4) | (1 << 3)),
+	}, {
+		.name		= "gen",
+		.enable		= exynos5_clk_ip_gen_ctrl,
+		.ctrlbit	= ((1 << 14) | (1 << 12) | (1 << 11) | (1 << 9)),
+	}, {
+		.name		= "gscl",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (0xff << 11),
+	},
 };
 
 static struct clk exynos5_i2cs_clocks[] = {
