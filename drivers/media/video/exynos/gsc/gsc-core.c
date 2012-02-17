@@ -1080,7 +1080,7 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 	gsc_hw_clear_irq(gsc, gsc_irq);
 
 	if (gsc_irq == GSC_OR_IRQ) {
-		gsc_err("Local path input over-run interrupt has occurred!\n");
+		gsc_err("Local path input over-run interrupt has occurred!");
 		return IRQ_HANDLED;
 	}
 
@@ -1095,6 +1095,7 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 		if (!ctx || !ctx->m2m_ctx)
 			goto isr_unlock;
 
+		del_timer(&ctx->op_timer);
 		src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 		dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
 		if (src_vb && dst_vb) {

@@ -97,6 +97,26 @@ int gsc_fill_addr(struct gsc_ctx *ctx)
 	return ret;
 }
 
+void gsc_op_timer_handler(unsigned long arg)
+{
+	struct gsc_ctx *ctx = (struct gsc_ctx *)arg;
+	struct gsc_dev *gsc = ctx->gsc_dev;
+	struct vb2_buffer *src_vb, *dst_vb;
+
+	clear_bit(ST_M2M_RUN, &gsc->state);
+	gsc_clock_gating(gsc, GSC_CLK_OFF);
+	pm_runtime_put_sync(&gsc->pdev->dev);
+
+	src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
+	dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
+	if (src_vb && dst_vb) {
+		v4l2_m2m_buf_done(src_vb, VB2_BUF_STATE_ERROR);
+		v4l2_m2m_buf_done(dst_vb, VB2_BUF_STATE_ERROR);
+	}
+	gsc_err("GSCALER interrupt hasn't been triggered");
+	gsc_err("erro ctx: %p, ctx->state: 0x%x", ctx, ctx->state);
+}
+
 static void gsc_m2m_device_run(void *priv)
 {
 	struct gsc_ctx *ctx = priv;
@@ -180,6 +200,9 @@ static void gsc_m2m_device_run(void *priv)
 		}
 		gsc_hw_enable_control(gsc, false);
 	}
+
+	ctx->op_timer.expires = (jiffies + 2 * HZ);
+	add_timer(&ctx->op_timer);
 
 	spin_unlock_irqrestore(&ctx->slock, flags);
 	return;
@@ -579,6 +602,9 @@ static int gsc_m2m_open(struct file *file)
 	ctx->in_path = GSC_DMA;
 	ctx->out_path = GSC_DMA;
 	spin_lock_init(&ctx->slock);
+	init_timer(&ctx->op_timer);
+	ctx->op_timer.data = (unsigned long)ctx;
+	ctx->op_timer.function = gsc_op_timer_handler;
 
 	ctx->m2m_ctx = v4l2_m2m_ctx_init(gsc->m2m.m2m_dev, ctx, queue_init);
 	if (IS_ERR(ctx->m2m_ctx)) {

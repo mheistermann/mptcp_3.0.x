@@ -568,6 +568,7 @@ struct gsc_ctx {
 	struct v4l2_fh		fh;
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct gsc_ctrls	gsc_ctrls;
+	struct timer_list	op_timer;
 	bool			ctrls_rdy;
 };
 
