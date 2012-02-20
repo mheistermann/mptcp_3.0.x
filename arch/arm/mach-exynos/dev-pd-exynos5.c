@@ -117,4 +117,19 @@ struct platform_device exynos5_device_pd[] = {
 			},
 		},
 	},
+	[PD_MAUDIO] = {
+		.name		= "samsung-pd",
+		.id		= PD_MAUDIO,
+		.dev = {
+			.platform_data = &(struct samsung_pd_info) {
+				.init			= exynos_pd_init,
+				.enable			= exynos_pd_enable,
+				.disable		= exynos_pd_disable,
+				.base			= EXYNOS5_MAU_CONFIGURATION,
+				.data			= &(struct exynos_pd_data) {
+					.clk_base		= NULL,
+				},
+			},
+		},
+	},
 };

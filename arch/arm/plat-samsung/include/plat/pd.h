@@ -31,6 +31,7 @@ enum exynos_pd_block {
 	PD_ISP,
 	PD_GSCL,
 	PD_DISP1,
+	PD_MAUDIO,
 };
 
 struct exynos_pd_data {
