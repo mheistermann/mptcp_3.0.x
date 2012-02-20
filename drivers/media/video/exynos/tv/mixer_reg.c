@@ -96,15 +96,14 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 	u32 val; /* value stored to register */
 
 	if (mxr_num == MXR_SUB_MIXER0) {
-		/* setting default layer priority: layer1 > video > layer0
+		/* setting default layer priority: layer1 > layer0 > video
 		 * because typical usage scenario would be
-		 * layer0 - framebuffer
-		 * video - video overlay
-		 * layer1 - OSD
+		 * layer0,1 - UI overlay
+		 * video - video playback
 		 */
-		val  = MXR_LAYER_CFG_GRP0_VAL(1);
-		val |= MXR_LAYER_CFG_VP_VAL(2);
-		val |= MXR_LAYER_CFG_GRP1_VAL(3);
+		val  = MXR_LAYER_CFG_GRP1_VAL(3);
+		val |= MXR_LAYER_CFG_GRP0_VAL(2);
+		val |= MXR_LAYER_CFG_VP_VAL(1);
 		mxr_write(mdev, MXR_LAYER_CFG, val);
 
 		/* use dark gray background color */
@@ -122,9 +121,9 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 		mxr_write(mdev, MXR_GRAPHIC_CFG(0), val);
 		mxr_write(mdev, MXR_GRAPHIC_CFG(1), val);
 	} else if (mxr_num == MXR_SUB_MIXER1) {
-		val  = MXR_LAYER_CFG_GRP0_VAL(1);
-		val |= MXR_LAYER_CFG_VP_VAL(2);
-		val |= MXR_LAYER_CFG_GRP1_VAL(3);
+		val  = MXR_LAYER_CFG_GRP1_VAL(3);
+		val |= MXR_LAYER_CFG_GRP0_VAL(2);
+		val |= MXR_LAYER_CFG_VP_VAL(1);
 		mxr_write(mdev, MXR1_LAYER_CFG, val);
 
 		/* use dark gray background color */
