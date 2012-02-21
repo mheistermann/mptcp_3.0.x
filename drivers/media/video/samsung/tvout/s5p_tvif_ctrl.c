@@ -1480,7 +1480,7 @@ static struct s5p_hdmi_ctrl_private_data s5p_hdmi_ctrl_private = {
 #if defined(CONFIG_VIDEO_TVOUT_2CH_AUDIO)
 		.channel = 2,
 #else
-		.channel = 5,
+		.channel = 6,
 #endif
 	},
 
