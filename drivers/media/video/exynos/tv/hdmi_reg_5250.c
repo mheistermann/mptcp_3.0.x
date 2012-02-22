@@ -2386,12 +2386,6 @@ int hdmi_conf_apply(struct hdmi_device *hdmi_dev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	/* reset hdmiphy */
-	hdmi_write_mask(hdmi_dev, HDMI_PHY_RSTOUT, ~0, HDMI_PHY_SW_RSTOUT);
-	mdelay(10);
-	hdmi_write_mask(hdmi_dev, HDMI_PHY_RSTOUT,  0, HDMI_PHY_SW_RSTOUT);
-	mdelay(10);
-
 	/* configure presets */
 	preset.preset = hdmi_dev->cur_preset;
 	ret = v4l2_subdev_call(hdmi_dev->phy_sd, video, s_dv_preset, &preset);
@@ -2399,12 +2393,6 @@ int hdmi_conf_apply(struct hdmi_device *hdmi_dev)
 		dev_err(dev, "failed to set preset (%u)\n", preset.preset);
 		return ret;
 	}
-
-	/* resetting HDMI core */
-	hdmi_write_mask(hdmi_dev, HDMI_CORE_RSTOUT,  0, HDMI_CORE_SW_RSTOUT);
-	mdelay(10);
-	hdmi_write_mask(hdmi_dev, HDMI_CORE_RSTOUT, ~0, HDMI_CORE_SW_RSTOUT);
-	mdelay(10);
 
 	hdmi_reg_init(hdmi_dev);
 
@@ -2744,6 +2732,13 @@ void hdmi_sw_hpd_plug(struct hdmi_device *hdev, int en)
 		hdmi_write_mask(hdev, HDMI_HPD, ~0, HDMI_SW_HPD_PLUGGED);
 	else
 		hdmi_write_mask(hdev, HDMI_HPD, 0, HDMI_SW_HPD_PLUGGED);
+}
+
+void hdmi_phy_sw_reset(struct hdmi_device *hdev)
+{
+	hdmi_write_mask(hdev, HDMI_PHY_RSTOUT, ~0, HDMI_PHY_SW_RSTOUT);
+	mdelay(10);
+	hdmi_write_mask(hdev, HDMI_PHY_RSTOUT,  0, HDMI_PHY_SW_RSTOUT);
 }
 
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix)

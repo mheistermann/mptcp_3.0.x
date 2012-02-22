@@ -292,14 +292,6 @@ static void hdmi_resource_poweron(struct hdmi_resources *res)
 	clk_enable(res->sclk_hdmi);
 }
 
-static void hdmi_resource_poweroff(struct hdmi_resources *res)
-{
-	/* turn clocks off */
-	clk_disable(res->sclk_hdmi);
-	/* power-off hdmiphy */
-	clk_disable(res->hdmiphy);
-}
-
 static int hdmi_runtime_resume(struct device *dev);
 static int hdmi_runtime_suspend(struct device *dev);
 
@@ -446,9 +438,21 @@ static int hdmi_runtime_suspend(struct device *dev)
 {
 	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
+	struct hdmi_resources *res = &hdev->res;
 
 	dev_dbg(dev, "%s\n", __func__);
-	hdmi_resource_poweroff(&hdev->res);
+
+	/* HDMI PHY off sequence
+	 * LINK off -> PHY off -> HDMI_PHY_CONTROL disable */
+
+	/* turn clocks off */
+	clk_disable(res->sclk_hdmi);
+
+	v4l2_subdev_call(hdev->phy_sd, core, s_power, 0);
+
+	/* power-off hdmiphy */
+	clk_disable(res->hdmiphy);
+
 	return 0;
 }
 
@@ -456,11 +460,19 @@ static int hdmi_runtime_resume(struct device *dev)
 {
 	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
+	struct hdmi_resources *res = &hdev->res;
 	int ret = 0;
 
 	dev_dbg(dev, "%s\n", __func__);
 
 	hdmi_resource_poweron(&hdev->res);
+
+	hdmi_phy_sw_reset(hdev);
+	ret = v4l2_subdev_call(hdev->phy_sd, core, s_power, 1);
+	if (ret) {
+		dev_err(dev, "failed to turn on hdmiphy\n");
+		goto fail;
+	}
 
 	ret = hdmi_conf_apply(hdev);
 	if (ret)
@@ -471,7 +483,9 @@ static int hdmi_runtime_resume(struct device *dev)
 	return 0;
 
 fail:
-	hdmi_resource_poweroff(&hdev->res);
+	clk_disable(res->sclk_hdmi);
+	v4l2_subdev_call(hdev->phy_sd, core, s_power, 0);
+	clk_disable(res->hdmiphy);
 	dev_err(dev, "poweron failed\n");
 
 	return ret;
