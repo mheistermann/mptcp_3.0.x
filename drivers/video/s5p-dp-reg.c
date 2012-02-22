@@ -967,33 +967,6 @@ u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp)
 	return reg;
 }
 
-#ifdef HW_LINK_TRAINING
-void s5p_dp_start_hw_link_training(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = HW_TRAINING_EN;
-	writel(reg, dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-}
-
-void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-	while (reg & HW_TRAINING_EN)
-		reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-}
-
-u32 s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-	return reg;
-}
-#endif
-
 void s5p_dp_reset_macro(struct s5p_dp_device *dp)
 {
 	u32 reg;

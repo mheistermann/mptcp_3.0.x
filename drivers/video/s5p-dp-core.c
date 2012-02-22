@@ -215,7 +215,6 @@ static void s5p_dp_enable_rx_to_enhanced_mode(struct s5p_dp_device *dp,
 			DPCD_LANE_COUNT_SET(data));
 }
 
-#ifndef HW_LINK_TRAINING
 static int s5p_dp_is_enhanced_mode_available(struct s5p_dp_device *dp)
 {
 	u8 data;
@@ -629,7 +628,6 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 
 	return 0;
 }
-#endif
 
 static void s5p_dp_get_max_rx_bandwidth(struct s5p_dp_device *dp,
 			u8 *bandwidth)
@@ -657,103 +655,6 @@ static void s5p_dp_get_max_rx_lane_count(struct s5p_dp_device *dp,
 	*lane_count = DPCD_MAX_LANE_COUNT(data);
 }
 
-#ifdef HW_LINK_TRAINING
-static int s5p_dp_hw_link_training(struct s5p_dp_device *dp,
-				u32 max_lane,
-				u32 max_rate)
-{
-	u32 data;
-
-	s5p_dp_stop_video(dp);
-
-	if (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED) {
-		dev_err(dp->dev, "PLL is not locked yet.\n");
-		return -EINVAL;
-	}
-
-	s5p_dp_reset_macro(dp);
-
-	/* Set TX pre-emphasis to minimum */
-	for (lane = 0; lane < lane_count; lane++)
-		s5p_dp_set_lane_lane_pre_emphasis(dp,
-			PRE_EMPHASIS_LEVEL_0, lane);
-
-	/* All DP analog module power up */
-	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
-
-	/* Initialize by reading RX's DPCD */
-	s5p_dp_get_max_rx_bandwidth(dp, &dp->link_train.link_rate);
-	s5p_dp_get_max_rx_lane_count(dp, &dp->link_train.lane_count);
-
-	if ((dp->link_train.link_rate != LINK_RATE_1_62GBPS) &&
-	   (dp->link_train.link_rate != LINK_RATE_2_70GBPS)) {
-		dev_err(dp->dev, "Rx Max Link Rate is abnormal :%x !\n",
-			dp->link_train.link_rate);
-		dp->link_train.link_rate = LINK_RATE_1_62GBPS;
-	}
-
-	if (dp->link_train.lane_count == 0) {
-		dev_err(dp->dev, "Rx Max Lane count is abnormal :%x !\n",
-			dp->link_train.lane_count);
-		dp->link_train.lane_count = (u8)LANE_COUNT1;
-	}
-
-	/* Setup TX lane count & rate */
-	if (dp->link_train.lane_count > max_lane)
-		dp->link_train.lane_count = max_lane;
-	if (dp->link_train.link_rate > max_rate)
-		dp->link_train.link_rate = max_rate;
-
-	/* Set link rate and count as you want to establish*/
-	s5p_dp_set_lane_count(dp, dp->video_info->lane_count);
-	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
-
-	/* Set sink to D0 (Sink Not Ready) mode. */
-	s5p_dp_write_byte_to_dpcd(dp, DPCD_ADDR_SINK_POWER_STATE,
-				DPCD_SET_POWER_STATE_D0);
-
-	/* Start HW link training */
-	s5p_dp_start_hw_link_training(dp);
-
-	/* Wait unitl HW link training done */
-	s5p_dp_wait_hw_link_training_done(dp);
-
-	/* Get hardware link training status */
-	data = s5p_dp_get_hw_link_training_status(dp);
-
-	if (data != 0)
-		dev_err(dp->dev, " H/W link training failure: 0x%x\n", data);
-
-	s5p_dp_get_link_bandwidth(dp, &data);
-	dp->link_train.link_rate = data;
-	dev_dbg(dp->dev, "final bandwidth = %.2x\n",
-		dp->link_train.link_rate);
-
-	s5p_dp_get_lane_count(dp, &data);
-	dp->link_train.lane_count = data;
-	dev_dbg(dp->dev, "final lane count = %.2x\n",
-		dp->link_train.lane_count);
-
-	return 0;
-}
-
-static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
-				u32 count,
-				u32 bwtype)
-{
-	int i;
-	int retval;
-
-	for (i = 0; i < DP_TIMEOUT_LOOP_COUNT; i++) {
-		retval = s5p_dp_hw_link_training(dp, count, bwtype);
-		if (retval == 0)
-			break;
-
-		udelay(100);
-	}
-	return retval;
-}
-#else
 static void s5p_dp_init_training(struct s5p_dp_device *dp,
 			enum link_lane_count_type max_lane,
 			enum link_rate_type max_rate)
@@ -845,7 +746,6 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 
 	return retval;
 }
-#endif
 
 static int s5p_dp_get_bpc_component(enum color_depth color_depth)
 {
