@@ -378,6 +378,7 @@ int s5p_dp_start_aux_transaction(struct s5p_dp_device *dp)
 {
 	int reg;
 	int retval = 0;
+	int timeout_loop = 0;
 
 	/* Enable AUX CH operation */
 	reg = readl(dp->reg_base + S5P_DP_AUX_CH_CTL_2);
@@ -386,8 +387,15 @@ int s5p_dp_start_aux_transaction(struct s5p_dp_device *dp)
 
 	/* Is AUX CH command reply received? */
 	reg = readl(dp->reg_base + S5P_DP_INT_STA);
-	while (!(reg & RPLY_RECEIV))
+	while (!(reg & RPLY_RECEIV)) {
+		timeout_loop++;
+		if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
+			dev_err(dp->dev, "AUX CH command reply failed!\n");
+			return -ETIMEDOUT;
+		}
 		reg = readl(dp->reg_base + S5P_DP_INT_STA);
+		udelay(10);
+	}
 
 	/* Clear interrupt source for AUX CH command reply */
 	writel(RPLY_RECEIV, dp->reg_base + S5P_DP_INT_STA);
