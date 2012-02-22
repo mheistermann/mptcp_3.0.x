@@ -495,10 +495,16 @@ int h264_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 static int pre_seq_start(struct mfc_inst_ctx *ctx)
 {
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	long mem_ofs;
 
 	/* Set stream buffer addr */
-	write_reg(mfc_mem_base_ofs(enc_ctx->streamaddr) >> 11, MFC_ENC_SI_CH1_SB_ADR);
-	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
+	mem_ofs = mfc_mem_ext_ofs(enc_ctx->streamaddr, enc_ctx->streamsize, PORT_A);
+	if (mem_ofs < 0) {
+		return -1;
+	} else {
+		write_reg(mem_ofs >> 11, MFC_ENC_SI_CH1_SB_ADR);
+		write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
+	}
 
 	return 0;
 }
@@ -509,7 +515,8 @@ static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
 	struct mfc_enc_h264 *h264 = (struct mfc_enc_h264 *)enc_ctx->e_priv;
 	unsigned int shm;
 
-	pre_seq_start(ctx);
+	if (pre_seq_start(ctx) < 0)
+		return -1;
 
 	/*
 	unsigned int reg;
@@ -577,21 +584,21 @@ static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
  */
 static int post_seq_start(struct mfc_inst_ctx *ctx)
 {
-	/*
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
-	int i;
-	*/
 
-	/*
-	unsigned int shm;
-	*/
-
-	/*
-	mfc_dbg("header size: %d", read_reg(MFC_ENC_SI_STRM_SIZE));
-
-	for (i = 0; i < read_reg(MFC_ENC_SI_STRM_SIZE); i++)
-		mfc_dbg("0x%02x", (unsigned char)(*(enc_ctx->kstrmaddr + i)));
-	*/
+	/* tile */
+	if (enc_ctx->framemap) {
+		enc_ctx->curlumasize = ALIGN(ctx->width, ALIGN_W) * ALIGN(ctx->height, ALIGN_H);
+		enc_ctx->curlumasize = ALIGN(enc_ctx->curlumasize, ALIGN_8KB);
+		enc_ctx->curchromasize = ALIGN(ctx->width, ALIGN_W) * ALIGN((ctx->height >> 1), ALIGN_H);
+		enc_ctx->curchromasize = ALIGN(enc_ctx->curchromasize, ALIGN_8KB);
+	/* linear */
+	} else {
+		enc_ctx->curlumasize = ALIGN(ctx->width, ALIGN_W_L) * ALIGN(ctx->height, ALIGN_H_L_L);
+		enc_ctx->curlumasize = ALIGN(enc_ctx->curlumasize, ALIGN_2KB);
+		enc_ctx->curchromasize = ALIGN(ctx->width, ALIGN_W_L) * ALIGN((ctx->height >> 1), ALIGN_H_L_C);
+		enc_ctx->curchromasize = ALIGN(enc_ctx->curchromasize, ALIGN_2KB);
+	}
 
 	return 0;
 }
@@ -628,7 +635,7 @@ static int set_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 #else
 	init_arg->cmn.out_u_addr.strm_ref_y = mfc_mem_data_ofs(enc_ctx->streamaddr, 1);
 	init_arg->cmn.out_u_addr.mv_ref_yc = 0;
-	init_arg->cmn.out_p_addr.strm_ref_y = mfc_mem_base_ofs(enc_ctx->streamaddr);
+	init_arg->cmn.out_p_addr.strm_ref_y = enc_ctx->streamaddr;
 	init_arg->cmn.out_p_addr.mv_ref_yc = 0;
 #endif
 
@@ -1216,10 +1223,10 @@ int set_strm_ref_buf(struct mfc_inst_ctx *ctx)
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 
 	/* width: 128B align, height: 32B align, size: 8KB align */
-	enc_ctx->lumasize = ALIGN(ctx->width, ALIGN_W) * ALIGN(ctx->height, ALIGN_H);
-	enc_ctx->lumasize = ALIGN(enc_ctx->lumasize, ALIGN_8KB);
-	enc_ctx->chromasize = ALIGN(ctx->width + 16, ALIGN_W) * ALIGN((ctx->height >> 1) + 4, ALIGN_H);
-	enc_ctx->chromasize = ALIGN(enc_ctx->chromasize, ALIGN_8KB);
+	enc_ctx->dpblumasize = ALIGN(ctx->width, ALIGN_W) * ALIGN(ctx->height, ALIGN_H);
+	enc_ctx->dpblumasize = ALIGN(enc_ctx->dpblumasize, ALIGN_8KB);
+	enc_ctx->dpbchromasize = ALIGN(ctx->width + 16, ALIGN_W) * ALIGN((ctx->height >> 1) + 4, ALIGN_H);
+	enc_ctx->dpbchromasize = ALIGN(enc_ctx->dpbchromasize, ALIGN_8KB);
 
 	/*
 	 * allocate stream buffer
@@ -1233,14 +1240,11 @@ int set_strm_ref_buf(struct mfc_inst_ctx *ctx)
 	enc_ctx->streamaddr = alloc->real;
 	enc_ctx->streamsize = MFC_STRM_SIZE;
 
-	/* FIXME: temp. */
-	enc_ctx->kstrmaddr = alloc->addr;
-
 	for (i = 0; i < 2; i++) {
 		/*
 		 * allocate Y0, Y1 ref buffer
 		 */
-		alloc = _mfc_alloc_buf(ctx, enc_ctx->lumasize, ALIGN_2KB, MBT_DPB | PORT_A);
+		alloc = _mfc_alloc_buf(ctx, enc_ctx->dpblumasize, ALIGN_2KB, MBT_DPB | PORT_A);
 		if (alloc == NULL) {
 			mfc_err("failed alloc luma ref buffer\n");
 
@@ -1257,7 +1261,7 @@ int set_strm_ref_buf(struct mfc_inst_ctx *ctx)
 			/*
 			 * allocate Y2, Y3 ref buffer
 			 */
-			alloc = _mfc_alloc_buf(ctx, enc_ctx->lumasize, ALIGN_2KB, MBT_DPB | PORT_B);
+			alloc = _mfc_alloc_buf(ctx, enc_ctx->dpblumasize, ALIGN_2KB, MBT_DPB | PORT_B);
 			if (alloc == NULL) {
 				mfc_err("failed alloc luma ref buffer\n");
 
@@ -1274,7 +1278,7 @@ int set_strm_ref_buf(struct mfc_inst_ctx *ctx)
 	 * allocate C0 ~ C3 ref buffer
 	 */
 	for (i = 0; i < enc_ctx->numdpb; i++) {
-		alloc = _mfc_alloc_buf(ctx, enc_ctx->chromasize, ALIGN_2KB, MBT_DPB | PORT_B);
+		alloc = _mfc_alloc_buf(ctx, enc_ctx->dpbchromasize, ALIGN_2KB, MBT_DPB | PORT_B);
 		if (alloc == NULL) {
 			mfc_err("failed alloc chroma ref buffer\n");
 
@@ -1555,6 +1559,7 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	void *ump_handle;
 #endif
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	long mem_ofs;
 
 	/* Set Frame Tag */
 	write_shm(ctx, exe_arg->in_frametag, SET_FRAME_TAG);
@@ -1563,9 +1568,13 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	enc_ctx->streamaddr = exe_arg->in_strm_st;
 	enc_ctx->streamsize = exe_arg->in_strm_end - exe_arg->in_strm_st;
 
-	write_reg(enc_ctx->streamaddr >> 11, MFC_ENC_SI_CH1_SB_ADR);
-	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
-
+	mem_ofs = mfc_mem_ext_ofs(enc_ctx->streamaddr, enc_ctx->streamsize, PORT_A);
+	if (mem_ofs < 0) {
+		return MFC_ENC_EXE_ERR;
+	} else  {
+		write_reg(mem_ofs >> 11, MFC_ENC_SI_CH1_SB_ADR);
+		write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
+	}
 	#if 0
 	/* force I frame or Not-coded frame */
 	if (mfc_ctx->forceSetFrameType == I_FRAME)
@@ -1596,27 +1605,22 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	#endif
 
 	/* Set current frame buffer addr */
-#if (MFC_MAX_MEM_PORT_NUM == 2)
-	write_reg((exe_arg->in_Y_addr - mfc_mem_base(1)) >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
-	write_reg((exe_arg->in_CbCr_addr - mfc_mem_base(1)) >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
-#else
-	write_reg((exe_arg->in_Y_addr - mfc_mem_base(0)) >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
-	write_reg((exe_arg->in_CbCr_addr - mfc_mem_base(0)) >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
-#endif
+	mem_ofs = mfc_mem_ext_ofs(exe_arg->in_Y_addr, enc_ctx->curlumasize, PORT_B);
+	if (mem_ofs < 0)
+		return MFC_ENC_EXE_ERR;
+	else
+		write_reg(mem_ofs >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
 
-	#if 0
-	write_reg(1, MFC_ENC_STR_BF_U_EMPTY);
-	write_reg(1, MFC_ENC_STR_BF_L_EMPTY);
-
-	/* buf reset command if stream buffer is frame mode */
-	write_reg(0x1 << 1, MFC_ENC_SF_BUF_CTRL);
-	#endif
+	mem_ofs = mfc_mem_ext_ofs(exe_arg->in_CbCr_addr, enc_ctx->curchromasize, PORT_B);
+	if (mem_ofs < 0)
+		return MFC_ENC_EXE_ERR;
+	else
+		write_reg(mem_ofs >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
 
 	if (ctx->buf_cache_type == CACHE) {
 		flush_all_cpu_caches();
 		outer_flush_all();
 	}
-
 
 	if (enc_ctx->outputmode == 0) { /* frame */
 		ret = mfc_cmd_frame_start(ctx);

@@ -28,8 +28,11 @@
 #define ALIGN_64KB	(1 << 16)
 #define ALIGN_128KB	(1 << 17)
 
-#define ALIGN_W		128
-#define ALIGN_H		32
+#define ALIGN_W		128	/* Tile, Horizontal, Luma & Chroma	*/
+#define ALIGN_H		32	/* Tile, Vertical, Luma & Chroma	*/
+#define ALIGN_W_L	16	/* Linear, Horizontal, Luma & Chroma	*/
+#define ALIGN_H_L_L	16	/* Linear, Vertical, Luma		*/
+#define ALIGN_H_L_C	8	/* Linear, Vertical, Chroma		*/
 
 /* System */					/* Size, Port, Align */
 #define MFC_FW_SYSTEM_SIZE	(0x80000)	/* 512KB, A, N(4KB for VMEM) */

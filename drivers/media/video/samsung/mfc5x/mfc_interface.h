@@ -491,6 +491,9 @@ typedef struct
 	int input_cookie;
 	int input_secure_id;
 	int input_size;
+
+	unsigned int encode_cnt;
+	int enc_frame_map;
 } _MFCLIB;
 
 #define ENC_PROFILE_LEVEL(profile, level)      ((profile) | ((level) << 8))

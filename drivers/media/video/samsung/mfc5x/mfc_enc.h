@@ -26,14 +26,14 @@ enum enc_pc {
 };
 
 struct mfc_enc_ctx {
-	unsigned int lumasize;		/* C */
-	unsigned int chromasize;	/* C */
+	unsigned int dpblumasize;	/* C */
+	unsigned int dpbchromasize;	/* C */
 
 	unsigned long streamaddr;	/* K */
 	unsigned int streamsize;	/* K */
 
-	/* FIXME: temp. */
-	unsigned char *kstrmaddr;
+	unsigned int curlumasize;
+	unsigned int curchromasize;
 
 	/* init */
 	enum enc_pc pixelcache;
