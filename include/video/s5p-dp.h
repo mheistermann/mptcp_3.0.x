@@ -85,20 +85,6 @@ enum refresh_denominator_type {
 	REFRESH_DENOMINATOR_1P001 = 0x1
 };
 
-enum pattern_type {
-	NO_PATTERN,
-	COLOR_RAMP,
-	BALCK_WHITE_V_LINES,
-	COLOR_SQUARE,
-	INVALID_PATTERN,
-	COLORBAR_32,
-	COLORBAR_64,
-	WHITE_GRAY_BALCKBAR_32,
-	WHITE_GRAY_BALCKBAR_64,
-	MOBILE_WHITEBAR_32,
-	MOBILE_WHITEBAR_64
-};
-
 enum pll_status {
 	PLL_UNLOCKED,
 	PLL_LOCKED
@@ -158,14 +144,12 @@ struct video_info {
 
 	enum refresh_denominator_type refresh_denominator;
 
-	enum pattern_type test_pattern;
 	enum link_rate_type link_rate;
 	enum link_lane_count_type lane_count;
 
 	bool video_mute_on;
 
 	bool master_mode;
-	bool bist_mode;
 };
 
 struct s5p_dp_platdata {

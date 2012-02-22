@@ -754,14 +754,12 @@ static struct video_info smdk5250_dp_config = {
 
 	.refresh_denominator	= REFRESH_DENOMINATOR_1,
 
-	.test_pattern		= COLORBAR_32,
 	.link_rate		= LINK_RATE_2_70GBPS,
 	.lane_count		= LANE_COUNT4,
 
 	.video_mute_on		= 0,
 
 	.master_mode		= 0,
-	.bist_mode		= 0,
 };
 
 static void s5p_dp_backlight_on(void)

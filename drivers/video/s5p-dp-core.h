@@ -44,7 +44,6 @@ struct s5p_dp_device {
 };
 
 /* s5p_dp_reg.c */
-void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_enable_video_mute(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_stop_video(struct s5p_dp_device *dp);
 void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable);
@@ -126,8 +125,6 @@ void s5p_dp_set_video_color_format(struct s5p_dp_device *dp,
 				u32 color_space,
 				u32 dynamic_range,
 				u32 coeff);
-int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
-			struct video_info *video_info);
 int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp);
 void s5p_dp_set_video_cr_mn(struct s5p_dp_device *dp,
 			enum clock_recovery_m_value_type type,

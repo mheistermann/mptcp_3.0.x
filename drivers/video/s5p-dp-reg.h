@@ -175,16 +175,6 @@
 #define VID_CHK_UPDATE_TYPE_1			(0x1 << 4)
 #define VID_CHK_UPDATE_TYPE_0			(0x0 << 4)
 
-/* S5P_DP_VIDEO_CTL_4 */
-#define BIST_EN					(0x1 << 3)
-#define BIST_WIDTH_MASK				(0x1 << 2)
-#define BIST_WIDTH_BAR_32_PIXEL			(0x0 << 2)
-#define BIST_WIDTH_BAR_64_PIXEL			(0x1 << 2)
-#define BIST_TYPE_MASK				(0x3 << 0)
-#define BIST_TYPE_COLOR_BAR			(0x0 << 0)
-#define BIST_TYPE_WHITE_GRAY_BLACK_BAR		(0x1 << 0)
-#define BIST_TYPE_MOBILE_WHITE_BAR		(0x2 << 0)
-
 /* S5P_DP_VIDEO_CTL_8 */
 #define VID_HRES_TH(x)				(((x) & 0xf) << 4)
 #define VID_VRES_TH(x)				(((x) & 0xf) << 0)
@@ -437,14 +427,5 @@
 #define VIDEO_MODE_MASK				(0x1 << 0)
 #define VIDEO_MODE_SLAVE_MODE			(0x1 << 0)
 #define VIDEO_MODE_MASTER_MODE			(0x0 << 0)
-
-/* S5P_DP_TEST_PATTERN_GEN_EN */
-#define TEST_PATTERN_GEN_EN			(0x1 << 0)
-#define TEST_PATTERN_GEN_DIS			(0x0 << 0)
-
-/* S5P_DP_TEST_PATTERN_GEN_CTRL */
-#define TEST_PATTERN_MODE_COLOR_SQUARE		(0x3 << 0)
-#define TEST_PATTERN_MODE_BALCK_WHITE_V_LINES	(0x2 << 0)
-#define TEST_PATTERN_MODE_COLOR_RAMP		(0x1 << 0)
 
 #endif /* _S5P_REGS_DP_H */

@@ -27,21 +27,6 @@
 #define COMMON_INT_MASK_4 (0)
 #define INT_STA_MASK (0)
 
-void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable)
-{
-	u32 reg;
-
-	if (enable) {
-		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_4);
-		reg |= BIST_EN;
-		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
-	} else {
-		reg = readl(dp->reg_base + S5P_DP_VIDEO_CTL_4);
-		reg &= ~BIST_EN;
-		writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
-	}
-}
-
 void s5p_dp_enable_video_mute(struct s5p_dp_device *dp, bool enable)
 {
 	u32 reg;
@@ -117,7 +102,6 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 	writel(RESET_DP_TX, dp->reg_base + S5P_DP_TX_SW_RESET);
 
 	s5p_dp_stop_video(dp);
-	s5p_dp_enable_video_bist(dp, 0);
 	s5p_dp_enable_video_mute(dp, 0);
 
 	reg = MASTER_VID_FUNC_EN_N | SLAVE_VID_FUNC_EN_N |
@@ -1059,121 +1043,6 @@ void s5p_dp_set_video_color_format(struct s5p_dp_device *dp,
 	else
 		reg |= IN_YC_COEFFI_ITU601;
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_3);
-}
-
-int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
-			struct video_info *video_info)
-{
-	u32 reg;
-	u32 bist_type = 0;
-	u32 pattern_value = 0;
-
-	/* For master mode, you don't need to set the video format */
-	if (video_info->master_mode == 0) {
-		writel(video_info->v_total & 0xff,
-			dp->reg_base + S5P_DP_TOTAL_LINE_CFG_L);
-		writel((video_info->v_total >> 8) & 0xff,
-			dp->reg_base + S5P_DP_TOTAL_LINE_CFG_H);
-		writel(video_info->v_active & 0xff,
-			dp->reg_base + S5P_DP_ACTIVE_LINE_CFG_L);
-		writel((video_info->v_active >> 8) & 0xff,
-			dp->reg_base + S5P_DP_ACTIVE_LINE_CFG_H);
-		writel(video_info->v_sync_width,
-			dp->reg_base + S5P_DP_V_SYNC_WIDTH_CFG);
-		writel(video_info->v_back_porch,
-			dp->reg_base + S5P_DP_V_B_PORCH_CFG);
-		writel(video_info->v_front_porch,
-			dp->reg_base + S5P_DP_V_F_PORCH_CFG);
-
-		writel(video_info->h_total & 0xff,
-			dp->reg_base + S5P_DP_TOTAL_PIXEL_CFG_L);
-		writel((video_info->h_total >> 8) & 0xff,
-			dp->reg_base + S5P_DP_TOTAL_PIXEL_CFG_H);
-		writel(video_info->h_active & 0xff,
-			dp->reg_base + S5P_DP_ACTIVE_PIXEL_CFG_L);
-		writel((video_info->h_active >> 8) & 0xff,
-			dp->reg_base + S5P_DP_ACTIVE_PIXEL_CFG_H);
-		writel(video_info->h_front_porch & 0xFF,
-			dp->reg_base + S5P_DP_H_F_PORCH_CFG_L);
-		writel((video_info->h_front_porch >> 8) & 0xff,
-			dp->reg_base + S5P_DP_H_F_PORCH_CFG_H);
-		writel(video_info->h_sync_width & 0xff,
-			dp->reg_base + S5P_DP_H_SYNC_CFG_L);
-		writel((video_info->h_sync_width >> 8) & 0xff,
-			dp->reg_base + S5P_DP_H_SYNC_CFG_H);
-		writel(video_info->h_back_porch & 0xff,
-			dp->reg_base + S5P_DP_H_B_PORCH_CFG_L);
-		writel((video_info->h_back_porch >> 8) & 0xff,
-			dp->reg_base + S5P_DP_H_B_PORCH_CFG_H);
-
-		writel((video_info->interlaced << 2) |
-			(video_info->v_sync_polarity << 1) |
-			(video_info->h_sync_polarity),
-			dp->reg_base + S5P_DP_VIDEO_CTL_10);
-	}
-
-	if (video_info->interlaced)
-		pattern_value |= 1 << 9;
-
-	pattern_value |= (video_info->color_space) << 7;
-	pattern_value |= (video_info->dynamic_range) << 6;
-	pattern_value |= (video_info->ycbcr_coeff) << 5;
-	pattern_value |= (video_info->color_depth) << 2;
-
-	/* BIST color bar width set--set to each bar is 32 pixel width */
-	switch (video_info->test_pattern) {
-	case COLOR_RAMP:
-		pattern_value |= TEST_PATTERN_MODE_COLOR_RAMP;
-		break;
-	case COLOR_SQUARE:
-		pattern_value |= TEST_PATTERN_MODE_COLOR_SQUARE;
-		break;
-	case BALCK_WHITE_V_LINES:
-		pattern_value |= TEST_PATTERN_MODE_BALCK_WHITE_V_LINES;
-		break;
-	case COLORBAR_32:
-		bist_type = BIST_WIDTH_BAR_32_PIXEL |
-			  BIST_TYPE_COLOR_BAR;
-		break;
-	case COLORBAR_64:
-		bist_type = BIST_WIDTH_BAR_64_PIXEL |
-			  BIST_TYPE_COLOR_BAR;
-		break;
-	case WHITE_GRAY_BALCKBAR_32:
-		bist_type = BIST_WIDTH_BAR_32_PIXEL |
-			  BIST_TYPE_WHITE_GRAY_BLACK_BAR;
-		break;
-	case WHITE_GRAY_BALCKBAR_64:
-		bist_type = BIST_WIDTH_BAR_64_PIXEL |
-			  BIST_TYPE_WHITE_GRAY_BLACK_BAR;
-		break;
-	case MOBILE_WHITEBAR_32:
-		bist_type = BIST_WIDTH_BAR_32_PIXEL |
-			  BIST_TYPE_MOBILE_WHITE_BAR;
-		break;
-	case MOBILE_WHITEBAR_64:
-		bist_type = BIST_WIDTH_BAR_64_PIXEL |
-			  BIST_TYPE_MOBILE_WHITE_BAR;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	reg = pattern_value;
-	writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_CTRL);
-
-	if (pattern_value & 0x3) {
-		reg = TEST_PATTERN_GEN_EN;
-		writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
-	} else {
-		reg = TEST_PATTERN_GEN_DIS;
-		writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
-	}
-
-	reg = bist_type;
-	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
-
-	return 0;
 }
 
 int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp)
