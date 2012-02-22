@@ -26,7 +26,6 @@ enum link_lane_count_type {
 	LANE_COUNT4 = 4
 };
 
-/* link training state machine */
 enum link_training_state {
 	START,
 	CLOCK_RECOVERY,
@@ -80,11 +79,6 @@ enum dynamic_range {
 	CEA
 };
 
-enum refresh_denominator_type {
-	REFRESH_DENOMINATOR_1 = 0x0,
-	REFRESH_DENOMINATOR_1P001 = 0x1
-};
-
 enum pll_status {
 	PLL_UNLOCKED,
 	PLL_LOCKED
@@ -113,23 +107,6 @@ enum analog_power_block {
 struct video_info {
 	char *name;
 
-	u32 h_total;
-	u32 h_active;
-	u32 h_sync_width;
-	u32 h_back_porch;
-	u32 h_front_porch;
-
-	u32 v_total;
-	u32 v_active;
-	u32 v_sync_width;
-	u32 v_back_porch;
-	u32 v_front_porch;
-
-	u32 v_sync_rate;
-
-	u32 mvid;
-	u32 nvid;
-
 	bool h_sync_polarity;
 	bool v_sync_polarity;
 	bool interlaced;
@@ -139,17 +116,8 @@ struct video_info {
 	enum color_coefficient ycbcr_coeff;
 	enum color_depth color_depth;
 
-	bool sync_clock;
-	bool even_field;
-
-	enum refresh_denominator_type refresh_denominator;
-
 	enum link_rate_type link_rate;
 	enum link_lane_count_type lane_count;
-
-	bool video_mute_on;
-
-	bool master_mode;
 };
 
 struct s5p_dp_platdata {

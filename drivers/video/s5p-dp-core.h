@@ -117,9 +117,7 @@ u32 s5p_dp_get_lane2_link_training(struct s5p_dp_device *dp);
 u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp);
 void s5p_dp_reset_macro(struct s5p_dp_device *dp);
 int s5p_dp_init_video(struct s5p_dp_device *dp);
-void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
-				u32 stream_clock,
-				enum link_rate_type link_rate);
+
 void s5p_dp_set_video_color_format(struct s5p_dp_device *dp,
 				u32 color_depth,
 				u32 color_space,
@@ -134,8 +132,6 @@ void s5p_dp_set_video_timing_mode(struct s5p_dp_device *dp, u32 type);
 void s5p_dp_enable_video_master(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_start_video(struct s5p_dp_device *dp);
 int s5p_dp_is_video_stream_on(struct s5p_dp_device *dp);
-void s5p_dp_config_video_master_mode(struct s5p_dp_device *dp,
-			struct video_info *video_info);
 void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
 			struct video_info *video_info);
 void s5p_dp_enable_scrambling(struct s5p_dp_device *dp);

@@ -988,39 +988,6 @@ int s5p_dp_init_video(struct s5p_dp_device *dp)
 	return 0;
 }
 
-void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
-			u32 stream_clock,
-			enum link_rate_type link_rate)
-{
-	u32 reg;
-	u32 m_vid_master;
-	u32 n_vid_master;
-	u8 video_filter_th = 0;
-
-	if (link_rate == LINK_RATE_2_70GBPS)
-		n_vid_master = 135000000;
-	else
-		n_vid_master = 81000000;
-
-	m_vid_master = stream_clock;
-
-	writel(m_vid_master, dp->reg_base + S5P_DP_M_VID_MASTER);
-	writel(n_vid_master, dp->reg_base + S5P_DP_N_VID_MASTER);
-	writel(video_filter_th, dp->reg_base + S5P_DP_M_VID_GEN_FILTER_TH);
-
-	if (video_filter_th > 0) {
-		reg = readl(dp->reg_base + S5P_DP_M_CAL_CTL);
-		reg &= ~M_VID_GEN_FILTER_EN_MASK;
-		reg |= M_VID_GEN_FILTER_ENABLE;
-		writel(reg, dp->reg_base + S5P_DP_M_CAL_CTL);
-	} else {
-		reg = readl(dp->reg_base + S5P_DP_M_CAL_CTL);
-		reg &= ~M_VID_GEN_FILTER_EN_MASK;
-		reg |= M_VID_GEN_FILTER_DISABLE;
-		writel(reg, dp->reg_base + S5P_DP_M_CAL_CTL);
-	}
-}
-
 void s5p_dp_set_video_color_format(struct s5p_dp_device *dp,
 			u32 color_depth,
 			u32 color_space,
@@ -1163,39 +1130,6 @@ int s5p_dp_is_video_stream_on(struct s5p_dp_device *dp)
 	}
 
 	return 0;
-}
-
-void s5p_dp_config_video_master_mode(struct s5p_dp_device *dp,
-			struct video_info *video_info)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_FUNC_EN_1);
-	reg &= ~(MASTER_VID_FUNC_EN_N | SLAVE_VID_FUNC_EN_N);
-	reg |= SLAVE_VID_FUNC_EN_N;
-	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_1);
-
-	reg = video_info->h_total;
-	writel(reg, dp->reg_base + S5P_DP_H_TOTAL_MASTER);
-	reg = video_info->v_total;
-	writel(reg, dp->reg_base + S5P_DP_V_TOTAL_MASTER);
-	reg = video_info->h_front_porch;
-	writel(reg, dp->reg_base + S5P_DP_H_F_PORCH_MASTER);
-	reg = video_info->h_back_porch;
-	writel(reg, dp->reg_base + S5P_DP_H_B_PORCH_MASTER);
-	reg = video_info->h_active;
-	writel(reg, dp->reg_base + S5P_DP_H_ACTIVE_MASTER);
-	reg = video_info->v_front_porch;
-	writel(reg, dp->reg_base + S5P_DP_V_F_PORCH_MASTER);
-	reg = video_info->v_back_porch;
-	writel(reg, dp->reg_base + S5P_DP_V_B_PORCH_MASTER);
-	reg = video_info->v_active;
-	writel(reg, dp->reg_base + S5P_DP_V_ACTIVE_MASTER);
-
-	reg = readl(dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
-	reg &= ~MASTER_VIDEO_INTERLACE_EN;
-	reg |= (video_info->interlaced << 4);
-	writel(reg, dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
 }
 
 void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,

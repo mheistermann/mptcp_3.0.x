@@ -723,23 +723,6 @@ static struct s5p_platform_mipi_dsim dsim_platform_data = {
 static struct video_info smdk5250_dp_config = {
 	.name			= "WQXGA(2560x1600) LCD, for SMDK TEST",
 
-	.h_total		= 2720,
-	.h_active		= 2560,
-	.h_sync_width		= 32,
-	.h_back_porch		= 80,
-	.h_front_porch		= 48,
-
-	.v_total		= 1646,
-	.v_active		= 1600,
-	.v_sync_width		= 6,
-	.v_back_porch		= 37,
-	.v_front_porch		= 3,
-
-	.v_sync_rate		= 60,
-
-	.mvid			= 0,
-	.nvid			= 0,
-
 	.h_sync_polarity	= 0,
 	.v_sync_polarity	= 0,
 	.interlaced		= 0,
@@ -749,17 +732,8 @@ static struct video_info smdk5250_dp_config = {
 	.ycbcr_coeff		= COLOR_YCBCR601,
 	.color_depth		= COLOR_8,
 
-	.sync_clock		= 0,
-	.even_field		= 0,
-
-	.refresh_denominator	= REFRESH_DENOMINATOR_1,
-
 	.link_rate		= LINK_RATE_2_70GBPS,
 	.lane_count		= LANE_COUNT4,
-
-	.video_mute_on		= 0,
-
-	.master_mode		= 0,
 };
 
 static void s5p_dp_backlight_on(void)

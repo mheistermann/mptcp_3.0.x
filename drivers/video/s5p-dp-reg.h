@@ -17,27 +17,9 @@
 #define S5P_DP_VIDEO_CTL_1			0x20
 #define S5P_DP_VIDEO_CTL_2			0x24
 #define S5P_DP_VIDEO_CTL_3			0x28
-#define S5P_DP_VIDEO_CTL_4			0x2C
 
 #define S5P_DP_VIDEO_CTL_8			0x3C
 #define S5P_DP_VIDEO_CTL_10			0x44
-#define S5P_DP_TOTAL_LINE_CFG_L			0x48
-#define S5P_DP_TOTAL_LINE_CFG_H			0x4C
-#define S5P_DP_ACTIVE_LINE_CFG_L		0x50
-#define S5P_DP_ACTIVE_LINE_CFG_H		0x54
-#define S5P_DP_V_F_PORCH_CFG			0x58
-#define S5P_DP_V_SYNC_WIDTH_CFG			0x5C
-#define S5P_DP_V_B_PORCH_CFG			0x60
-#define S5P_DP_TOTAL_PIXEL_CFG_L		0x64
-#define S5P_DP_TOTAL_PIXEL_CFG_H		0x68
-#define S5P_DP_ACTIVE_PIXEL_CFG_L		0x6C
-#define S5P_DP_ACTIVE_PIXEL_CFG_H		0x70
-#define S5P_DP_H_F_PORCH_CFG_L			0x74
-#define S5P_DP_H_F_PORCH_CFG_H			0x78
-#define S5P_DP_H_SYNC_CFG_L			0x7C
-#define S5P_DP_H_SYNC_CFG_H			0x80
-#define S5P_DP_H_B_PORCH_CFG_L			0x84
-#define S5P_DP_H_B_PORCH_CFG_H			0x88
 
 #define S5P_DP_LANE_MAP				0x35C
 
@@ -96,7 +78,6 @@
 #define S5P_DP_VIDEO_FIFO_THRD			0x730
 #define S5P_DP_AUDIO_MARGIN			0x73C
 
-#define S5P_DP_M_CAL_CTL			0x760
 #define S5P_DP_M_VID_GEN_FILTER_TH		0x764
 #define S5P_DP_M_AUD_GEN_FILTER_TH		0x778
 #define S5P_DP_AUX_CH_STA			0x780
@@ -112,19 +93,6 @@
 #define S5P_DP_BUF_DATA_0			0x7C0
 
 #define S5P_DP_SOC_GENERAL_CTL			0x800
-#define S5P_DP_H_TOTAL_MASTER			0x804
-#define S5P_DP_V_TOTAL_MASTER			0x808
-#define S5P_DP_H_F_PORCH_MASTER			0x80C
-#define S5P_DP_H_B_PORCH_MASTER			0x810
-#define S5P_DP_H_ACTIVE_MASTER			0x814
-#define S5P_DP_V_F_PORCH_MASTER			0x818
-#define S5P_DP_V_B_PORCH_MASTER			0x81C
-#define S5P_DP_V_ACTIVE_MASTER			0x820
-#define S5P_DP_M_VID_MASTER			0x824
-#define S5P_DP_N_VID_MASTER			0x828
-
-#define S5P_DP_TEST_PATTERN_GEN_EN		0x944
-#define S5P_DP_TEST_PATTERN_GEN_CTRL		0x948
 
 /* S5P_DP_TX_SW_RESET */
 #define RESET_DP_TX				(0x1 << 0)
@@ -371,14 +339,6 @@
 #define MACRO_RST				(0x1 << 5)
 #define CH1_TEST				(0x1 << 1)
 #define CH0_TEST				(0x1 << 0)
-
-/* S5P_DP_M_CAL_CTL */
-#define M_AUD_GEN_FILTER_EN_MASK		(0x1 << 3)
-#define M_AUD_GEN_FILTER_ENABLE			(0x1 << 3)
-#define M_AUD_GEN_FILTER_DISABLE		(0x0 << 3)
-#define M_VID_GEN_FILTER_EN_MASK		(0x1 << 2)
-#define M_VID_GEN_FILTER_ENABLE			(0x1 << 2)
-#define M_VID_GEN_FILTER_DISABLE		(0x0 << 2)
 
 /* S5P_DP_AUX_CH_STA */
 #define AUX_BUSY				(0x1 << 4)

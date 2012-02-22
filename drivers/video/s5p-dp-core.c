@@ -747,187 +747,14 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 	return retval;
 }
 
-static int s5p_dp_get_bpc_component(enum color_depth color_depth)
-{
-	int bpc;
-
-	switch (color_depth) {
-	case COLOR_6:
-		bpc = 6;
-		break;
-	case COLOR_8:
-		bpc = 8;
-		break;
-	case COLOR_10:
-		bpc = 10;
-		break;
-	case COLOR_12:
-		bpc = 12;
-		break;
-	default:
-		bpc = 0;
-	}
-
-	return bpc;
-}
-
-static int s5p_dp_get_bpp(enum color_space color_space, int bpc)
-{
-	int bpp;
-
-	switch (color_space) {
-	case COLOR_RGB:
-		bpp = bpc * 3;
-		break;
-	case COLOR_YCBCR422:
-		bpp = bpc * 2;
-		break;
-	case COLOR_YCBCR444:
-		bpp = bpc * 3;
-		break;
-	default:
-		bpp = 0;
-	}
-
-	return bpp;
-}
-
 static int s5p_dp_config_video(struct s5p_dp_device *dp,
 			struct video_info *video_info)
 {
-	u32 stream_clk;
 	int retval = 0;
-	int bpc;
-	int bpp;
-	int max_available_vsync_rate;
-	int v_total_bpp_per_frame;
 	int timeout_loop = 0;
-	int v_start;
-	int h_start;
 	int done_count = 0;
 
-	/* Our device specification. */
-	if (!((video_info->v_total >= 1) && (video_info->v_total <= 4095)))
-		dev_err(dp->dev, "video_info->v_total %d is not supported.\n",
-			video_info->v_total);
-
-	if (!((video_info->v_active >= 1) && (video_info->v_active <= 4095)))
-		dev_err(dp->dev, "video_info->v_active %d is not supported.\n",
-			video_info->v_active);
-
-	if (!((video_info->v_front_porch >= 1) &&
-	   (video_info->v_front_porch <= 255)))
-		dev_err(dp->dev, "video_info->v_front_porch %d is not supported.\n",
-			video_info->v_front_porch);
-
-	if (!((video_info->v_back_porch >= 1) &&
-	   (video_info->v_back_porch <= 254)))
-		dev_err(dp->dev, "video_info->v_back_porch %d is not supported.\n",
-			video_info->v_back_porch);
-
-	if (!((video_info->v_sync_width >= 1) &&
-	   (video_info->v_sync_width <= 254)))
-		dev_err(dp->dev, "video_info->v_sync_width %d is not supported.\n",
-			video_info->v_sync_width);
-
-	v_start = video_info->v_back_porch + video_info->v_sync_width;
-
-	if (!((v_start >= 2) && (v_start <= 255)))
-		dev_err(dp->dev, "v_start %d is not supported.\r\n", v_start);
-
-	if (!((video_info->h_total >= 1) && (video_info->h_total <= 16383)))
-		dev_err(dp->dev, "video_info->h_total %d is not supported.\n",
-			video_info->h_total);
-
-	if (!((video_info->h_active >= 1) && (video_info->h_active <= 16383)))
-		dev_err(dp->dev, "video_info->h_active %d is not supported.\n",
-			video_info->h_active);
-
-	if (!((video_info->h_front_porch >= 1) &&
-	   (video_info->h_front_porch <= 4095)))
-		dev_err(dp->dev, "video_info->h_front_porch %d is not supported.\n",
-			video_info->h_front_porch);
-
-	if (!((video_info->h_back_porch >= 1) &&
-	   (video_info->h_back_porch <= 4094)))
-		dev_err(dp->dev, "video_info->h_back_porch %d is not supported.\n",
-			video_info->h_back_porch);
-
-	if (!((video_info->h_sync_width >= 1) &&
-	   (video_info->h_sync_width <= 4094)))
-		dev_err(dp->dev, "video_info->h_sync_width %d is not supported.\n",
-			video_info->h_sync_width);
-
-	h_start = video_info->h_sync_width + video_info->h_back_porch;
-	if (!((h_start >= 2) && (h_start <= 4095)))
-		dev_err(dp->dev, "h_start %d is not supported\n", h_start);
-
-	if (video_info->master_mode) {
-		s5p_dp_config_video_master_mode(dp, video_info);
-
-		if (video_info->refresh_denominator == REFRESH_DENOMINATOR_1)
-			/*
-			 * F_STRM_CLK
-			 * = VideoVTotalLength * VideoHTotalLength *
-			 *   VideoFrameRate
-			 * = 1650 * 750 * 60 = 74,250,000
-			 */
-			stream_clk = video_info->v_total *
-				video_info->h_total *
-				video_info->v_sync_rate;
-		else
-			/*
-			 * F_STRM_CLK
-			 * = VideoVTotalLength * VideoHTotalLength *
-			 *   VideoFrameRate / 1.001
-			 * = 74,125,824
-			 */
-			stream_clk = (u32)(video_info->v_total *
-				video_info->h_total *
-				video_info->v_sync_rate / 1);
-
-		if (video_info->interlaced)
-			stream_clk = video_info->v_total *
-				video_info->h_total *
-				video_info->v_sync_rate >> 1;
-
-		bpc = s5p_dp_get_bpc_component(video_info->color_depth);
-		bpp = s5p_dp_get_bpp(video_info->color_space, bpc);
-
-		v_total_bpp_per_frame = (video_info->v_total *
-				video_info->h_total * bpp) >>
-				video_info->interlaced;
-
-		if (video_info->link_rate == LINK_RATE_2_70GBPS) {
-			if (stream_clk > 135000000)
-				dev_err(dp->dev, "Too high stream clock %d\n",
-					stream_clk);
-			max_available_vsync_rate = (int)(270000000 *
-					dp->link_train.lane_count /
-					v_total_bpp_per_frame);
-			max_available_vsync_rate *= 8;
-		} else {
-			if (stream_clk > 81000000)
-				dev_err(dp->dev, "Too high stream clock %d\n",
-					stream_clk);
-			max_available_vsync_rate = (int)(162000000 *
-					dp->link_train.lane_count /
-					v_total_bpp_per_frame);
-			max_available_vsync_rate *= 8;
-		}
-
-		if (video_info->v_sync_rate > max_available_vsync_rate) {
-			dev_err(dp->dev, "VSync for master interface is too high\n");
-			dev_err(dp->dev, "VSync Rate %d\n",
-				video_info->v_sync_rate);
-		}
-
-		s5p_dp_set_video_master_data_mn(dp, stream_clk,
-					video_info->link_rate);
-	} else {
-		/* debug slave */
-		s5p_dp_config_video_slave_mode(dp, video_info);
-	}
+	s5p_dp_config_video_slave_mode(dp, video_info);
 
 	s5p_dp_set_video_color_format(dp, video_info->color_depth,
 			video_info->color_space,
@@ -939,23 +766,20 @@ static int s5p_dp_config_video(struct s5p_dp_device *dp,
 		return -EINVAL;
 	}
 
-	if (video_info->master_mode == 0) {
-		for (;;) {
-			timeout_loop++;
-			if (s5p_dp_is_slave_video_stream_clock_on(dp) == 0)
-				break;
-			if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
-				dev_err(dp->dev, "Timeout of video streamclk ok\n");
-				return -ETIMEDOUT;
-			}
-
-			mdelay(100);
+	for (;;) {
+		timeout_loop++;
+		if (s5p_dp_is_slave_video_stream_clock_on(dp) == 0)
+			break;
+		if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
+			dev_err(dp->dev, "Timeout of video streamclk ok\n");
+			return -ETIMEDOUT;
 		}
+
+		mdelay(100);
 	}
 
 	/* Set to use the register calculated M/N video */
 	s5p_dp_set_video_cr_mn(dp, CALCULATED_M, 0, 0);
-	/* s5p_dp_set_video_cr_mn(dp, REGISTER_M, 4505, 27000); */
 
 	/* For video bist, Video timing must be generated by register */
 	s5p_dp_set_video_timing_mode(dp, VIDEO_TIMING_FROM_CAPTURE);
@@ -963,31 +787,29 @@ static int s5p_dp_config_video(struct s5p_dp_device *dp,
 	/* Disable video mute */
 	s5p_dp_enable_video_mute(dp, 0);
 
-	/* Configure video Master or Slave mode */
-	s5p_dp_enable_video_master(dp, video_info->master_mode);
+	/* Configure video slave mode */
+	s5p_dp_enable_video_master(dp, 0);
 
 	/* Enable video */
 	s5p_dp_start_video(dp);
 
-	if (!video_info->master_mode) {
-		timeout_loop = 0;
+	timeout_loop = 0;
 
-		for (;;) {
-			timeout_loop++;
-			if (s5p_dp_is_video_stream_on(dp) == 0) {
-				done_count++;
-				if (done_count > 10)
-					break;
-			} else if (done_count) {
-				done_count = 0;
-			}
-			if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
-				dev_err(dp->dev, "Timeout of video streamclk ok\n");
-				return -ETIMEDOUT;
-			}
-
-			mdelay(100);
+	for (;;) {
+		timeout_loop++;
+		if (s5p_dp_is_video_stream_on(dp) == 0) {
+			done_count++;
+			if (done_count > 10)
+				break;
+		} else if (done_count) {
+			done_count = 0;
 		}
+		if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
+			dev_err(dp->dev, "Timeout of video streamclk ok\n");
+			return -ETIMEDOUT;
+		}
+
+		mdelay(100);
 	}
 
 	if (retval != 0)
