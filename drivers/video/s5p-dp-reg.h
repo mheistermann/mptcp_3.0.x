@@ -1,7 +1,8 @@
 /*
- * Copyright (C) 2011 Samsung Electronics Co., Ltd.
- *
  * Register definition file for Samsung DP driver
+ *
+ * Copyright (C) 2012 Samsung Electronics Co., Ltd.
+ * Author: Jingoo Han <jg1.han@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

@@ -1,7 +1,7 @@
 /*
- * Samsung S5P SoC series DP (Display Port) interface driver.
+ * Samsung SoC DP (Display Port) interface driver.
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2012 Samsung Electronics Co., Ltd.
  * Author: Jingoo Han <jg1.han@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1214,5 +1214,5 @@ module_init(s5p_dp_init);
 module_exit(s5p_dp_exit);
 
 MODULE_AUTHOR("Jingoo Han <jg1.han@samsung.com>");
-MODULE_DESCRIPTION("Samsung S5P DP interface Driver");
+MODULE_DESCRIPTION("Samsung SoC DP Driver");
 MODULE_LICENSE("GPL");

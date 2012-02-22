@@ -1,7 +1,7 @@
 /*
  * Header file for Samsung DP (Display Port) interface driver.
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2012 Samsung Electronics Co., Ltd.
  * Author: Jingoo Han <jg1.han@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -10,8 +10,8 @@
  * option) any later version.
  */
 
-#ifndef S5P_DP_H_
-#define S5P_DP_H_
+#ifndef _S5P_DP_CORE_H
+#define _S5P_DP_CORE_H
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -211,4 +211,4 @@ void s5p_dp_disable_scrambling(struct s5p_dp_device *dp);
 #define DPCD_SET_POWER_STATE_D0			(0x1 << 0)
 #define DPCD_SET_POWER_STATE_D4			(0x2 << 0)
 
-#endif /* S5P_DP_H_ */
+#endif /* _S5P_DP_CORE_H */

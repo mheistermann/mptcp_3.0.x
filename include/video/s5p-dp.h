@@ -1,15 +1,16 @@
 /*
- * Copyright (C) 2011 Samsung Electronics Co., Ltd.
- *
  * Samsung SoC DP device support
+ *
+ * Copyright (C) 2012 Samsung Electronics Co., Ltd.
+ * Author: Jingoo Han <jg1.han@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
 
-#ifndef _S5P_DP_H_
-#define _S5P_DP_H_ __FILE__
+#ifndef _S5P_DP_H
+#define _S5P_DP_H
 
 #define DP_TIMEOUT_LOOP_COUNT 100
 #define MAX_CR_LOOP 5
@@ -129,4 +130,4 @@ struct s5p_dp_platdata {
 	void (*backlight_off)(void);
 };
 
-#endif /* _S5P_DP_H_ */
+#endif /* _S5P_DP_H */
