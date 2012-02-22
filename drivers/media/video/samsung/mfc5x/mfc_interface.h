@@ -131,14 +131,14 @@ struct mfc_enc_init_common_arg {
 	int in_frame_map;
 
 	unsigned int in_pixelcache;
-
-	unsigned int in_output_mode;
-
 	unsigned int in_mapped_addr;
+
 	struct mfc_strm_ref_buf_arg out_u_addr;
 	struct mfc_strm_ref_buf_arg out_p_addr;
 	struct mfc_strm_ref_buf_arg out_buf_size;
 	unsigned int out_header_size;
+
+	unsigned int in_output_mode;
 };
 
 struct mfc_enc_init_h263_arg {
@@ -487,6 +487,7 @@ typedef struct
 	unsigned int dec_pixelcache;
 	unsigned int dec_slice;
 	unsigned int dec_numextradpb;
+	unsigned int dec_packedPB_detect;
 
 	int input_cookie;
 	int input_secure_id;
