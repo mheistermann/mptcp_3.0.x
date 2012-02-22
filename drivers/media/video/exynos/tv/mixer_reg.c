@@ -113,8 +113,7 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 
 		/* setting graphical layers */
 
-		val  = MXR_GRP_CFG_COLOR_KEY_DISABLE; /* no blank key */
-		val |= MXR_GRP_CFG_BLEND_PRE_MUL; /* premul mode */
+		val  = MXR_GRP_CFG_BLANK_KEY_OFF; /* no blank key */
 		val |= MXR_GRP_CFG_ALPHA_VAL(0xff); /* non-transparent alpha */
 
 		/* the same configuration for both layers */
@@ -133,8 +132,7 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 
 		/* setting graphical layers */
 
-		val  = MXR_GRP_CFG_COLOR_KEY_DISABLE; /* no blank key */
-		val |= MXR_GRP_CFG_BLEND_PRE_MUL; /* premul mode */
+		val  = MXR_GRP_CFG_BLANK_KEY_OFF; /* no blank key */
 		val |= MXR_GRP_CFG_ALPHA_VAL(0xff); /* non-transparent alpha */
 
 		/* the same configuration for both layers */
@@ -408,20 +406,20 @@ void mxr_reg_layer_alpha(struct mxr_device *mdev, int sub_mxr, int num, u32 a)
 		mxr_write_mask(mdev, MXR_VIDEO_CFG, MXR_VIDEO_CFG_ALPHA(a),
 				0xff);
 	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
-		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA(a),
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA_VAL(a),
 				0xff);
 	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
-		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA(a),
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA_VAL(a),
 				0xff);
 #if defined(CONFIG_ARCH_EXYNOS5)
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_VIDEO)
 		mxr_write_mask(mdev, MXR1_VIDEO_CFG, MXR_VIDEO_CFG_ALPHA(a),
 				0xff);
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
-		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA(a),
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA_VAL(a),
 				0xff);
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
-		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA(a),
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA_VAL(a),
 				0xff);
 #endif
 
@@ -467,17 +465,17 @@ void mxr_reg_set_colorkey(struct mxr_device *mdev, int sub_mxr, int num, int en)
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
 		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
-				MXR_GRP_CFG_BLANK_KEY_EN);
+				MXR_GRP_CFG_BLANK_KEY_OFF);
 	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
 		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), val,
-				MXR_GRP_CFG_BLANK_KEY_EN);
+				MXR_GRP_CFG_BLANK_KEY_OFF);
 #if defined(CONFIG_ARCH_EXYNOS5)
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
 		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), val,
-				MXR_GRP_CFG_BLANK_KEY_EN);
+				MXR_GRP_CFG_BLANK_KEY_OFF);
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
 		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
-				MXR_GRP_CFG_BLANK_KEY_EN);
+				MXR_GRP_CFG_BLANK_KEY_OFF);
 #endif
 
 	mxr_vsync_set_update(mdev, MXR_ENABLE);
