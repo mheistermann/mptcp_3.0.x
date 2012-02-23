@@ -226,6 +226,7 @@ struct s5p_mfc_dev {
 	struct s5p_mfc_pm	pm;
 	struct s5p_mfc_fw	fw;
 	struct s5p_mfc_variant	*variant;
+	struct s5p_mfc_platdata	*platdata;
 
 	int num_inst;
 	spinlock_t irqlock;

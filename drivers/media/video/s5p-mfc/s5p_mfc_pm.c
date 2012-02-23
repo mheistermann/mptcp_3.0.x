@@ -12,6 +12,7 @@
 
 #include <linux/err.h>
 #include <linux/clk.h>
+#include <plat/s5p-mfc.h>
 
 #include "s5p_mfc_common.h"
 
@@ -171,7 +172,6 @@ bool s5p_mfc_power_chk(void)
 #define CLK_DEBUG
 
 static struct s5p_mfc_pm *pm;
-extern int mfc_clk_rate;
 
 atomic_t clk_ref;
 
@@ -179,6 +179,7 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 {
 	struct clk *parent_clk;
 	int ret = 0;
+	struct s5p_mfc_platdata *pdata;
 
 	pm = &dev->pm;
 
@@ -197,7 +198,9 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 		ret = PTR_ERR(parent_clk);
 		goto err_p_clk;
 	}
-	clk_set_rate(parent_clk, mfc_clk_rate);
+
+	pdata = dev->platdata;
+	clk_set_rate(parent_clk, pdata->clock_rate);
 
 	atomic_set(&pm->power, 0);
 	atomic_set(&clk_ref, 0);

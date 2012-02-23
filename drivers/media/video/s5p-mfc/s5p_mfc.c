@@ -1074,6 +1074,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 		goto free_dev;
 	}
 
+	dev->platdata = (&pdev->dev)->platform_data;
 	dev_dbg(&pdev->dev, "Getting clocks\n");
 	ret = s5p_mfc_init_pm(dev);
 	if (ret < 0) {
