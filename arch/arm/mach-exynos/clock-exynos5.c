@@ -792,12 +792,7 @@ static struct clk exynos5_init_clocks[] = {
 		.devname	= "s5pv210-uart.5",
 		.enable		= exynos5_clk_ip_peric_ctrl,
 		.ctrlbit	= (1 << 5),
-	}, {
-		.name		= "secss",
-		.parent		= &exynos5_clk_aclk_acp.clk,
-		.enable		= exynos5_clk_ip_acp_ctrl,
-		.ctrlbit	= (1 << 2),
-	}
+	},
 };
 
 static struct clk exynos5_init_clocks_off[] = {
@@ -1194,6 +1189,23 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "gscl",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
 		.ctrlbit	= (0xff << 11),
+	}, {
+		.name		= "secss",
+		.parent		= &exynos5_clk_aclk_acp.clk,
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "sromc",
+		.enable		= exynos5_clk_ip_fsys_ctrl ,
+		.ctrlbit	= (1 << 17),
+	}, {
+		.name		= "mipi-hsi",
+		.enable		= exynos5_clk_ip_fsys_ctrl ,
+		.ctrlbit	= (1 << 8),
+	}, {
+		.name		= "mie",
+		.enable		= exynos5_clk_ip_disp1_ctrl ,
+		.ctrlbit	= (1 << 1),
 	},
 };
 
