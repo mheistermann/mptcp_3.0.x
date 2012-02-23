@@ -751,6 +751,13 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 		goto fail_vdev;
 	}
 
+	/* HDMI PHY power off
+	 * HDMI PHY is on as default configuration
+	 * So, HDMI PHY must be turned off if it's not used */
+	clk_enable(hdmi_dev->res.hdmiphy);
+	v4l2_subdev_call(hdmi_dev->phy_sd, core, s_power, 0);
+	clk_disable(hdmi_dev->res.hdmiphy);
+
 	pm_runtime_enable(dev);
 
 	/* irq setting by TV power on/off status */
