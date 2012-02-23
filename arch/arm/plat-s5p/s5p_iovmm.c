@@ -85,7 +85,7 @@ int iovmm_setup(struct device *dev)
 	}
 
 	/* 1GB addr space from 0x80000000 */
-	ret = gen_pool_add(vmm->vmm_pool, 0x80000000, 0x20000000, -1);
+	ret = gen_pool_add(vmm->vmm_pool, 0x80000000, 0x40000000, -1);
 	if (ret)
 		goto err_setup_domain;
 
