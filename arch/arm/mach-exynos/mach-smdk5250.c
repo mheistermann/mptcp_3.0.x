@@ -2550,6 +2550,12 @@ static struct platform_pwm_backlight_data smdk5250_bl_data = {
 };
 #endif
 
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+static struct s5p_mfc_platdata smdk5250_mfc_pd = {
+	.clock_rate = 300000000,
+};
+#endif
+
 static void __init smdk5250_map_io(void)
 {
 	clk_xxti.rate = 24000000;
@@ -2721,7 +2727,7 @@ static void __init smdk5250_machine_init(void)
 	smdk5250_xhci_init();
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 300 * MHZ);
+	s5p_mfc_set_platdata(&smdk5250_mfc_pd);
 
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
 	clk_add_alias("mfc", "s5p-mfc-v6", "mfc", &s5p_device_mfc.dev);
