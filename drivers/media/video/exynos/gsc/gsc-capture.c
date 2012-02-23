@@ -237,34 +237,37 @@ static int gsc_capture_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	struct gsc_capture_device *cap = &gsc->cap;
 	struct gsc_ctx *ctx = cap->ctx;
 
-	gsc_info("");
+	if (enable) {
+		gsc_info("start");
+		gsc_hw_set_frm_done_irq_mask(gsc, false);
+		gsc_hw_set_overflow_irq_mask(gsc, false);
+		gsc_hw_set_one_frm_mode(gsc, false);
+		gsc_hw_set_gsc_irq_enable(gsc, true);
 
-	gsc_hw_set_frm_done_irq_mask(gsc, false);
-	gsc_hw_set_overflow_irq_mask(gsc, false);
-	gsc_hw_set_one_frm_mode(gsc, false);
-	gsc_hw_set_gsc_irq_enable(gsc, true);
+		if (gsc->pipeline.disp)
+			gsc_hw_set_sysreg_writeback(ctx);
+		else
+			gsc_hw_set_sysreg_camif(true);
 
-	if (gsc->pipeline.disp)
-		gsc_hw_set_sysreg_writeback(ctx);
-	else
-		gsc_hw_set_sysreg_camif(true);
+		gsc_hw_set_input_path(ctx);
+		gsc_hw_set_in_size(ctx);
+		gsc_hw_set_in_image_format(ctx);
+		gsc_hw_set_output_path(ctx);
+		gsc_hw_set_out_size(ctx);
+		gsc_hw_set_out_image_format(ctx);
+		gsc_hw_set_global_alpha(ctx);
 
-	gsc_hw_set_input_path(ctx);
-	gsc_hw_set_in_size(ctx);
-	gsc_hw_set_in_image_format(ctx);
-	gsc_hw_set_output_path(ctx);
-	gsc_hw_set_out_size(ctx);
-	gsc_hw_set_out_image_format(ctx);
-	gsc_hw_set_global_alpha(ctx);
+		gsc_capture_scaler_info(ctx);
+		gsc_hw_set_prescaler(ctx);
+		gsc_hw_set_mainscaler(ctx);
 
-	gsc_capture_scaler_info(ctx);
-	gsc_hw_set_prescaler(ctx);
-	gsc_hw_set_mainscaler(ctx);
+		set_bit(ST_CAPT_PEND, &gsc->state);
 
-	set_bit(ST_CAPT_PEND, &gsc->state);
-
-	gsc_hw_enable_control(gsc, true);
-	set_bit(ST_CAPT_STREAM, &gsc->state);
+		gsc_hw_enable_control(gsc, true);
+		set_bit(ST_CAPT_STREAM, &gsc->state);
+	} else {
+		gsc_info("stop");
+	}
 
 	return 0;
 }
@@ -333,7 +336,7 @@ static int gsc_cap_stop_capture(struct gsc_dev *gsc)
 	gsc_info("G-Scaler h/w disable control");
 	gsc_hw_enable_control(gsc, false);
 	clear_bit(ST_CAPT_STREAM, &gsc->state);
-	ret = gsc_wait_operating(gsc);
+	ret = gsc_wait_stop(gsc);
 	if (ret) {
 		gsc_err("GSCALER_OP_STATUS is operating\n");
 		return ret;
@@ -746,6 +749,12 @@ int __gsc_cap_pipeline_shutdown(struct gsc_dev *gsc)
 	if (ret && ret != -ENXIO)
 		gsc_set_cam_clock(gsc, false);
 
+	gsc->pipeline.sd_gsc= NULL;
+	gsc->pipeline.disp= NULL;
+	gsc->pipeline.flite = NULL;
+	gsc->pipeline.csis = NULL;
+	gsc->pipeline.sensor = NULL;
+
 	return ret == -ENXIO ? 0 : ret;
 }
 
@@ -760,6 +769,7 @@ int gsc_cap_pipeline_shutdown(struct gsc_dev *gsc)
 
 	return ret;
 }
+
 static int gsc_capture_close(struct file *file)
 {
 	struct gsc_dev *gsc = video_drvdata(file);
@@ -1292,10 +1302,10 @@ static int gsc_capture_link_setup(struct media_entity *entity,
 	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
 	struct gsc_capture_device *cap = &gsc->cap;
 
-	gsc_info("");
 	switch (local->index | media_entity_type(remote->entity)) {
 	case GSC_PAD_SINK | MEDIA_ENT_T_V4L2_SUBDEV:
 		if (flags & MEDIA_LNK_FL_ENABLED) {
+			gsc_info("local to gsc-subdev link enable");
 			if (cap->input != 0)
 				return -EBUSY;
 			/* Write-Back link enabled */
@@ -1304,18 +1314,29 @@ static int gsc_capture_link_setup(struct media_entity *entity,
 					media_entity_to_v4l2_subdev(remote->entity);
 				gsc->cap.sd_disp->grp_id = FIMD_GRP_ID;
 				cap->ctx->in_path = GSC_WRITEBACK;
-				cap->input |= GSC_IN_FIMD_WRITEBACK;
+				cap->input = GSC_IN_FIMD_WRITEBACK;
 			} else if (remote->index == FLITE_PAD_SOURCE_PREV) {
-				cap->input |= GSC_IN_FLITE_PREVIEW;
+				cap->ctx->in_path = GSC_CAMERA;
+				cap->input = GSC_IN_FLITE_PREVIEW;
 			} else {
-				cap->input |= GSC_IN_FLITE_CAMCORDING;
+				cap->ctx->in_path = GSC_CAMERA;
+				cap->input = GSC_IN_FLITE_CAMCORDING;
 			}
 		} else {
+			if (cap->input == GSC_IN_FIMD_WRITEBACK)
+				gsc->pipeline.disp = NULL;
+			else if ((cap->input == GSC_IN_FLITE_PREVIEW) ||
+				(cap->input == GSC_IN_FLITE_CAMCORDING))
+				gsc->pipeline.flite = NULL;
+			gsc_info("local to gsc-subdev link disable");
 			cap->input = GSC_IN_NONE;
 		}
 		break;
 	case GSC_PAD_SOURCE | MEDIA_ENT_T_DEVNODE:
-		/* gsc-cap always write to memory */
+		if (flags & MEDIA_LNK_FL_ENABLED)
+			gsc_info("gsc-subdev to gsc-video link enable");
+		else
+			gsc_info("gsc-subdev to gsc-video link disable");
 		break;
 	}
 
@@ -1383,9 +1404,7 @@ static int gsc_capture_create_link(struct gsc_dev *gsc)
 	source = &gsc->cap.sd_cap->entity;
 	sink = &gsc->cap.vfd->entity;
 	if (source && sink) {
-		ret = media_entity_create_link(source, GSC_PAD_SOURCE, sink,
-				0, MEDIA_LNK_FL_IMMUTABLE |
-				MEDIA_LNK_FL_ENABLED);
+		ret = media_entity_create_link(source, GSC_PAD_SOURCE, sink, 0, 0);
 		if (ret) {
 			gsc_err("failed link flite to gsc\n");
 			return ret;

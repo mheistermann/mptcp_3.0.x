@@ -69,7 +69,7 @@ int gsc_wait_operating(struct gsc_dev *dev)
 
 	while (time_before(jiffies, timeo)) {
 		cfg = readl(dev->regs + GSC_ENABLE);
-		if ((cfg & GSC_ENABLE_OP_STATUS) == GSC_ENABLE_OP_STATUS)
+		if (cfg & GSC_ENABLE_OP_STATUS)
 			return 0;
 		usleep_range(10, 20);
 	}
