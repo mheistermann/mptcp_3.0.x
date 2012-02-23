@@ -611,10 +611,10 @@ static int flite_link_setup(struct media_entity *entity,
 	struct v4l2_subdev *sd = media_entity_to_v4l2_subdev(entity);
 	struct flite_dev *flite = v4l2_get_subdevdata(sd);
 
-	flite_info("");
 	switch (local->index | media_entity_type(remote->entity)) {
 	case FLITE_PAD_SINK | MEDIA_ENT_T_V4L2_SUBDEV:
 		if (flags & MEDIA_LNK_FL_ENABLED) {
+			flite_info("sink link enabled");
 			if (flite->input != FLITE_INPUT_NONE) {
 				flite_err("link is busy");
 				return -EBUSY;
@@ -624,22 +624,29 @@ static int flite_link_setup(struct media_entity *entity,
 			else
 				flite->input = FLITE_INPUT_SENSOR;
 		} else {
+			flite_info("sink link disabled");
 			flite->input = FLITE_INPUT_NONE;
 		}
 		break;
 
 	case FLITE_PAD_SOURCE_PREV | MEDIA_ENT_T_V4L2_SUBDEV: /* fall through */
 	case FLITE_PAD_SOURCE_CAMCORD | MEDIA_ENT_T_V4L2_SUBDEV:
-		if (flags & MEDIA_LNK_FL_ENABLED)
+		if (flags & MEDIA_LNK_FL_ENABLED) {
+			flite_info("source link enabled");
 			flite->output |= FLITE_OUTPUT_GSC;
-		else
+		} else {
+			flite_info("source link disabled");
 			flite->output &= ~FLITE_OUTPUT_GSC;
+		}
 		break;
 	case FLITE_PAD_SOURCE_MEM | MEDIA_ENT_T_DEVNODE:
-		if (flags & MEDIA_LNK_FL_ENABLED)
+		if (flags & MEDIA_LNK_FL_ENABLED) {
+			flite_info("source link enabled");
 			flite->output |= FLITE_OUTPUT_MEM;
-		else
+		} else {
+			flite_info("source link disabled");
 			flite->output &= ~FLITE_OUTPUT_MEM;
+		}
 		break;
 	default:
 		flite_err("ERR link");
@@ -890,6 +897,10 @@ int __flite_pipeline_shutdown(struct flite_dev *flite)
 
 	if (ret && ret != -ENXIO)
 		flite_set_cam_clock(flite, false);
+
+	flite->pipeline.flite = NULL;
+	flite->pipeline.csis = NULL;
+	flite->pipeline.sensor = NULL;
 
 	return ret == -ENXIO ? 0 : ret;
 }
