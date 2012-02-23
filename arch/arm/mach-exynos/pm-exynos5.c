@@ -284,7 +284,7 @@ static void exynos5_pm_resume(void)
 		 * To ISP power domain off,
 		 * first, ISP_ARM power domain be off.
 		 */
-		if (!(__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1)) {
+		if ((__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1)) {
 			/* Disable ISP_ARM */
 			timeout = __raw_readl(EXYNOS5_ISP_ARM_OPTION);
 			timeout &= ~EXYNOS5_ISP_ARM_ENABLE;
@@ -334,6 +334,7 @@ static void exynos5_pm_resume(void)
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIA_OPTION);
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIB_OPTION);
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_SPI_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_GPIO_SYSMEM_OPTION);
 
 	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
