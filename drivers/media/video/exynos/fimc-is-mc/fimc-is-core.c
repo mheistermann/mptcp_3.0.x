@@ -121,7 +121,7 @@ static struct fimc_is_back_dev *to_fimc_is_back_dev(struct v4l2_subdev *sdev)
 
 static int fimc_is_sensor_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
@@ -153,10 +153,10 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 	char			cma_name[16];
 	int err;
 
-	printk(KERN_DEBUG "fimc_is_init_mem - ION\n");
+	dbg( "fimc_is_init_mem - ION\n");
 	sprintf(cma_name, "%s%d", "fimc_is", 0);
 	err = cma_info(&mem_info, &dev->pdev->dev, 0);
-	printk(KERN_DEBUG "%s : [cma_info] start_addr : 0x%x, end_addr : 0x%x, "
+	dbg( "%s : [cma_info] start_addr : 0x%x, end_addr : 0x%x, "
 			"total_size : 0x%x, free_size : 0x%x\n",
 			__func__, mem_info.lower_bound, mem_info.upper_bound,
 			mem_info.total_size, mem_info.free_size);
@@ -174,8 +174,8 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 		(unsigned long)sizeof(struct is_region));
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, FIMC_IS_REGION_SIZE+1);
 
-	printk(KERN_DEBUG "ctrl->mem.size = 0x%x\n", dev->mem.size);
-	printk(KERN_DEBUG "ctrl->mem.base = 0x%x\n", dev->mem.base);
+	dbg( "ctrl->mem.size = 0x%x\n", dev->mem.size);
+	dbg( "ctrl->mem.base = 0x%x\n", dev->mem.base);
 
 	return 0;
 }
@@ -309,7 +309,7 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 {
 	int ret;
 
-	printk(KERN_DEBUG "fimc_is_init_mem - ION\n");
+	dbg( "fimc_is_init_mem - ION\n");
 	ret = fimc_is_alloc_firmware(dev);
 	if (ret) {
 		err("Couldn't alloc for FIMC-IS firmware\n");
@@ -375,7 +375,7 @@ int fimc_is_load_fw(struct  fimc_is_dev *dev)
 {
 	int ret;
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	if (test_bit(IS_ST_IDLE, &dev->state)) {
 		/* 1. Load IS firmware */
 		ret = fimc_is_request_firmware(dev);
@@ -633,135 +633,135 @@ static int fimc_is_front_s_stream(struct v4l2_subdev *sd, int enable)
 			return -EINVAL;
 		}
 		set_bit(IS_ST_IDLE , &isp->state);
-		printk(KERN_DEBUG "state(%d), pipe_state(%d)\n", (int)isp->state, (int)isp->pipe_state);
+		dbg( "state(%d), pipe_state(%d)\n", (int)isp->state, (int)isp->pipe_state);
 	}
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_set_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_set_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_format *fmt)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_set_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_crop *crop)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 static int fimc_is_back_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
@@ -833,74 +833,74 @@ static struct v4l2_subdev_ops fimc_is_back_subdev_ops = {
 
 static int fimc_is_sensor_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_close(struct v4l2_subdev *sd,
 			      struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_sensor_subdev_registered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static void fimc_is_sensor_subdev_unregistered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 }
 
 static int fimc_is_front_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_close(struct v4l2_subdev *sd,
 			      struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_front_subdev_registered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static void fimc_is_front_subdev_unregistered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 }
 
 static int fimc_is_back_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_close(struct v4l2_subdev *sd,
 			      struct v4l2_subdev_fh *fh)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_back_subdev_registered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 	return 0;
 }
 
 static void fimc_is_back_subdev_unregistered(struct v4l2_subdev *sd)
 {
-	printk(KERN_DEBUG  "%s\n", __func__);
+	dbg(  "%s\n", __func__);
 }
 
 static const struct v4l2_subdev_internal_ops fimc_is_sensor_v4l2_internal_ops = {
@@ -931,9 +931,9 @@ static int fimc_is_sensor_link_setup(struct media_entity *entity,
 	struct v4l2_subdev *sd = media_entity_to_v4l2_subdev(entity);
 	struct fimc_is_sensor_dev *fimc_is_sensor = to_fimc_is_sensor_dev(sd);
 
-	printk(KERN_DEBUG "++%s\n", __func__);
-	printk(KERN_DEBUG "local->index : %d\n", local->index);
-	printk(KERN_DEBUG "media_entity_type(remote->entity) : %d\n", media_entity_type(remote->entity));
+	dbg( "++%s\n", __func__);
+	dbg( "local->index : %d\n", local->index);
+	dbg( "media_entity_type(remote->entity) : %d\n", media_entity_type(remote->entity));
 
 	switch (local->index | media_entity_type(remote->entity)) {
 	case FIMC_IS_SENSOR_PAD_SOURCE_FRONT | MEDIA_ENT_T_V4L2_SUBDEV:
@@ -947,7 +947,7 @@ static int fimc_is_sensor_link_setup(struct media_entity *entity,
 		v4l2_err(sd, "%s : ERR link\n", __func__);
 		return -EINVAL;
 	}
-	printk(KERN_DEBUG "--%s\n", __func__);
+	dbg( "--%s\n", __func__);
 	return 0;
 }
 
@@ -958,16 +958,16 @@ static int fimc_is_front_link_setup(struct media_entity *entity,
 	struct v4l2_subdev *sd = media_entity_to_v4l2_subdev(entity);
 	struct fimc_is_front_dev *fimc_is_front = to_fimc_is_front_dev(sd);
 
-	printk(KERN_DEBUG "++%s\n", __func__);
-	printk(KERN_DEBUG "local->index : %d\n", local->index);
-	printk(KERN_DEBUG "media_entity_type(remote->entity) : %d\n", media_entity_type(remote->entity));
+	dbg( "++%s\n", __func__);
+	dbg( "local->index : %d\n", local->index);
+	dbg( "media_entity_type(remote->entity) : %d\n", media_entity_type(remote->entity));
 
 	switch (local->index | media_entity_type(remote->entity)) {
 	case FIMC_IS_FRONT_PAD_SINK | MEDIA_ENT_T_V4L2_SUBDEV:
-		printk(KERN_DEBUG "%s : fimc_is_front sink pad\n", __func__);
+		dbg( "%s : fimc_is_front sink pad\n", __func__);
 		if (flags & MEDIA_LNK_FL_ENABLED) {
 			if (fimc_is_front->input != FIMC_IS_FRONT_INPUT_NONE) {
-				printk(KERN_DEBUG "BUSY\n");
+				dbg( "BUSY\n");
 				return -EBUSY;
 			}
 			if (remote->index == FIMC_IS_SENSOR_PAD_SOURCE_FRONT)
@@ -1001,7 +1001,7 @@ static int fimc_is_front_link_setup(struct media_entity *entity,
 		v4l2_err(sd, "%s : ERR link\n", __func__);
 		return -EINVAL;
 	}
-	printk(KERN_DEBUG "--%s\n", __func__);
+	dbg( "--%s\n", __func__);
 	return 0;
 }
 
@@ -1012,13 +1012,13 @@ static int fimc_is_back_link_setup(struct media_entity *entity,
 	struct v4l2_subdev *sd = media_entity_to_v4l2_subdev(entity);
 	struct fimc_is_back_dev *fimc_is_back = to_fimc_is_back_dev(sd);
 
-	printk(KERN_DEBUG "++%s\n", __func__);
+	dbg( "++%s\n", __func__);
 	switch (local->index | media_entity_type(remote->entity)) {
 	case FIMC_IS_BACK_PAD_SINK | MEDIA_ENT_T_V4L2_SUBDEV:
-		printk(KERN_DEBUG "%s : fimc_is_back sink pad\n", __func__);
+		dbg( "%s : fimc_is_back sink pad\n", __func__);
 		if (flags & MEDIA_LNK_FL_ENABLED) {
 			if (fimc_is_back->input != FIMC_IS_BACK_INPUT_NONE) {
-				printk(KERN_DEBUG "BUSY\n");
+				dbg( "BUSY\n");
 				return -EBUSY;
 			}
 			if (remote->index == FIMC_IS_FRONT_PAD_SOURCE_BACK)
@@ -1043,7 +1043,7 @@ static int fimc_is_back_link_setup(struct media_entity *entity,
 		v4l2_err(sd, "%s : ERR link\n", __func__);
 		return -EINVAL;
 	}
-	printk(KERN_DEBUG "--%s\n", __func__);
+	dbg( "--%s\n", __func__);
 	return 0;
 }
 
@@ -1067,12 +1067,12 @@ int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 	struct v4l2_subdev *sensor_sd;
 	int	ret;
 
-	printk(KERN_DEBUG "--%s\n", __func__);
+	dbg( "--%s\n", __func__);
 
 	pad = media_entity_remote_source(pad);
 	if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV
 			|| pad == NULL)
-		printk(KERN_DEBUG "cannot find back entity\n");
+		dbg( "cannot find back entity\n");
 
 	back_sd = media_entity_to_v4l2_subdev(pad->entity);
 
@@ -1081,7 +1081,7 @@ int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 	pad = media_entity_remote_source(pad);
 	if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV
 			|| pad == NULL)
-		printk(KERN_DEBUG "cannot find front entity\n");
+		dbg( "cannot find front entity\n");
 
 	front_sd = media_entity_to_v4l2_subdev(pad->entity);
 
@@ -1090,7 +1090,7 @@ int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 	pad = media_entity_remote_source(pad);
 	if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV
 			|| pad == NULL)
-		printk(KERN_DEBUG "cannot find sensor entity\n");
+		dbg( "cannot find sensor entity\n");
 
 	sensor_sd = media_entity_to_v4l2_subdev(pad->entity);
 
@@ -1124,19 +1124,19 @@ int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 
 static int fimc_is_suspend(struct device *dev)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_resume(struct device *dev)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
 static int fimc_is_runtime_suspend(struct device *dev)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
@@ -1148,7 +1148,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	u32 cfg;
 	u32 timeout;
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 
 	enable_mipi();
 	/* set mipi & fimclite */
@@ -1158,11 +1158,6 @@ static int fimc_is_runtime_resume(struct device *dev)
 	f_frame.offs_v = 0;
 	f_frame.width = DEFAULT_PREVIEW_STILL_WIDTH + 16;
 	f_frame.height = DEFAULT_PREVIEW_STILL_HEIGHT + 12;
-
-	/*start mipi & fimclite*/
-	start_fimc_lite(&f_frame);
-	mdelay(10);
-	start_mipi_csi(&f_frame);
 
 	/* init Clock */
 	if (isp->pdata->clk_cfg) {
@@ -1179,17 +1174,22 @@ static int fimc_is_runtime_resume(struct device *dev)
 		return 0;
 	}
 
+	/*start mipi & fimclite*/
+	start_fimc_lite(&f_frame);
+	msleep(10);
+	start_mipi_csi(&f_frame);
+
 	/* 1. A5 start address setting */
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	cfg = isp->mem.base;
 #elif defined(CONFIG_VIDEOBUF2_ION)
 	cfg = isp->mem.dvaddr;
 	if (isp->alloc_ctx)
-	fimc_is_mem_resume(isp->alloc_ctx);
+		fimc_is_mem_resume(isp->alloc_ctx);
 #endif
 
-	printk(KERN_DEBUG "mem.base(dvaddr) : 0x%08x\n", cfg);
-	printk(KERN_DEBUG "mem.base(kvaddr) : 0x%08x\n", isp->mem.kvaddr);
+	dbg( "mem.base(dvaddr) : 0x%08x\n", cfg);
+	dbg( "mem.base(kvaddr) : 0x%08x\n", (unsigned int)isp->mem.kvaddr);
 	writel(cfg, isp->regs + BBOAR);
 
 	/* 2. A5 power on*/
@@ -1453,7 +1453,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	struct vb2_queue *scalerp_q;
 	struct vb2_queue *dnr_q;
 
-	printk(KERN_DEBUG "fimc_is_front_probe\n");
+	dbg( "fimc_is_front_probe\n");
 
 	isp = kzalloc(sizeof(struct fimc_is_dev), GFP_KERNEL);
 	if (!isp)
@@ -1495,7 +1495,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(isp->mdev))
 		goto p_err3;
 
-	printk(KERN_DEBUG "fimc_is_front->mdev : 0x%p\n", isp->mdev);
+	dbg( "fimc_is_front->mdev : 0x%p\n", isp->mdev);
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	isp->vb2 = &fimc_is_vb2_cma;
@@ -1619,7 +1619,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd, VFL_TYPE_GRABBER,
 					FIMC_IS_VIDEO_NUM_SCALERC+EXYNOS_VIDEONODE_FIMC_IS);
-	printk(KERN_DEBUG "VIDEO NODE :: scalerC minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.minor);
+	dbg( "VIDEO NODE :: scalerC minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register ScalerC video device\n", __func__);
 		goto p_err3;
@@ -1656,7 +1656,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd, VFL_TYPE_GRABBER,
 					FIMC_IS_VIDEO_NUM_SCALERP+EXYNOS_VIDEONODE_FIMC_IS);
-	printk(KERN_DEBUG "VIDEO NODE :: scalerP minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.minor);
+	dbg( "VIDEO NODE :: scalerP minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register ScalerP video device\n", __func__);
 		goto p_err3;
@@ -1693,7 +1693,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd, VFL_TYPE_GRABBER,
 					FIMC_IS_VIDEO_NUM_3DNR+EXYNOS_VIDEONODE_FIMC_IS);
-	printk(KERN_DEBUG "VIDEO NODE :: 3DNR minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.minor);
+	dbg( "VIDEO NODE :: 3DNR minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register 3DNR video device\n", __func__);
 		goto p_err3;
@@ -1781,7 +1781,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
-	printk(KERN_DEBUG "%s : fimc_is_front_%d probe success\n", __func__, pdev->id);
+	dbg( "%s : fimc_is_front_%d probe success\n", __func__, pdev->id);
 	printk("probe2\n");
 	return 0;
 
@@ -1796,7 +1796,7 @@ p_err1:
 
 static int fimc_is_remove(struct platform_device *pdev)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	dbg( "%s\n", __func__);
 	return 0;
 }
 
