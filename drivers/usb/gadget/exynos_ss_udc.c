@@ -1545,6 +1545,9 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 	dev_dbg(udc->dev, "%s\n", __func__);
 
+	/* Disable test mode */
+	__bic32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_TstCtl_MASK);
+
 	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
 	/* End transfer, kill all requests and clear STALL on the
