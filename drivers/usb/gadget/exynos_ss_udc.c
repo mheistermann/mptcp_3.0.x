@@ -396,18 +396,18 @@ static struct usb_request *exynos_ss_udc_ep_alloc_request(struct usb_ep *ep,
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
-	struct exynos_ss_udc_req *req;
+	struct exynos_ss_udc_req *udc_req;
 
 	dev_dbg(udc->dev, "%s: ep%d\n", __func__, udc_ep->epnum);
 
-	req = kzalloc(sizeof(struct exynos_ss_udc_req), flags);
-	if (!req)
+	udc_req = kzalloc(sizeof(struct exynos_ss_udc_req), flags);
+	if (!udc_req)
 		return NULL;
 
-	INIT_LIST_HEAD(&req->queue);
+	INIT_LIST_HEAD(&udc_req->queue);
 
-	req->req.dma = DMA_ADDR_INVALID;
-	return &req->req;
+	udc_req->req.dma = DMA_ADDR_INVALID;
+	return &udc_req->req;
 }
 
 /**
@@ -1709,6 +1709,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
 		dev_info(udc->dev, "Disconnection Detected");
 		call_gadget(udc, disconnect);
+		udc->gadget.speed = USB_SPEED_UNKNOWN;
 #ifdef CONFIG_BATTERY_SAMSUNG
 		exynos_ss_udc_cable_disconnect(udc);
 #endif
