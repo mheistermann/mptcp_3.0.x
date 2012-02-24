@@ -608,6 +608,7 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 	struct clk *gsc_ctrl = NULL;
 	struct clk *isp_ctrl = NULL;
 	struct clk *mipi_ctrl = NULL;
+	struct clk *cam_if_top = NULL;
 	struct clk *cam_A_clk = NULL;
 
 	printk(KERN_DEBUG "exynos5_fimc_is_clk_on\n");
@@ -640,6 +641,13 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 	clk_enable(mipi_ctrl);
 	clk_put(mipi_ctrl);
 
+	cam_if_top = clk_get(&pdev->dev, "camif_top");
+	if (IS_ERR(cam_if_top))
+		return PTR_ERR(cam_if_top);
+
+	clk_enable(cam_if_top);
+	clk_put(cam_if_top);
+
 	cam_A_clk = clk_get(&pdev->dev, "sclk_cam0");
 	if (IS_ERR(cam_A_clk))
 		return PTR_ERR(cam_A_clk);
@@ -655,6 +663,7 @@ int exynos5_fimc_is_clk_off(struct platform_device *pdev)
 	struct clk *gsc_ctrl = NULL;
 	struct clk *isp_ctrl = NULL;
 	struct clk *mipi_ctrl = NULL;
+	struct clk *cam_if_top = NULL;
 	struct clk *cam_A_clk = NULL;
 
 	printk(KERN_DEBUG "exynos5_fimc_is_clk_on\n");
@@ -686,6 +695,13 @@ int exynos5_fimc_is_clk_off(struct platform_device *pdev)
 
 	clk_disable(mipi_ctrl);
 	clk_put(mipi_ctrl);
+
+	cam_if_top = clk_get(&pdev->dev, "camif_top");
+	if (IS_ERR(cam_if_top))
+		return PTR_ERR(cam_if_top);
+
+	clk_disable(cam_if_top);
+	clk_put(cam_if_top);
 
 	cam_A_clk = clk_get(&pdev->dev, "sclk_cam0");
 	if (IS_ERR(cam_A_clk))
