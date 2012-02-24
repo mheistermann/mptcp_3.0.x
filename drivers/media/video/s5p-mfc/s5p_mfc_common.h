@@ -17,7 +17,6 @@
 #define S5P_MFC_COMMON_H_
 
 #include <linux/videodev2.h>
-#include <linux/workqueue.h>
 #include <linux/slab.h>
 
 #include <media/v4l2-device.h>
@@ -54,7 +53,6 @@
 #define MFC_FW_NAME		"mfc_fw.bin"
 
 #define STUFF_BYTE		4
-#define MFC_WORKQUEUE_LEN	32
 
 #define MFC_BASE_MASK		((1 << 17) - 1)
 
@@ -262,10 +260,6 @@ struct s5p_mfc_dev {
 	struct work_struct watchdog_work;
 
 	struct vb2_alloc_ctx **alloc_ctx;
-
-	unsigned long clk_state;
-	struct work_struct work_struct;
-	struct workqueue_struct *irq_workqueue;
 };
 
 /**

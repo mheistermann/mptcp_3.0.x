@@ -169,8 +169,6 @@ bool s5p_mfc_power_chk(void)
 #define MFC_CLKNAME		"sclk_mfc"
 #define MFC_GATE_CLK_NAME	"mfc"
 
-#define CLK_DEBUG
-
 static struct s5p_mfc_pm *pm;
 
 atomic_t clk_ref;
@@ -231,17 +229,15 @@ void s5p_mfc_final_pm(struct s5p_mfc_dev *dev)
 
 int s5p_mfc_clock_on(void)
 {
-	int ret;
+	int ret, state;
 	struct s5p_mfc_dev *dev = platform_get_drvdata(to_platform_device(pm->device));
 
-	atomic_inc(&clk_ref);
+	state = atomic_inc_return(&clk_ref);
 
-#ifdef CLK_DEBUG
-	mfc_debug(3, "+ %d", atomic_read(&clk_ref));
-#endif
+	mfc_debug(3, "+ %d", state);
 
 	ret = clk_enable(pm->clock);
-	if (atomic_read(&clk_ref) == 1)
+	if (state == 1)
 		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
 
 	return ret;
@@ -249,15 +245,14 @@ int s5p_mfc_clock_on(void)
 
 void s5p_mfc_clock_off(void)
 {
+	int state;
 	struct s5p_mfc_dev *dev = platform_get_drvdata(to_platform_device(pm->device));
 
-	atomic_dec(&clk_ref);
+	state = atomic_dec_return(&clk_ref);
 
-#ifdef CLK_DEBUG
-	mfc_debug(3, "- %d", atomic_read(&clk_ref));
-#endif
+	mfc_debug(3, "- %d", state);
 
-	if (atomic_read(&clk_ref) == 0)
+	if (state == 0)
 		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
 	clk_disable(pm->clock);
 }

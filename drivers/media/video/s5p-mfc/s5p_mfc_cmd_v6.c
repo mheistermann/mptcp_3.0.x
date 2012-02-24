@@ -16,9 +16,12 @@
 #include "s5p_mfc_reg.h"
 #include "s5p_mfc_cmd.h"
 #include "s5p_mfc_mem.h"
+#include "s5p_mfc_pm.h"
 
 int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
 {
+	s5p_mfc_clock_on();
+
 	mfc_debug(2, "Issue the command: %d\n", cmd);
 
 	/* Reset RISC2HOST command */
@@ -41,8 +44,12 @@ int s5p_mfc_sys_init_cmd(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_alloc_dev_context_buffer(dev);
 
+	s5p_mfc_clock_on();
+
 	s5p_mfc_write_reg(dev->ctx_buf.ofs, S5P_FIMV_CONTEXT_MEM_ADDR);
 	s5p_mfc_write_reg(buf_size->dev_ctx, S5P_FIMV_CONTEXT_MEM_SIZE);
+
+	s5p_mfc_clock_off();
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_SYS_INIT, &h2r_args);
 
@@ -91,6 +98,7 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 	int ret;
 
 	mfc_debug_enter();
+	s5p_mfc_clock_on();
 
 	mfc_debug(2, "Requested codec mode: %d\n", ctx->codec_mode);
 
@@ -99,6 +107,8 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_write_reg(ctx->ctx_buf_size, S5P_FIMV_CONTEXT_MEM_SIZE);
 	if (ctx->type == MFCINST_DECODER)
 		s5p_mfc_write_reg(dec->crc_enable, S5P_FIMV_D_CRC_CTRL);
+
+	s5p_mfc_clock_off();
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_OPEN_INSTANCE, &h2r_args);
 
@@ -116,7 +126,9 @@ int s5p_mfc_close_inst_cmd(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	if (ctx->state != MFCINST_FREE) {
+		s5p_mfc_clock_on();
 		s5p_mfc_write_reg(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
+		s5p_mfc_clock_off();
 
 		ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_CLOSE_INSTANCE,
 					    &h2r_args);

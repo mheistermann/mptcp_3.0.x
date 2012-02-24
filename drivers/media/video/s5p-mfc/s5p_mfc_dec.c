@@ -726,8 +726,12 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 
 static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
+	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if (!buf_ctrl->has_new)
@@ -770,13 +774,20 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 			  buf_ctrl->val);
 	}
 
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_off();
+
 	return 0;
 }
 
 static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
+	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if ((buf_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
@@ -795,6 +806,9 @@ static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		mfc_debug(5, "id: 0x%08x val: %d\n", buf_ctrl->id,
 			  buf_ctrl->val);
 	}
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_off();
 
 	return 0;
 }
@@ -1114,7 +1128,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 
 	/* In case of calling s_fmt twice or more */
 	if (ctx->inst_no != MFC_NO_INSTANCE_SET) {
-		s5p_mfc_clock_on();
 		ctx->state = MFCINST_RETURN_INST;
 		spin_lock_irqsave(&dev->condlock, flags);
 		set_bit(ctx->num, &dev->ctx_work_bits);
@@ -1131,7 +1144,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		s5p_mfc_release_dec_desc_buffer(ctx);
 
 		ctx->state = MFCINST_INIT;
-		s5p_mfc_clock_off();
 	}
 
 	if (dec->crc_enable && (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||

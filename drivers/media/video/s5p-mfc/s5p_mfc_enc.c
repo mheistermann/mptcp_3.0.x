@@ -28,6 +28,7 @@
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
 #include "s5p_mfc_enc.h"
+#include "s5p_mfc_pm.h"
 
 #define DEF_SRC_FMT	1
 #define DEF_DST_FMT	2
@@ -1325,10 +1326,14 @@ static int enc_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 
 static int enc_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
+	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
 
 	mfc_debug_enter();
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if (!buf_ctrl->has_new)
@@ -1371,6 +1376,9 @@ static int enc_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 			  buf_ctrl->val);
 	}
 
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_off();
+
 	mfc_debug_leave();
 
 	return 0;
@@ -1378,8 +1386,12 @@ static int enc_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 
 static int enc_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
+	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
@@ -1395,6 +1407,9 @@ static int enc_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		mfc_debug(5, "id: 0x%08x val: %d\n", buf_ctrl->id,
 			  buf_ctrl->val);
 	}
+
+	if (IS_MFCV6(dev))
+		s5p_mfc_clock_off();
 
 	return 0;
 }
