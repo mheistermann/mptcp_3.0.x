@@ -309,6 +309,11 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 		__func__, ep->name, desc->bEndpointAddress, desc->bmAttributes,
 		desc->wMaxPacketSize, desc->bInterval);
 
+	if (!ep || !desc || desc->bDescriptorType != USB_DT_ENDPOINT) {
+		dev_err(udc->dev, "%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
 	/* not to be called for EP0 */
 	WARN_ON(udc_ep->epnum == 0);
 
@@ -372,6 +377,14 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 
 	dev_dbg(udc->dev, "%s: ep%d%s\n", __func__,
 			  udc_ep->epnum, udc_ep->dir_in ? "in" : "out");
+
+	if (!ep) {
+		dev_err(udc->dev, "%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!udc_ep->enabled)
+		return 0;
 
 	spin_lock_irqsave(&udc_ep->lock, flags);
 	exynos_ss_udc_ep_deactivate(udc, udc_ep);
