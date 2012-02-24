@@ -18,7 +18,6 @@
 #include <linux/errno.h>
 #include <linux/bug.h>
 #include <linux/interrupt.h>
-#include <linux/workqueue.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/list.h>
@@ -1059,13 +1058,6 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 	return ret;
 }
 
-void gsc_wq_suspend(struct work_struct *work)
-{
-	struct gsc_dev *gsc = container_of(work, struct gsc_dev,
-					     work_struct);
-	pm_runtime_put_sync(&gsc->pdev->dev);
-}
-
 void gsc_cap_irq_handler(struct gsc_dev *gsc)
 {
 	int done_index;
@@ -1099,6 +1091,7 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 		struct gsc_ctx *ctx =
 			v4l2_m2m_get_curr_priv(gsc->m2m.m2m_dev);
 
+		gsc_clock_gating(gsc, GSC_CLK_OFF);
 		if (!ctx || !ctx->m2m_ctx)
 			goto isr_unlock;
 
@@ -1121,8 +1114,7 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 			}
 			spin_unlock(&ctx->slock);
 		}
-		/* schedule pm_runtime_put_sync */
-		queue_work(gsc->irq_workqueue, &gsc->work_struct);
+		pm_runtime_put(&gsc->pdev->dev);
 	} else if (test_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
 		if (!list_empty(&gsc->out.active_buf_q)) {
 			struct gsc_input_buf *done_buf;
@@ -1154,17 +1146,39 @@ static int gsc_get_media_info(struct device *dev, void *p)
 	return 0;
 }
 
+void gsc_clock_gating(struct gsc_dev *gsc, enum gsc_clk_status status)
+{
+	int clk_cnt;
+
+	if (status == GSC_CLK_ON) {
+		clk_cnt = atomic_inc_return(&gsc->clk_cnt);
+		if (clk_cnt == 1) {
+			clk_enable(gsc->clock);
+			gsc->vb2->resume(gsc->alloc_ctx);
+			set_bit(ST_PWR_ON, &gsc->state);
+		}
+	} else if (status == GSC_CLK_OFF) {
+		clk_cnt = atomic_dec_return(&gsc->clk_cnt);
+		if (clk_cnt == 0) {
+			gsc->vb2->suspend(gsc->alloc_ctx);
+			clk_disable(gsc->clock);
+			clear_bit(ST_PWR_ON, &gsc->state);
+		} else if (clk_cnt < 0) {
+			gsc_err("clock count is out of range");
+			atomic_set(&gsc->clk_cnt, 0);
+		}
+	}
+}
+
 static int gsc_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct gsc_dev *gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
 
-	if (gsc_m2m_opened(gsc))
+	if (!gsc_m2m_opened(gsc))
+		gsc_clock_gating(gsc, GSC_CLK_OFF);
+	else
 		gsc->m2m.ctx = NULL;
-
-	gsc->vb2->suspend(gsc->alloc_ctx);
-	clk_disable(gsc->clock);
-	clear_bit(ST_PWR_ON, &gsc->state);
 
 	return 0;
 }
@@ -1174,9 +1188,9 @@ static int gsc_runtime_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct gsc_dev *gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
 
-	clk_enable(gsc->clock);
-	gsc->vb2->resume(gsc->alloc_ctx);
-	set_bit(ST_PWR_ON, &gsc->state);
+	if (!gsc_m2m_opened(gsc))
+		gsc_clock_gating(gsc, GSC_CLK_ON);
+
 	return 0;
 }
 
@@ -1206,7 +1220,6 @@ static int gsc_probe(struct platform_device *pdev)
 	struct device_driver *driver;
 	struct exynos_md *mdev[MDEV_MAX_NUM] = {NULL,};
 	int ret = 0;
-	char workqueue_name[WORKQUEUE_NAME_SIZE];
 
 	dev_dbg(&pdev->dev, "%s():\n", __func__);
 	drv_data = (struct gsc_driverdata *)
@@ -1315,18 +1328,10 @@ static int gsc_probe(struct platform_device *pdev)
 			goto err_irq;
 	}
 
-	sprintf(workqueue_name, "gsc%d_irq_wq_name", gsc->id);
-	gsc->irq_workqueue = create_singlethread_workqueue(workqueue_name);
-	if (gsc->irq_workqueue == NULL) {
-		dev_err(&pdev->dev, "failed to create workqueue for gsc\n");
-		goto err_irq;
-	}
-	INIT_WORK(&gsc->work_struct, gsc_wq_suspend);
-
 	gsc->alloc_ctx = gsc->vb2->init(gsc);
 	if (IS_ERR(gsc->alloc_ctx)) {
 		ret = PTR_ERR(gsc->alloc_ctx);
-		goto err_wq;
+		goto err_irq;
 	}
 	gsc_pm_runtime_enable(&pdev->dev);
 
@@ -1334,8 +1339,6 @@ static int gsc_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_wq:
-	destroy_workqueue(gsc->irq_workqueue);
 err_irq:
 	free_irq(gsc->irq, gsc);
 err_regs_unmap:

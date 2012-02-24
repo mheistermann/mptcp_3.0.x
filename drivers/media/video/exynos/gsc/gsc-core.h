@@ -134,6 +134,11 @@ enum gsc_irq {
 	GSC_DONE_IRQ = 16,
 };
 
+enum gsc_clk_status {
+	GSC_CLK_OFF,
+	GSC_CLK_ON,
+};
+
 /**
  * enum gsc_datapath - the path of data used for gscaler
  * @GSC_CAMERA: from camera
@@ -513,12 +518,12 @@ struct gsc_dev {
 	struct gsc_variant		*variant;
 	u16				id;
 	struct clk			*clock;
+	atomic_t			clk_cnt;
 	void __iomem			*regs;
 	struct resource			*regs_res;
 	int				irq;
 	wait_queue_head_t		irq_queue;
 	struct work_struct		work_struct;
-	struct workqueue_struct		*irq_workqueue;
 	struct gsc_m2m_device		m2m;
 	struct gsc_output_device	out;
 	struct gsc_capture_device	cap;
@@ -573,6 +578,7 @@ extern const struct gsc_vb2 gsc_vb2_ion;
 #endif
 
 void gsc_set_prefbuf(struct gsc_dev *gsc, struct gsc_frame frm);
+void gsc_clock_gating(struct gsc_dev *gsc, enum gsc_clk_status status);
 void gsc_clk_release(struct gsc_dev *gsc);
 int gsc_register_m2m_device(struct gsc_dev *gsc);
 void gsc_unregister_m2m_device(struct gsc_dev *gsc);

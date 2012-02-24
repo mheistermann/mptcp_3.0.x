@@ -18,7 +18,6 @@
 #include <linux/errno.h>
 #include <linux/bug.h>
 #include <linux/interrupt.h>
-#include <linux/workqueue.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/list.h>
@@ -111,6 +110,7 @@ static void gsc_m2m_device_run(void *priv)
 
 	gsc = ctx->gsc_dev;
 	pm_runtime_get_sync(&gsc->pdev->dev);
+	gsc_clock_gating(gsc, GSC_CLK_ON);
 
 	spin_lock_irqsave(&ctx->slock, flags);
 	/* Reconfigure hardware if the context has changed. */
