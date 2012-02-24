@@ -1,9 +1,8 @@
-/* linux/drivers/media/video/exynos/rotator/rotator-core.c
+/*
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
- *		http://www.samsung.com/
- *
- * Core file for Samsung Exynos Image Rotator driver
+ * Core file for Samsung EXYNOS Image Rotator driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -144,7 +143,8 @@ void rot_bound_align_image(struct rot_ctx *ctx, struct rot_fmt *rot_fmt,
 		limit = &variant->limit_rgb888;
 		break;
 	default:
-		break;
+		rot_err("not supported format values\n");
+		return;
 	}
 
 	/* Bound an image to have width and height in limit */
@@ -800,7 +800,7 @@ static int rot_open(struct file *file)
 	if (IS_ERR(ctx->m2m_ctx)) {
 		kfree(ctx);
 		atomic_dec(&rot->m2m.in_use);
-		return PTR_ERR(ctx->m2m_ctx);
+		return -EINVAL;
 	}
 
 	return 0;
@@ -845,22 +845,50 @@ static const struct v4l2_file_operations rot_v4l2_fops = {
 	.mmap		= rot_mmap,
 };
 
-void rot_work(struct work_struct *work)
+static void rot_clock_gating(struct rot_dev *rot, enum rot_clk_status status)
 {
-	struct rot_dev *rot = container_of(work, struct rot_dev, ws);
+	int clk_cnt;
+
+	if (status == ROT_CLK_ON) {
+		clk_cnt = atomic_inc_return(&rot->clk_cnt);
+		if (clk_cnt == 1) {
+			clk_enable(rot->clock);
+			rot->vb2->resume(rot->alloc_ctx);
+		}
+	} else if (status == ROT_CLK_OFF) {
+		clk_cnt = atomic_dec_return(&rot->clk_cnt);
+		if (clk_cnt == 0) {
+			rot->vb2->suspend(rot->alloc_ctx);
+			clk_disable(rot->clock);
+		} else if (clk_cnt < 0) {
+			rot_err("rotator clock control is wrong!!\n");
+			atomic_set(&rot->clk_cnt, 0);
+		}
+	}
+}
+
+void rot_watchdog(unsigned long arg)
+{
+	struct rot_dev *rot = (struct rot_dev *)arg;
 	struct rot_ctx *ctx;
 	unsigned long flags;
 	struct vb2_buffer *src_vb, *dst_vb;
 
-	spin_lock_irqsave(&rot->slock, flags);
-
+	rot_dbg("timeout watchdog\n");
 	if (atomic_read(&rot->wdt.cnt) >= ROT_WDT_CNT) {
+		rot_clock_gating(rot, ROT_CLK_OFF);
+
 		rot_dbg("wakeup blocked process\n");
+		atomic_set(&rot->wdt.cnt, 0);
+		clear_bit(DEV_RUN, &rot->state);
+
 		ctx = v4l2_m2m_get_curr_priv(rot->m2m.m2m_dev);
 		if (!ctx || !ctx->m2m_ctx) {
 			rot_err("current ctx is NULL\n");
-			goto wq_unlock;
+			return;
 		}
+		spin_lock_irqsave(&rot->slock, flags);
+		clear_bit(CTX_RUN, &ctx->flags);
 		src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 		dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
 
@@ -871,22 +899,10 @@ void rot_work(struct work_struct *work)
 			v4l2_m2m_job_finish(rot->m2m.m2m_dev, ctx->m2m_ctx);
 		}
 		rot->m2m.ctx = NULL;
-		atomic_set(&rot->wdt.cnt, 0);
-		clear_bit(DEV_RUN, &rot->state);
-		clear_bit(CTX_RUN, &ctx->flags);
+		spin_unlock_irqrestore(&rot->slock, flags);
+		return;
 	}
 
-wq_unlock:
-	spin_unlock_irqrestore(&rot->slock, flags);
-
-	pm_runtime_put(&rot->pdev->dev);
-}
-
-void rot_watchdog(unsigned long arg)
-{
-	struct rot_dev *rot = (struct rot_dev *)arg;
-
-	rot_dbg("timeout watchdog\n");
 	if (test_bit(DEV_RUN, &rot->state)) {
 		atomic_inc(&rot->wdt.cnt);
 		rot_err("rotator is still running\n");
@@ -895,9 +911,6 @@ void rot_watchdog(unsigned long arg)
 	} else {
 		rot_dbg("rotator finished job\n");
 	}
-
-	if (atomic_read(&rot->wdt.cnt) >= ROT_WDT_CNT)
-		queue_work(rot->wq, &rot->ws);
 }
 
 static irqreturn_t rot_irq_handler(int irq, void *priv)
@@ -923,6 +936,8 @@ static irqreturn_t rot_irq_handler(int irq, void *priv)
 		rot_err("####################\n");
 		rot_dump_register(rot);
 	}
+
+	rot_clock_gating(rot, ROT_CLK_OFF);
 
 	ctx = v4l2_m2m_get_curr_priv(rot->m2m.m2m_dev);
 	if (!ctx || !ctx->m2m_ctx) {
@@ -950,8 +965,6 @@ static irqreturn_t rot_irq_handler(int irq, void *priv)
 		/* Wake up from CTX_ABORT state */
 		if (test_and_clear_bit(CTX_ABORT, &ctx->flags))
 			wake_up(&rot->irq.wait);
-
-		queue_work(rot->wq, &rot->ws);
 	} else {
 		rot_err("failed to get the buffer done\n");
 	}
@@ -1068,7 +1081,7 @@ static void rot_m2m_device_run(void *priv)
 		goto run_unlock;
 	}
 
-	pm_runtime_get_sync(&ctx->rot_dev->pdev->dev);
+	rot_clock_gating(rot, ROT_CLK_ON);
 
 	if (rot->m2m.ctx != ctx)
 		rot->m2m.ctx = ctx;
@@ -1245,41 +1258,9 @@ static int rot_resume(struct device *dev)
 	return 0;
 }
 
-static int rot_runtime_suspend(struct device *dev)
-{
-	struct rot_dev *rot;
-	struct platform_device *pdev;
-
-	pdev = to_platform_device(dev);
-	rot = (struct rot_dev *)platform_get_drvdata(pdev);
-
-	rot->vb2->suspend(rot->alloc_ctx);
-
-	clk_disable(rot->clock);
-
-	return 0;
-}
-
-static int rot_runtime_resume(struct device *dev)
-{
-	struct rot_dev *rot;
-	struct platform_device *pdev;
-
-	pdev = to_platform_device(dev);
-	rot = (struct rot_dev *)platform_get_drvdata(pdev);
-
-	clk_enable(rot->clock);
-
-	rot->vb2->resume(rot->alloc_ctx);
-
-	return 0;
-}
-
 static const struct dev_pm_ops rot_pm_ops = {
 	.suspend		= rot_suspend,
 	.resume			= rot_resume,
-	.runtime_suspend	= rot_runtime_suspend,
-	.runtime_resume		= rot_runtime_resume,
 };
 
 static int rot_probe(struct platform_device *pdev)
@@ -1351,19 +1332,14 @@ static int rot_probe(struct platform_device *pdev)
 		goto err_ioremap;
 	}
 
-	rot->wq = create_singlethread_workqueue(MODULE_NAME);
-	if (rot->wq == NULL) {
-		rot_err("failed to create workqueue for rotator\n");
-		goto err_irq;
-	}
-	INIT_WORK(&rot->ws, rot_work);
-
 	atomic_set(&rot->wdt.cnt, 0);
 	setup_timer(&rot->wdt.timer, rot_watchdog, (unsigned long)rot);
 
 	rot->clock = clk_get(&rot->pdev->dev, "rotator");
-	if (IS_ERR(rot->clock))
-		goto err_wq;
+	if (IS_ERR(rot->clock)) {
+		rot_err("failed to get clock for rotator\n");
+		goto err_irq;
+	}
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	rot->vb2 = &rot_vb2_cma;
@@ -1373,22 +1349,15 @@ static int rot_probe(struct platform_device *pdev)
 
 	rot->alloc_ctx = rot->vb2->init(rot);
 	ret = rot_register_m2m_device(rot);
-	if (ret)
+	if (ret) {
+		rot_err("failed to register m2m device\n");
 		goto err_irq;
-
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_enable(&pdev->dev);
-#else
-	rot_runtime_resume(&pdev->dev);
-#endif
-
+	}
 	rot_info("rotator registered successfully\n");
 	printk(KERN_INFO "--%s\n", __func__);
 
 	return 0;
 
-err_wq:
-	destroy_workqueue(rot->wq);
 err_irq:
 	free_irq(rot->irq.num, rot);
 err_ioremap:
@@ -1408,16 +1377,10 @@ static int rot_remove(struct platform_device *pdev)
 
 	free_irq(rot->irq.num, rot);
 	clk_put(rot->clock);
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_disable(&pdev->dev);
-#else
-	rot_runtime_suspend(&pdev->dev);
-#endif
 
 	if (timer_pending(&rot->wdt.timer))
 		del_timer(&rot->wdt.timer);
 
-	destroy_workqueue(rot->wq);
 	iounmap(rot->regs);
 	release_mem_region(rot->regs_res->start,
 			resource_size(rot->regs_res));

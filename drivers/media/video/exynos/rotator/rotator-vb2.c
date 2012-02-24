@@ -1,9 +1,8 @@
-/* linux/drivers/media/video/exynos/rotator/rotator-vb2.c
+/*
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
- *		http://www.samsung.com/
- *
- * Videobuf2 bridge driver file for Exynos Rotator driver
+ * Videobuf2 bridge driver file for EXYNOS Image Rotator driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -46,9 +45,9 @@ void *rot_ion_init(struct rot_dev *rot)
 
 	vb2_ion.dev = &rot->pdev->dev;
 	vb2_ion.name = "Rotator";
-	vb2_ion.contig = false;
+	vb2_ion.contig = true;
 	vb2_ion.cacheable = false;
-	vb2_ion.align = SZ_4K;
+	vb2_ion.align = SZ_1M;
 
 	vb2_drv.use_mmu = true;
 

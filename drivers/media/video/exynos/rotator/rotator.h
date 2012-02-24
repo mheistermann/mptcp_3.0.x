@@ -1,7 +1,6 @@
-/* linux/drivers/media/video/exynos/rotator/rotator.h
- *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
- *		http://www.samsung.com/
+/*
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
  *
  * Header file for Exynos Rotator driver
  *
@@ -78,7 +77,7 @@ static enum rot_log log_level = ROT_LOG_DEFAULT;
 #define rot_err(fmt, ...)		ROT_ERR(fmt, ##__VA_ARGS__)
 
 /* Time to wait for frame done interrupt */
-#define ROT_TIMEOUT		(20*HZ)
+#define ROT_TIMEOUT		(2 * HZ)
 #define ROT_WDT_CNT		5
 #define MODULE_NAME		"rotator"
 #define ROT_MAX_DEVS		1
@@ -125,6 +124,10 @@ enum rot_status {
 	ROT_RUNNING_REMAIN,
 };
 
+enum rot_clk_status {
+	ROT_CLK_ON,
+	ROT_CLK_OFF,
+};
 /*
  * struct exynos_rot_size_limit - Rotator variant size  information
  *
@@ -252,6 +255,7 @@ struct rot_vb2;
  * @slock:	the spinlock protecting this data structure
  * @lock:	the mutex protecting this data structure
  * @wdt:	watchdog timer information
+ * @clk_cnt:	rotator clock on/off count
  */
 struct rot_dev {
 	struct platform_device		*pdev;
@@ -271,6 +275,7 @@ struct rot_dev {
 	spinlock_t			slock;
 	struct mutex			lock;
 	struct rot_wdt			wdt;
+	atomic_t			clk_cnt;
 };
 
 /*
