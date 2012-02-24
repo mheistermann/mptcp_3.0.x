@@ -48,7 +48,7 @@
 #define FIMC_IS_FW								"fimc_is_fw.bin"
 #define FIMC_IS_SETFILE							"setfile.bin"
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT				(400*HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT				(3*HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR		(3*HZ)
 
 #define FIMC_IS_A5_MEM_SIZE					(0x00A00000)
