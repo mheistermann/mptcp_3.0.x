@@ -2452,6 +2452,11 @@ static u8 hdmi_chksum(struct hdmi_device *hdev, u32 start, u8 len, u32 hdr_sum)
 	return (u8)(0x100 - (hdr_sum & 0xff));
 }
 
+void hdmi_reg_stop_vsi(struct hdmi_device *hdev)
+{
+	hdmi_writeb(hdev, HDMI_VSI_CON, HDMI_VSI_CON_DO_NOT_TRANSMIT);
+}
+
 void hdmi_reg_infoframe(struct hdmi_device *hdev,
 		struct hdmi_infoframe *infoframe)
 {

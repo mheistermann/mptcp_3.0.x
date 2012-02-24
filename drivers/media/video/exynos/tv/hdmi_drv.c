@@ -165,7 +165,8 @@ static int hdmi_set_infoframe(struct hdmi_device *hdev)
 		infoframe.ver = HDMI_VSI_VERSION;
 		infoframe.len = HDMI_VSI_LENGTH;
 		hdmi_reg_infoframe(hdev, &infoframe);
-	}
+	} else
+		hdmi_reg_stop_vsi(hdev);
 
 	infoframe.type = HDMI_PACKET_TYPE_AVI;
 	infoframe.ver = HDMI_AVI_VERSION;
