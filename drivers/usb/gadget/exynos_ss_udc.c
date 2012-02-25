@@ -1384,80 +1384,60 @@ static void exynos_ss_udc_complete_request_lock(struct exynos_ss_udc *udc,
 }
 
 /**
- * exynos_ss_udc_complete_in - complete IN transfer
+ * exynos_ss_udc_xfer_complete - complete transfer
  * @udc: The device state.
  * @udc_ep: The endpoint that has just completed.
+ * @event: The event being handled.
  *
- * An IN transfer has been completed, update the transfer's state and then
+ * Transfer has been completed, update the transfer's state and then
  * call the relevant completion routines.
  */
-static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
-				      struct exynos_ss_udc_ep *udc_ep)
+static void exynos_ss_udc_xfer_complete(struct exynos_ss_udc *udc,
+					struct exynos_ss_udc_ep *udc_ep,
+					u32 event)
 {
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
 	struct usb_request *req = &udc_req->req;
 	int size_left;
+	int result = 0;
 
-	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, udc_ep->epnum, req);
+	dev_dbg(udc->dev, "%s: ep%d%s, req %p\n",
+			  __func__, udc_ep->epnum,
+			  udc_ep->dir_in ? "in" : "out", req);
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "XferCompl but no req\n");
 		return;
 	}
 
-	if (udc_ep->trb->param2 & EXYNOS_USB3_TRB_HWO) {
-		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
-		return;
+	if (event & EXYNOS_USB3_DEPEVT_EventStatus_BUSERR) {
+		dev_err(udc->dev, "%s: Bus Error occured\n", __func__);
+		result = -ECONNRESET;
 	}
+
+	if (udc_ep->trb->param2 & EXYNOS_USB3_TRB_HWO)
+		dev_err(udc->dev, "%s: HWO bit set\n", __func__);
 
 	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
-	udc_req->req.actual = udc_req->req.length - size_left;
 
-	if (size_left)
-		dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
-				  __func__, size_left);
+	if (udc_ep->dir_in) {
+		/* Incomplete IN transfer */
+		if (size_left) {
+			dev_err(udc->dev, "%s: BUFSIZ is not zero (%d)",
+					  __func__, size_left);
+			/* REVISIT shall we -ECONNRESET here? */
+		}
 
-	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
-}
+		udc_req->req.actual = udc_req->req.length - size_left;
+	} else {
+		int len;
 
-
-/**
- * exynos_ss_udc_complete_out - complete OUT transfer
- * @udc: The device state.
- * @epnum: The endpoint that has just completed.
- *
- * An OUT transfer has been completed, update the transfer's state and then
- * call the relevant completion routines.
- */
-static void exynos_ss_udc_complete_out(struct exynos_ss_udc *udc,
-				       struct exynos_ss_udc_ep *udc_ep)
-{
-	struct exynos_ss_udc_req *udc_req = udc_ep->req;
-	struct usb_request *req = &udc_req->req;
-	int len, size_left;
-
-	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, udc_ep->epnum, req);
-
-	if (!udc_req) {
-		dev_dbg(udc->dev, "%s: no request active\n", __func__);
-		return;
+		len = (req->length + udc_ep->ep.maxpacket - 1) &
+			~(udc_ep->ep.maxpacket - 1);
+		udc_req->req.actual = len - size_left;
 	}
 
-	if (udc_ep->trb->param2 & EXYNOS_USB3_TRB_HWO) {
-		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
-		return;
-	}
-
-	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
-	len = (req->length + udc_ep->ep.maxpacket - 1) &
-		~(udc_ep->ep.maxpacket - 1);
-	udc_req->req.actual = len - size_left;
-
-	if (size_left)
-		dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
-				  __func__, size_left);
-
-	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
+	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
 }
 
 /**
@@ -1630,15 +1610,9 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		break;
 
 	case EXYNOS_USB3_DEPEVT_EVENT_XferComplete:
-		dev_dbg(udc->dev, "Xfer Complete: ep%d%s\n",
-				  epnum, dir_in ? "in" : "out");
-		if (dir_in) {
-			/* Handle "transfer complete" for IN EPs */
-			exynos_ss_udc_complete_in(udc, udc_ep);
-		} else {
-			/* Handle "transfer complete" for OUT EPs */
-			exynos_ss_udc_complete_out(udc, udc_ep);
-		}
+		dev_dbg(udc->dev, "Xfer Complete\n");
+
+		exynos_ss_udc_xfer_complete(udc, udc_ep, event);
 
 		if (epnum == 0 && udc->ep0_state == EP0_SETUP_PHASE)
 			exynos_ss_udc_enqueue_setup(udc);
