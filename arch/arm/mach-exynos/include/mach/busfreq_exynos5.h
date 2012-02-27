@@ -61,13 +61,20 @@ struct busfreq_data {
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	void (*monitor) (struct busfreq_data *data, struct opp **mif_opp,
 			struct opp **int_opp);
-	void (*target)	(enum ppmu_type type, int index);
+	void (*target)	(struct busfreq_data *data, enum ppmu_type type, int index);
 	unsigned int (*get_int_volt) (unsigned long freq);
 	int (*get_table_index) (unsigned long freq, enum ppmu_type type);
 	void (*busfreq_prepare) (int index);
 	void (*busfreq_post) (int index);
 	void (*busfreq_suspend) (void);
 	void (*busfreq_resume) (void);
+
+	/* Dividers calculated at boot/probe-time */
+	unsigned int lex_divtable[LV_INT_END];
+	unsigned int r0x_divtable[LV_INT_END];
+	unsigned int r1x_divtable[LV_INT_END];
+	unsigned int cdrex_divtable[LV_MIF_END];
+	unsigned int cdrex2_divtable[LV_MIF_END];
 };
 
 struct busfreq_table {

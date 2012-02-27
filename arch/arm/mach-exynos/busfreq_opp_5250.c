@@ -343,30 +343,12 @@ static void exynos5250_set_bus_volt(void)
 	return;
 }
 
-static void exynos5250_target_for_mif(int div_index)
+static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
 {
 	unsigned int tmp;
 
 	/* Change Divider - CDREX */
-	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX);
-
-	tmp &= ~(EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_MASK |
-		EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_MASK |
-		EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_MASK |
-		EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_MASK |
-		EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_MASK |
-		EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_MASK |
-		EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_MASK |
-		EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_MASK);
-
-	tmp |= ((clkdiv_cdrex[div_index][0] << EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_SHIFT) |
-		(clkdiv_cdrex[div_index][1] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_SHIFT) |
-		(clkdiv_cdrex[div_index][2] << EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_SHIFT) |
-		(clkdiv_cdrex[div_index][3] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_SHIFT) |
-		(clkdiv_cdrex[div_index][4] << EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_SHIFT) |
-		(clkdiv_cdrex[div_index][5] << EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_SHIFT) |
-		(clkdiv_cdrex[div_index][6] << EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_SHIFT) |
-		(clkdiv_cdrex[div_index][8] << EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_SHIFT));
+	tmp = data->cdrex_divtable[div_index];
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX);
 
@@ -374,11 +356,7 @@ static void exynos5250_target_for_mif(int div_index)
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX);
 	} while (tmp & 0x11111111);
 
-	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX2);
-
-	tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
-
-	tmp |= clkdiv_cdrex[div_index][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
+	tmp = data->cdrex2_divtable[div_index];
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
 
@@ -387,7 +365,7 @@ static void exynos5250_target_for_mif(int div_index)
 	} while (tmp & 0x1);
 }
 
-static void exynos5250_target_for_int(int div_index)
+static void exynos5250_target_for_int(struct busfreq_data *data, int div_index)
 {
 	unsigned int tmp;
 	unsigned int tmp2;
@@ -436,12 +414,7 @@ static void exynos5250_target_for_int(int div_index)
 	} while ((tmp & 0x1110000) && (tmp2 & 0x80000));
 
 	/* Change Divider - LEX */
-	tmp = __raw_readl(EXYNOS5_CLKDIV_LEX);
-
-	tmp &= ~(EXYNOS5_CLKDIV_LEX_ATCLK_LEX_MASK | EXYNOS5_CLKDIV_LEX_PCLK_LEX_MASK);
-
-	tmp |= ((clkdiv_lex[div_index][0] << EXYNOS5_CLKDIV_LEX_ATCLK_LEX_SHIFT) |
-			(clkdiv_lex[div_index][1] << EXYNOS5_CLKDIV_LEX_PCLK_LEX_SHIFT));
+	tmp = data->lex_divtable[div_index];
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_LEX);
 
@@ -463,11 +436,7 @@ static void exynos5250_target_for_int(int div_index)
 	} while (tmp & 0x10);
 
 	/* Change Divider - R1X */
-	tmp = __raw_readl(EXYNOS5_CLKDIV_R1X);
-
-	tmp &= ~EXYNOS5_CLKDIV_R1X_PCLK_R1X_MASK;
-
-	tmp |= (clkdiv_r1x[div_index][0] << EXYNOS5_CLKDIV_R1X_PCLK_R1X_SHIFT);
+	tmp = data->r1x_divtable[div_index];
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_R1X);
 
@@ -476,12 +445,13 @@ static void exynos5250_target_for_int(int div_index)
 	} while (tmp & 0x10);
 }
 
-static void exynos5250_target(enum ppmu_type type, int index)
+static void exynos5250_target(struct busfreq_data *data, enum ppmu_type type,
+			      int index)
 {
 	if (type == PPMU_MIF)
-		exynos5250_target_for_mif(index);
+		exynos5250_target_for_mif(data, index);
 	else
-		exynos5250_target_for_int(index);
+		exynos5250_target_for_int(data, index);
 }
 
 static int exynos5250_get_table_index(unsigned long freq, enum ppmu_type type)
@@ -679,6 +649,73 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	} else {
 		dev_err(dev, "Don't support cdrex table\n");
 		return -EINVAL;
+	}
+
+	tmp = __raw_readl(EXYNOS5_CLKDIV_LEX);
+
+	for (i = LV_0; i < LV_INT_END; i++) {
+		tmp &= ~(EXYNOS5_CLKDIV_LEX_ATCLK_LEX_MASK | EXYNOS5_CLKDIV_LEX_PCLK_LEX_MASK);
+
+		tmp |= ((clkdiv_lex[i][0] << EXYNOS5_CLKDIV_LEX_ATCLK_LEX_SHIFT) |
+			(clkdiv_lex[i][1] << EXYNOS5_CLKDIV_LEX_PCLK_LEX_SHIFT));
+
+		data->lex_divtable[i] = tmp;
+	}
+
+	tmp = __raw_readl(EXYNOS5_CLKDIV_R0X);
+
+	for (i = LV_0; i < LV_INT_END; i++) {
+
+		tmp &= ~EXYNOS5_CLKDIV_R0X_PCLK_R0X_MASK;
+
+		tmp |= (clkdiv_r0x[i][0] << EXYNOS5_CLKDIV_R0X_PCLK_R0X_SHIFT);
+
+		data->r0x_divtable[i] = tmp;
+	}
+
+	tmp = __raw_readl(EXYNOS5_CLKDIV_R1X);
+
+	for (i = LV_0; i < LV_INT_END; i++) {
+		tmp &= ~EXYNOS5_CLKDIV_R1X_PCLK_R1X_MASK;
+
+		tmp |= (clkdiv_r1x[i][0] << EXYNOS5_CLKDIV_R1X_PCLK_R1X_SHIFT);
+
+		data->r1x_divtable[i] = tmp;
+	}
+
+	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX);
+
+	for (i = LV_0; i < LV_MIF_END; i++) {
+		tmp &= ~(EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_MASK |
+			 EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_MASK |
+			 EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_MASK |
+			 EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_MASK |
+			 EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_MASK |
+			 EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_MASK |
+			 EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_MASK |
+			 EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_MASK);
+
+		tmp |= ((clkdiv_cdrex[i][0] << EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_SHIFT) |
+			(clkdiv_cdrex[i][1] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_SHIFT) |
+			(clkdiv_cdrex[i][2] << EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_SHIFT) |
+			(clkdiv_cdrex[i][3] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_SHIFT) |
+			(clkdiv_cdrex[i][4] << EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_SHIFT) |
+			(clkdiv_cdrex[i][5] << EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_SHIFT) |
+			(clkdiv_cdrex[i][6] << EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_SHIFT) |
+			(clkdiv_cdrex[i][8] << EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_SHIFT));
+
+		data->cdrex_divtable[i] = tmp;
+	}
+
+	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX2);
+
+	for (i = LV_0; i < LV_MIF_END; i++) {
+		tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
+
+		tmp |= clkdiv_cdrex[i][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
+
+		data->cdrex2_divtable[i] = tmp;
+
 	}
 
 	exynos5250_set_bus_volt();

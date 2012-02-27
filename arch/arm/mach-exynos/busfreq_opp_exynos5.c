@@ -143,7 +143,7 @@ static void _target(struct busfreq_data *data,
 			data->busfreq_prepare(index);
 	}
 
-	data->target(type, index);
+	data->target(data, type, index);
 
 	if (newfreq < data->curr_freq[type]) {
 		if (type == PPMU_MIF && data->busfreq_post)
