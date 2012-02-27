@@ -33,7 +33,10 @@ void *jpeg_cma_init(struct jpeg_dev *dev)
 	return vb2_cma_phys_init(&dev->plat_dev->dev, NULL, SZ_8K, false);
 }
 
-void jpeg_cma_resume(void *alloc_ctx) {}
+int jpeg_cma_resume(void *alloc_ctx)
+{
+	return 1;
+}
 void jpeg_cma_suspend(void *alloc_ctx) {}
 
 const struct jpeg_vb2 jpeg_vb2_cma = {
