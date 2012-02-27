@@ -19,7 +19,10 @@ void *rot_cma_init(struct rot_dev *rot)
 	return vb2_cma_phys_init(&rot->pdev->dev, NULL, 0, false);
 }
 
-void rot_cma_resume(void *alloc_ctx) {}
+int rot_cma_resume(void *alloc_ctx)
+{
+	return 1;
+}
 void rot_cma_suspend(void *alloc_ctx) {}
 void rot_cma_set_cacheable(void *alloc_ctx, bool cacheable) {}
 int rot_cma_cache_flush(struct vb2_buffer *vb, u32 plane_no) { return 0; }
