@@ -1351,6 +1351,54 @@ static void exynos_ss_udc_complete_request_lock(struct exynos_ss_udc *udc,
 }
 
 /**
+ * exynos_ss_udc_ep_cmd_complete - process event EP Command Complete
+ * @udc: The device state.
+ * @udc_ep: The endpoint this event is for.
+ * @event: The event being handled.
+ */
+static void exynos_ss_udc_ep_cmd_complete(struct exynos_ss_udc *udc,
+					  struct exynos_ss_udc_ep *udc_ep,
+					  u32 event)
+{
+	struct exynos_ss_udc_ep_command *epcmd, *tepcmd;
+	struct exynos_ss_udc_req *udc_req;
+	int epnum;
+	int res;
+	bool restart;
+
+	dev_dbg(udc->dev, "%s: ep%d%s\n", __func__, udc_ep->epnum,
+			  udc_ep->dir_in ? "in" : "out");
+
+	/* We use IOC _only_ for End Transfer command currently */
+
+	udc_ep->not_ready = 0;
+
+	/* Issue all pending commands for endpoint */
+	list_for_each_entry_safe(epcmd, tepcmd,
+				 &udc_ep->cmd_queue, queue) {
+
+		dev_dbg(udc->dev, "Pending command %02xh for ep%d%s\n",
+				  epcmd->cmdtyp, epnum,
+				  udc_ep->dir_in ? "in" : "out");
+
+		res = exynos_ss_udc_issue_epcmd(udc, epcmd);
+		if (res < 0)
+			dev_err(udc->dev, "Failed to issue command\n");
+
+		list_del_init(&epcmd->queue);
+		kfree(epcmd);
+	}
+
+	/* If we have pending request, then start it */
+	restart = !list_empty(&udc_ep->queue);
+	if (restart) {
+		udc_req = get_ep_head(udc_ep);
+		exynos_ss_udc_start_req(udc, udc_ep,
+					udc_req, false);
+	}
+}
+
+/**
  * exynos_ss_udc_xfer_complete - complete transfer
  * @udc: The device state.
  * @udc_ep: The endpoint that has just completed.
@@ -1662,13 +1710,8 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 {
 	int index = (event & EXYNOS_USB3_DEPEVT_EPNUM_MASK) >> 1;
-	int dir_in = index & 1;
 	int epnum = get_usb_epnum(index);
 	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
-	struct exynos_ss_udc_ep_command *epcmd, *tepcmd;
-	struct exynos_ss_udc_req *udc_req;
-	bool restart;
-	int res;
 
 	switch (event & EXYNOS_USB3_DEPEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEPEVT_EVENT_XferNotReady:
@@ -1688,35 +1731,9 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		break;
 
 	case EXYNOS_USB3_DEPEVT_EVENT_EPCmdCmplt:
-		dev_dbg(udc->dev, "EP Cmd complete: ep%d%s\n",
-				  epnum, dir_in ? "in" : "out");
+		dev_dbg(udc->dev, "EP Cmd Complete\n");
 
-		udc_ep->not_ready = 0;
-
-		/* Issue all pending commands for endpoint */
-		list_for_each_entry_safe(epcmd, tepcmd,
-					 &udc_ep->cmd_queue, queue) {
-
-			dev_dbg(udc->dev, "Pending command %02xh for ep%d%s\n",
-					  epcmd->cmdtyp, epnum,
-					  dir_in ? "in" : "out");
-
-			res = exynos_ss_udc_issue_epcmd(udc, epcmd);
-			if (res < 0)
-				dev_err(udc->dev, "Failed to issue command\n");
-
-			list_del_init(&epcmd->queue);
-			kfree(epcmd);
-		}
-
-		/* If we have pending request, then start it */
-		restart = !list_empty(&udc_ep->queue);
-		if (restart) {
-			udc_req = get_ep_head(udc_ep);
-			exynos_ss_udc_start_req(udc, udc_ep,
-						udc_req, false);
-		}
-
+		exynos_ss_udc_ep_cmd_complete(udc, udc_ep, event);
 		break;
 	}
 }
