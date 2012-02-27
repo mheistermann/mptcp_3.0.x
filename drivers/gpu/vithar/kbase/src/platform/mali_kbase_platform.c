@@ -219,7 +219,9 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 			panic("failed to turn off sclk_g3d\n");
 
 		kbdev->pm.cmu_pmu_status = 0;
+#if MALI_RTPM_DEBUG
 		printk( KERN_ERR "3D cmu_pmu_control - off\n" );
+#endif
 	}
 	else // on
 	{
@@ -235,7 +237,9 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 			panic("failed to turn on g3d power\n");
 
 		kbdev->pm.cmu_pmu_status = 1;
+#if MALI_RTPM_DEBUG
 		printk( KERN_ERR "3D cmu_pmu_control - on\n");
+#endif
 	}
 
 	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);

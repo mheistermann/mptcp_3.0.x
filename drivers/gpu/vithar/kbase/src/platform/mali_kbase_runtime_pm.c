@@ -39,6 +39,7 @@
 #include <linux/io.h>
 #include <linux/timer.h>
 #include <kbase/src/platform/mali_kbase_platform.h>
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <linux/pm_runtime.h>
 
 
@@ -47,9 +48,8 @@
  * if SUSPENDED_OFF is defined, power gating to mali-t604 is RUNTIME_PM_RUNTIME_DELAY_TIME delayed.
  */
 #define SUSPENDED_OFF
-#define RUNTIME_PM_RUNTIME_DELAY_TIME 50
+#define RUNTIME_PM_RUNTIME_DELAY_TIME 10
 //static struct timer_list runtime_pm_timer;
-
 static void kbase_device_runtime_timer_callback(unsigned long data)
 {
 #ifdef SUSPENDED_OFF
