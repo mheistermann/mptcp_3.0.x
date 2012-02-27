@@ -228,10 +228,10 @@ static struct v4l2_queryctrl controls[] = {
 	},
 	{
 		.id = V4L2_CID_CACHEABLE,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Cacheable flag",
 		.minimum = 0,
-		.maximum = 1,
+		.maximum = 3,
 		.step = 1,
 		.default_value = 0,
 	},
