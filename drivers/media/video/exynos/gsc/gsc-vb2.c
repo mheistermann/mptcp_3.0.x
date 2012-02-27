@@ -19,7 +19,10 @@ void *gsc_cma_init(struct gsc_dev *gsc)
 	return vb2_cma_phys_init(&gsc->pdev->dev, NULL, 0, false);
 }
 
-void gsc_cma_resume(void *alloc_ctx) {}
+int gsc_cma_resume(void *alloc_ctx)
+{
+	return 1;
+}
 void gsc_cma_suspend(void *alloc_ctx) {}
 void gsc_cma_set_cacheable(void *alloc_ctx, bool cacheable) {}
 
