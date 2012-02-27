@@ -467,7 +467,7 @@ static void exynos5250_target_for_int(int div_index)
 
 	tmp &= ~EXYNOS5_CLKDIV_R1X_PCLK_R1X_MASK;
 
-	tmp |= (clkdiv_r1x[div_index][0] << EXYNOS5_CLKDIV_R0X_PCLK_R0X_SHIFT);
+	tmp |= (clkdiv_r1x[div_index][0] << EXYNOS5_CLKDIV_R1X_PCLK_R1X_SHIFT);
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_R1X);
 
