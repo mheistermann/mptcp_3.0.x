@@ -34,6 +34,7 @@
 #include <plat/reset.h>
 #include <plat/audio.h>
 #include <plat/tv-core.h>
+#include <plat/rtc-core.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
@@ -256,6 +257,9 @@ void __init exynos4_map_io(void)
 	s3c_fimc_setname(1, "exynos4-fimc");
 	s3c_fimc_setname(2, "exynos4-fimc");
 	s3c_fimc_setname(3, "exynos4-fimc");
+#ifdef CONFIG_S3C_DEV_RTC
+	s3c_rtc_setname("exynos-rtc");
+#endif
 #ifdef CONFIG_FB_S3C
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 #endif

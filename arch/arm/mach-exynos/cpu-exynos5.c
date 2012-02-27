@@ -28,6 +28,7 @@
 #include <plat/tv-core.h>
 #include <plat/ace-core.h>
 #include <plat/reset.h>
+#include <plat/rtc-core.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
@@ -190,6 +191,9 @@ void __init exynos5_map_io(void)
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	exynos5_default_sdhci3();
+#endif
+#ifdef CONFIG_S3C_DEV_RTC
+	s3c_rtc_setname("exynos-rtc");
 #endif
 
 	s5p_fb_setname(1, "exynos5-fb");        /* FIMD1 */
