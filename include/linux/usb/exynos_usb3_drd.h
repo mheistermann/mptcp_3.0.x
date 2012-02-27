@@ -260,6 +260,10 @@
 #define EXYNOS_USB3_DEPEVT_EventParam(_x)		((_x) << 16)
 #define EXYNOS_USB3_DEPEVT_EventStatus_MASK		(0xf << 12)
 #define EXYNOS_USB3_DEPEVT_EventStatus_SHIFT		12
+#define EXYNOS_USB3_DEPEVT_EventStatus_CTL_MASK		(0x3 << 12)
+#define EXYNOS_USB3_DEPEVT_EventStatus_CTL_SETUP	(0 << 12)
+#define EXYNOS_USB3_DEPEVT_EventStatus_CTL_DATA		(1 << 12)
+#define EXYNOS_USB3_DEPEVT_EventStatus_CTL_STATUS	(2 << 12)
 #define EXYNOS_USB3_DEPEVT_EventStatus_BUSERR		(1 << 12)
 #define EXYNOS_USB3_DEPEVT_EVENT_MASK			(0xf << 6)
 #define EXYNOS_USB3_DEPEVT_EVENT_SHIFT			6

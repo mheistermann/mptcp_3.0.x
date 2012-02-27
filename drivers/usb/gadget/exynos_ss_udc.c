@@ -575,7 +575,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 		udc->ep0_state = EP0_STALL;
 
 	/* If everything is Ok, we mark endpoint as halted */
-	if (value)
+	if (value && udc_ep->epnum != 0)
 		udc_ep->halted = 1;
 	else
 		udc_ep->halted = udc_ep->wedged = 0;
@@ -656,12 +656,11 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 			trb_type = CONTROL_DATA;
 			break;
 
-		case EP0_STATUS_PHASE_2:
-			trb_type = CONTROL_STATUS_2;
-			break;
-
-		case EP0_STATUS_PHASE_3:
-			trb_type = CONTROL_STATUS_3;
+		case EP0_STATUS_PHASE:
+			if (udc->ep0_three_stage)
+				trb_type = CONTROL_STATUS_3;
+			else
+				trb_type = CONTROL_STATUS_2;
 			break;
 		default:
 			dev_warn(udc->dev, "%s: Erroneous EP0 state (%d)",
@@ -1152,7 +1151,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	if (ctrl->wLength == 0) {
 		ep0->dir_in = 1;
 		udc->ep0_three_stage = 0;
-		udc->ep0_state = EP0_STATUS_PHASE_2;
+		udc->ep0_state = EP0_WAIT_NRDY;
 	} else
 		udc->ep0_three_stage = 1;
 
@@ -1165,8 +1164,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 				EXYNOS_USB3_DCFG_DevAddr(ctrl->wValue));
 
 			dev_info(udc->dev, "new address %d\n", ctrl->wValue);
-
-			udc->ep0_state = EP0_WAIT_NRDY;
 			return;
 
 		case USB_REQ_GET_STATUS:
@@ -1175,12 +1172,10 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 		case USB_REQ_CLEAR_FEATURE:
 			ret = exynos_ss_udc_process_clr_feature(udc, ctrl);
-			udc->ep0_state = EP0_WAIT_NRDY;
 			break;
 
 		case USB_REQ_SET_FEATURE:
 			ret = exynos_ss_udc_process_set_feature(udc, ctrl);
-			udc->ep0_state = EP0_WAIT_NRDY;
 			break;
 
 		case USB_REQ_SET_SEL:
@@ -1197,6 +1192,9 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	/* as a fallback, try delivering it to the driver to deal with */
 
 	if (ret == 0 && udc->driver) {
+		if (udc->ep0_three_stage == 0)
+			udc->ep0_state = EP0_STATUS_PHASE;
+
 		ret = udc->driver->setup(&udc->gadget, ctrl);
 		if (ret < 0)
 			dev_dbg(udc->dev, "driver->setup() ret %d\n", ret);
@@ -1207,18 +1205,9 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	 */
 
 	if (ret < 0) {
-		struct exynos_ss_udc_ep_command epcmd;
-		int res;
-
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-		epcmd.ep = 0;
-		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
-		epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-		res = exynos_ss_udc_issue_epcmd(udc, &epcmd);
-		if (res < 0)
-			dev_err(udc->dev, "Failed to set/clear stall\n");
-
+		exynos_ss_udc_ep_sethalt(&ep0->ep, 1);
 		udc->ep0_state = EP0_SETUP_PHASE;
 		exynos_ss_udc_enqueue_setup(udc);
 	}
@@ -1316,28 +1305,6 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 	if (udc_req->req.buf != udc->ctrl_buff &&
 	    udc_req->req.buf != udc->ep0_buff)
 		exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
-
-	if (udc_ep->epnum == 0) {
-		switch (udc->ep0_state) {
-		case EP0_SETUP_PHASE:
-			udc->ep0_state = EP0_DATA_PHASE;
-			break;
-		case EP0_DATA_PHASE:
-			udc->ep0_state = EP0_WAIT_NRDY;
-			break;
-		case EP0_STATUS_PHASE_2:
-		case EP0_STATUS_PHASE_3:
-			udc->ep0_state = EP0_SETUP_PHASE;
-			break;
-		default:
-			dev_err(udc->dev, "%s: Erroneous EP0 state (%d)",
-					  __func__, udc->ep0_state);
-			/* Will try to repair from it */
-			udc->ep0_state = EP0_SETUP_PHASE;
-			return;
-			break;
-		}
-	}
 
 	/* call the complete request with the locks off, just in case the
 	 * request tries to queue more work for this endpoint. */
@@ -1437,7 +1404,117 @@ static void exynos_ss_udc_xfer_complete(struct exynos_ss_udc *udc,
 		udc_req->req.actual = len - size_left;
 	}
 
+	if (udc_ep->epnum == 0) {
+		switch (udc->ep0_state) {
+		case EP0_SETUP_PHASE:
+			udc->ep0_state = EP0_DATA_PHASE;
+			break;
+		case EP0_DATA_PHASE:
+			udc->ep0_state = EP0_WAIT_NRDY;
+			break;
+		case EP0_STATUS_PHASE:
+			udc->ep0_state = EP0_SETUP_PHASE;
+			break;
+		default:
+			dev_err(udc->dev, "%s: Erroneous EP0 state (%d)",
+					  __func__, udc->ep0_state);
+			/* Will try to repair from it */
+			udc->ep0_state = EP0_SETUP_PHASE;
+			return;
+			break;
+		}
+	}
+
 	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
+}
+
+/**
+ * exynos_ss_udc_xfer_notready - process event Transfer Not Ready
+ * @udc: The device state.
+ * @udc_ep: The endpoint this event is for.
+ * @event: The event being handled.
+ */
+static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
+					struct exynos_ss_udc_ep *udc_ep,
+					u32 event)
+{
+	int index = (event & EXYNOS_USB3_DEPEVT_EPNUM_MASK) >> 1;
+	int direction = index & 1;
+	u32 status = event & EXYNOS_USB3_DEPEVT_EventStatus_CTL_MASK;
+
+	dev_dbg(udc->dev, "%s: ep%d%s\n", __func__, udc_ep->epnum,
+			  direction ? "in" : "out");
+
+	if (udc_ep->epnum == 0) {
+		switch (udc->ep0_state) {
+		case EP0_SETUP_PHASE:
+			/*
+			 * Check if host is attempting to move data or start
+			 * the status stage for a previous control transfer.
+			 */
+			if (status !=
+				EXYNOS_USB3_DEPEVT_EventStatus_CTL_SETUP) {
+
+				dev_dbg(udc->dev, "Unexpected XferNotReady "
+						  "during EP0 Setup phase\n");
+
+				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+				udc->ep0_state = EP0_SETUP_PHASE;
+				exynos_ss_udc_enqueue_setup(udc);
+				return;
+			}
+
+			break;
+
+		case EP0_DATA_PHASE:
+			/*
+			 * Check if host is attempting to move data in the
+			 * wrong direction.
+			 */
+			if (udc_ep->dir_in != direction &&
+			    status == EXYNOS_USB3_DEPEVT_EventStatus_CTL_DATA) {
+
+				dev_dbg(udc->dev, "Unexpected XferNotReady "
+						  "during EP0 Data phase\n");
+
+				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+				udc->ep0_state = EP0_SETUP_PHASE;
+				exynos_ss_udc_enqueue_setup(udc);
+				return;
+			}
+
+			break;
+
+		case EP0_WAIT_NRDY:
+			/*
+			 * Check if host is attempting to start the data stage
+			 * when data stage is not present or move more data
+			 * than specified in the wLength field.
+			 */
+			if (status == EXYNOS_USB3_DEPEVT_EventStatus_CTL_DATA) {
+
+				dev_dbg(udc->dev, "Unexpected XferNotReady "
+						  "during EP0 Wait NotReady\n");
+
+				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+				udc->ep0_state = EP0_SETUP_PHASE;
+				exynos_ss_udc_enqueue_setup(udc);
+				return;
+			}
+
+			udc_ep->dir_in = direction;
+			udc->ep0_state = EP0_STATUS_PHASE;
+			exynos_ss_udc_enqueue_status(udc);
+			break;
+
+		case EP0_STATUS_PHASE:
+			/* FALLTHROUGH */
+		default:
+			dev_dbg(udc->dev, "Unexpected XferNotReady\n");
+			break;
+		}
+	}
+
 }
 
 /**
@@ -1595,18 +1672,9 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 
 	switch (event & EXYNOS_USB3_DEPEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEPEVT_EVENT_XferNotReady:
-		dev_dbg(udc->dev, "Xfer Not Ready: ep%d%s\n",
-				  epnum, dir_in ? "in" : "out");
-		if (epnum == 0 && udc->ep0_state == EP0_WAIT_NRDY) {
-			udc_ep->dir_in = dir_in;
+		dev_dbg(udc->dev, "Xfer Not Ready\n");
 
-			if (udc->ep0_three_stage)
-				udc->ep0_state = EP0_STATUS_PHASE_3;
-			else
-				udc->ep0_state = EP0_STATUS_PHASE_2;
-
-			exynos_ss_udc_enqueue_status(udc);
-		}
+		exynos_ss_udc_xfer_notready(udc, udc_ep, event);
 		break;
 
 	case EXYNOS_USB3_DEPEVT_EVENT_XferComplete:
