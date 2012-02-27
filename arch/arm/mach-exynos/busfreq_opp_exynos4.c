@@ -163,9 +163,6 @@ static void exynos_busfreq_timer(struct work_struct *work)
 
 	mutex_lock(&busfreq_lock);
 
-	if (data->force_opp)
-		opp = data->force_opp;
-
 	if (bus_ctrl.opp_lock)
 		opp = bus_ctrl.opp_lock;
 
@@ -300,7 +297,7 @@ static struct attribute *busfreq_attributes[] = {
 	NULL
 };
 
-void exynos_request_apply(unsigned long freq, bool fix, bool disable)
+void exynos_request_apply(unsigned long freq)
 {
 	struct opp *opp;
 	unsigned int index;
@@ -312,36 +309,12 @@ void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 
 	opp = bus_ctrl.data->curr_opp;
 
-	if (bus_ctrl.data->force_opp && fix && !disable) {
-		pr_debug("Fix lock already exist.\n");
-		goto out;
-	}
-
-	if (!bus_ctrl.data->force_opp && fix && disable) {
-		pr_debug("Fix lock doesn't exist.\n");
-		goto out;
-	}
-
-	if (fix) {
-		if (disable) {
-			bus_ctrl.data->force_opp = NULL;
-			bus_ctrl.data->curr_opp = bus_ctrl.data->max_opp;
-			opp = bus_ctrl.data->curr_opp;
-		} else {
-			opp = opp_find_freq_exact(bus_ctrl.data->dev, freq, true);
-			bus_ctrl.data->force_opp = opp;
-		}
-	} else {
-		opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
-	}
-
-	if (bus_ctrl.data->force_opp)
-		opp = bus_ctrl.data->force_opp;
+	opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
 
 	if (bus_ctrl.opp_lock)
 		opp = bus_ctrl.opp_lock;
 
-	if (!fix && opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
+	if (opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
 		goto out;
 
 	index = _target(bus_ctrl.data, opp);

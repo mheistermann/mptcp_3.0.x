@@ -355,7 +355,7 @@ int exynos_request_register(struct notifier_block *n)
 	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
 }
 
-void exynos_request_apply(unsigned long freq, bool fix, bool disable)
+void exynos_request_apply(unsigned long freq)
 {
 	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, NULL);
 }

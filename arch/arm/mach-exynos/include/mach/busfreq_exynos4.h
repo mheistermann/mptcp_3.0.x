@@ -35,7 +35,6 @@ struct busfreq_data {
 	struct opp *curr_opp;
 	struct opp *max_opp;
 	struct opp *min_opp;
-	struct opp *force_opp;
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
 	unsigned int sampling_rate;
@@ -73,7 +72,7 @@ struct busfreq_table {
 	unsigned int clk_dmc1div;
 };
 
-void exynos_request_apply(unsigned long freq, bool fix, bool disable);
+void exynos_request_apply(unsigned long freq);
 struct opp *step_down(struct busfreq_data *data, int step);
 
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
