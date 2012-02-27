@@ -24,7 +24,10 @@ void *mxr_cma_init(struct mxr_device *mdev)
 	return vb2_cma_phys_init(mdev->dev, NULL, 0, false);
 }
 
-void mxr_cma_resume(void *alloc_ctx){}
+int mxr_cma_resume(void *alloc_ctx)
+{
+	return 1;
+}
 void mxr_cma_suspend(void *alloc_ctx){}
 void mxr_cma_set_cacheable(void *alloc_ctx, bool cacheable){}
 
