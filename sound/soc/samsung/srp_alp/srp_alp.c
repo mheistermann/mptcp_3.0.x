@@ -379,14 +379,9 @@ static void srp_commbox_deinit(void)
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 }
 
-static void srp_clr_fw_buff(void)
+static void srp_clr_fw_data(void)
 {
-	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
-	memset(srp.fw_info.cga, 0, CGA_SIZE);
 	memset(srp.fw_info.data, 0, DATA_SIZE);
-
-	memcpy(srp.fw_info.vliw, srp_fw_vliw, sizeof(srp_fw_vliw));
-	memcpy(srp.fw_info.cga, srp_fw_cga, sizeof(srp_fw_cga));
 	memcpy(srp.fw_info.data, srp_fw_data, sizeof(srp_fw_data));
 }
 
@@ -421,7 +416,7 @@ static void srp_set_default_fw(void)
 	/* Initialize Commbox & default parameters */
 	srp_commbox_init();
 
-	srp_clr_fw_buff();
+	srp_clr_fw_data();
 
 	/* Download default Firmware */
 	srp_fw_download();
@@ -878,6 +873,14 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.fw_info.vliw_size = sizeof(srp_fw_vliw);
 	srp.fw_info.cga_size = sizeof(srp_fw_cga);
 	srp.fw_info.data_size = sizeof(srp_fw_data);
+
+	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
+	memset(srp.fw_info.cga, 0, CGA_SIZE);
+	memset(srp.fw_info.data, 0, DATA_SIZE);
+
+	memcpy(srp.fw_info.vliw, srp_fw_vliw, srp.fw_info.vliw_size);
+	memcpy(srp.fw_info.cga, srp_fw_cga, srp.fw_info.cga_size);
+	memcpy(srp.fw_info.data, srp_fw_data, srp.fw_info.data_size);
 
 	srp_info("VLIW_SIZE[%lu]Bytes\n", srp.fw_info.vliw_size);
 	srp_info("CGA_SIZE[%lu]Bytes\n", srp.fw_info.cga_size);
