@@ -19,6 +19,7 @@
 #include <asm/proc-fns.h>
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
+#include <asm/hardware/gic.h>
 
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
@@ -35,6 +36,8 @@
 #include <plat/pm.h>
 #include <plat/devs.h>
 #include <plat/cpu.h>
+#include <plat/map-base.h>
+#include <plat/map-s5p.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM_NS + 0x24)
@@ -387,6 +390,8 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 		abb_val = exynos4x12_get_abb_member(ABB_ARM);
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
 	}
+
+	__raw_writel(0xA0A0A0A0, S5P_VA_GIC_DIST + GIC_DIST_PRI);
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -476,6 +481,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
 	}
 
+	__raw_writel(0xA0A0A0A0, S5P_VA_GIC_DIST + GIC_DIST_PRI);
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -594,6 +600,7 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 
 		spin_unlock(&idle_lock);
 
+		__raw_writel(0xA0A0A0A0, S5P_VA_GIC_DIST + GIC_DIST_PRI);
 		cpu_do_idle();
 
 		spin_lock(&idle_lock);
@@ -611,8 +618,10 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 		spin_unlock(&idle_lock);
 
 		put_cpu();
-	} else
+	} else {
+		__raw_writel(0xA0A0A0A0, S5P_VA_GIC_DIST + GIC_DIST_PRI);
 		cpu_do_idle();
+	}
 
 	do_gettimeofday(&after);
 	local_irq_enable();
