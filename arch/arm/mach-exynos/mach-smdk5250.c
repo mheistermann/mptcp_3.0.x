@@ -2370,7 +2370,7 @@ static void __init exynos_reserve_mem(void)
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"exynos-fimc-lite.0=flite0;exynos-fimc-lite.1=flite1;"
-		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,flite0,flite1,fimd,fw,b1;"
+		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,flite0,flite1,fimd,fw,b1,rot;"
 		"exynos-rot=rot;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;"
