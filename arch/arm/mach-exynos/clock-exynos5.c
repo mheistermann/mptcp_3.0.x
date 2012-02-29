@@ -1159,7 +1159,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "acp",
 		.enable		= exynos5_clk_ip_acp_ctrl,
-		.ctrlbit	= ((1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5)),
+		.ctrlbit	= ((1 << 11) | (1 << 10) | (1 << 9) | (1 << 8)),
 	},
 #ifndef CONFIG_SAMSUNG_C2C
 	{
@@ -1184,7 +1184,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "gen",
 		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= ((1 << 14) | (1 << 12) | (1 << 11) | (1 << 9)),
+		.ctrlbit	= ((1 << 14) | (1 << 12) | (1 << 11)),
 	}, {
 		.name		= "gscl",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
