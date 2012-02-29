@@ -566,7 +566,7 @@ struct kbase_device {
 	struct clk *sclk_g3d;
 #endif
 #ifdef CONFIG_VITHAR_RT_PM
-	struct timer_list runtime_pm_timer;
+	struct delayed_work runtime_pm_workqueue;
 #endif
 };
 

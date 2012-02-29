@@ -41,39 +41,32 @@
 #include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <linux/pm_runtime.h>
-
+#include <linux/workqueue.h>
 
 /** Indicator to use suspended power off scheme.
  *
  * if SUSPENDED_OFF is defined, power gating to mali-t604 is RUNTIME_PM_RUNTIME_DELAY_TIME delayed.
  */
 #define SUSPENDED_OFF
-#define RUNTIME_PM_RUNTIME_DELAY_TIME 10
-//static struct timer_list runtime_pm_timer;
-static void kbase_device_runtime_timer_callback(unsigned long data)
+#define RUNTIME_PM_DELAY_TIME 10
+static void kbase_device_runtime_workqueue_callback(struct work_struct *work)
 {
 #ifdef SUSPENDED_OFF
 	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata((struct device *)data);
+	kbdev = container_of(work, struct kbase_device, runtime_pm_workqueue.work);
 
 	kbase_pm_wait_for_power_down(kbdev);
-	kbase_platform_cmu_pmu_control((struct device *)data, 0);
+	kbase_platform_cmu_pmu_control(kbdev->osdev.dev, 0);
 #endif
 }
 
-void kbase_device_runtime_init_timer(struct device *dev)
+void kbase_device_runtime_init_workqueue(struct device *dev)
 {
 #ifdef SUSPENDED_OFF
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
-
-	init_timer(&kbdev->runtime_pm_timer);
-
-	kbdev->runtime_pm_timer.expires = jiffies + RUNTIME_PM_RUNTIME_DELAY_TIME;
-	kbdev->runtime_pm_timer.data = (unsigned long)dev;
-	kbdev->runtime_pm_timer.function = kbase_device_runtime_timer_callback;
-
-	add_timer(&kbdev->runtime_pm_timer);
+	INIT_DELAYED_WORK(&kbdev->runtime_pm_workqueue, kbase_device_runtime_workqueue_callback);
+	schedule_delayed_work(&kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME);
 #endif
 }
 
@@ -91,7 +84,8 @@ int kbase_device_runtime_suspend(struct device *dev)
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 
-	mod_timer(&kbdev->runtime_pm_timer, jiffies + RUNTIME_PM_RUNTIME_DELAY_TIME);
+	cancel_delayed_work(&kbdev->runtime_pm_workqueue);
+	schedule_delayed_work(&kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME);
 	return 0;
 #else
 	return kbase_platform_cmu_pmu_control(dev, 0);
@@ -112,7 +106,9 @@ int kbase_device_runtime_resume(struct device *dev)
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 
-	del_timer_sync(&kbdev->runtime_pm_timer);
+	if(work_pending(&kbdev->runtime_pm_workqueue.work)) {
+		cancel_delayed_work(&kbdev->runtime_pm_workqueue);
+	}
 #endif
 	return kbase_platform_cmu_pmu_control(dev, 1);
 }
@@ -145,8 +141,7 @@ void kbase_device_runtime_get_sync(struct device *dev)
 {
 	int result;
 
-	if(rp_started)
-	{
+	if(rp_started) {
 		kbase_device_runtime_init(dev);
 		rp_started = 0;
 	}
@@ -161,8 +156,7 @@ void kbase_device_runtime_put_sync(struct device *dev)
 {
 	int result;
 
-	if(rp_started)
-	{
+	if(rp_started) {
 		return;
 	}
 
@@ -170,5 +164,4 @@ void kbase_device_runtime_put_sync(struct device *dev)
 	//OSK_PRINT_ERROR(OSK_BASE_PM, "put_sync, usage_count=%d  \n", atomic_read(&dev->power.usage_count));
 	if(result < 0)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_put_sync failed (%d)\n", result);
-
 }
