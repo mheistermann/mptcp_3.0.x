@@ -282,7 +282,7 @@ static int s5p_iommu_map(struct iommu_domain *domain, unsigned long iova,
 			goto nomem_error;
 		}
 
-		pgtable_flush(entry, entry + S5P_LV2TABLE_ENTRIES);
+		pgtable_flush(l2table, l2table + S5P_LV2TABLE_ENTRIES);
 
 		MAKE_LV2TABLE_ENTRY(*entry, virt_to_phys(l2table));
 		pgtable_flush(entry, entry + 1);
