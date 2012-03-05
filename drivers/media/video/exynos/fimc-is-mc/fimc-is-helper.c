@@ -1356,7 +1356,7 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 			if (timeout == 0)
 				printk(KERN_ERR "A5 power on failed2\n");
 			timeout--;
-			mdelay(1);
+			msleep(1);
 		}
 #endif
 		/* 2. enable ISP */
@@ -1391,7 +1391,7 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 			if (timeout == 0)
 				printk(KERN_ERR "A5 power off failed\n");
 			timeout--;
-			mdelay(1);
+			msleep(1);
 		}
 
 		/* 4. ISP Power down mode (LOWPWR) */
@@ -1404,9 +1404,9 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 			if (timeout == 0)
 				printk(KERN_ERR "ISP power off failed\n");
 			timeout--;
-			mdelay(10);
+			msleep(1);
 		}
-		msleep(100);
+		//msleep(100);
 #endif
 	}
 	mutex_unlock(&isp->lock);
@@ -3532,8 +3532,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	* change equation to support various size
 	*/
 	dbg("calulate crop size\n");
-	printk("front w: %d front h: %d\n", front_width, front_height);
-	printk("back w: %d back h: %d\n", back_width, back_height);
+	dbg("front w: %d front h: %d\n", front_width, front_height);
+	dbg("back w: %d back h: %d\n", back_width, back_height);
 
 	front_crop_ratio = front_width*1000/front_height;
 	back_crop_ratio = back_width*1000/back_height;
@@ -3554,8 +3554,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	crop_y = (front_height -crop_height)/2;
 
 
-	printk("crop w: %d crop h: %d\n", crop_width, crop_height);
-	printk("crop x: %d crop y: %d\n", crop_x, crop_y);
+	dbg("crop w: %d crop h: %d\n", crop_width, crop_height);
+	dbg("crop x: %d crop y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);
