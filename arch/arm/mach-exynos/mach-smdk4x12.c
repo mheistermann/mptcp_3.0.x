@@ -1706,6 +1706,8 @@ static void exynos_dwmci_cfg_gpio(int width)
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 	}
 
+	width = (1 << width);
+
 	switch (width) {
 	case 8:
 		for (gpio = EXYNOS4_GPK1(3); gpio <= EXYNOS4_GPK1(6); gpio++) {
