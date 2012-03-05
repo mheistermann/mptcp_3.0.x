@@ -537,6 +537,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
 	struct exynos_ss_udc_ep_command epcmd;
+	int epnum = udc_ep->epnum;
 	int index = get_phys_epnum(udc_ep);
 	unsigned long irqflags;
 	int res;
@@ -545,13 +546,13 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 
 	spin_lock_irqsave(&udc_ep->lock, irqflags);
 
-	if (value && udc_ep->dir_in && udc_ep->req) {
+	if (value && epnum != 0 && udc_ep->dir_in && udc_ep->req) {
 		dev_dbg(udc->dev, "%s: transfer in progress!\n", __func__);
 		spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 		return -EAGAIN;
 	}
 
-	if (udc_ep->epnum == 0)
+	if (epnum == 0)
 		/* Only OUT direction can be stalled */
 		epcmd.ep = 0;
 	else
@@ -571,14 +572,15 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 		return res;
 	}
 
-	if (udc_ep->epnum == 0 && value)
-		udc->ep0_state = EP0_STALL;
+	if (epnum == 0) {
+		if (value)
+			udc->ep0_state = EP0_STALL;
+	} else {
+		udc_ep->halted = !!value;
 
-	/* If everything is Ok, we mark endpoint as halted */
-	if (value && udc_ep->epnum != 0)
-		udc_ep->halted = 1;
-	else
-		udc_ep->halted = udc_ep->wedged = 0;
+		if (!value)
+			udc_ep->wedged = 0;
+	}
 
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 
