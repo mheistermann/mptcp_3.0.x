@@ -69,14 +69,8 @@
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
-#define VLIW_SIZE_MAX	(0x10000)
-#define CGA_SIZE_MAX	(0x10000)
-#if defined(CONFIG_ARCH_EXYNOS4)
-#define DATA_SIZE_MAX	(0x20000)
-#elif defined(CONFIG_ARCH_EXYNOS5)
-#define DATA_SIZE_MAX	(0x28000)
-#endif
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
+#define DATA_OFFSET	(0x8004)
 
 /* F/W Endian Configuration */
 #ifdef USE_FW_ENDIAN_CONVERT
@@ -151,6 +145,9 @@ struct srp_info {
 	void __iomem	*cmem;
 	void __iomem	*commbox;
 
+	/* MMAP base address */
+	unsigned int	mmap_base;
+
 	/* IBUF informaion */
 	unsigned char	*ibuf0;
 	unsigned char	*ibuf1;
@@ -178,6 +175,7 @@ struct srp_info {
 	/* For EVT0 : will be removed on EVT1 */
 	unsigned char	*pcm_obuf0;
 	unsigned char	*pcm_obuf1;
+	unsigned int	pcm_obuf_pa;
 
 	/* Temporary BUF informaion */
 	unsigned char	*wbuf;

@@ -124,8 +124,17 @@ static void srp_flush_ibuf(void)
 
 static void srp_flush_obuf(void)
 {
-	memset(srp.obuf0, 0, srp.obuf_size);
-	memset(srp.obuf1, 0, srp.obuf_size);
+	unsigned long i;
+
+	if (soc_is_exynos4210()) {
+		for (i = 0; i < srp.obuf_size; i += 4) {
+			writel(0x0, srp.obuf0 + i);
+			writel(0x0, srp.obuf1 + i);
+		}
+	} else {
+		memset(srp.obuf0, 0, srp.obuf_size);
+		memset(srp.obuf1, 0, srp.obuf_size);
+	}
 }
 
 static void srp_reset(void)
@@ -257,7 +266,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	unsigned char *mmapped_obuf0 = srp.obuf_info.addr;
 	unsigned char *mmapped_obuf1 = srp.obuf_info.addr + srp.obuf_size;
 	int ret = 0;
-	int i;
 
 	srp_debug("Entered Get Obuf in PCM function\n");
 
@@ -297,17 +305,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		srp_debug("not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
 		srp.pcm_info.size = 0;
 		return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
-	}
-
-	/* For EVT0 : will be removed on EVT1 */
-	if (soc_is_exynos5250()) {
-		if (srp.obuf_ready == 0) {
-			for (i = 0; i < srp.obuf_size; i += 4)
-				memcpy(&srp.obuf0[i], &srp.pcm_obuf0[i], 0x4);
-		} else {
-			for (i = 0; i < srp.obuf_size; i += 4)
-				memcpy(&srp.obuf1[i], &srp.pcm_obuf1[i], 0x4);
-		}
 	}
 
 	srp.pcm_info.addr = srp.obuf_ready ? mmapped_obuf1 : mmapped_obuf0;
@@ -374,7 +371,6 @@ static void srp_commbox_deinit(void)
 	unsigned int reg = 0;
 
 	srp_wait_for_pending();
-	srp_pending_ctrl(STALL);
 	srp.decoding_started = 0;
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 }
@@ -392,10 +388,20 @@ static void srp_fw_download(void)
 	unsigned int reg = 0;
 
 	/* Fill ICACHE with first 64KB area : ARM access I$ */
-	memcpy(srp.icache, srp.fw_info.vliw, ICACHE_SIZE);
+	pval = (unsigned long *)srp.fw_info.vliw;
+	for (n = 0; n < ICACHE_SIZE; n += 4, pval++)
+		writel(ENDIAN_CHK_CONV(*pval), srp.icache + n);
 
 	/* Fill DMEM */
-	memcpy(srp.dmem, srp.fw_info.data, DMEM_SIZE);
+	if (soc_is_exynos5250()) {
+		pval = (unsigned long *) (srp.fw_info.data + DATA_OFFSET);
+		for (n = DATA_OFFSET; n < DMEM_SIZE; n += 4, pval++)
+		writel(ENDIAN_CHK_CONV(*pval), srp.dmem + n);
+	} else {
+		pval = (unsigned long *)srp.fw_info.data;
+		for (n = 0; n < DMEM_SIZE; n += 4, pval++)
+		writel(ENDIAN_CHK_CONV(*pval), srp.dmem + n);
+	}
 
 	/* Fill CMEM : Should be write by the 1word(32bit) */
 	pval = (unsigned long *)srp.fw_info.cga;
@@ -603,17 +609,12 @@ static int srp_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
 	unsigned int pfn;
-	unsigned int mmap_addr;
 
 	vma->vm_flags |= VM_IO;
 	vma->vm_flags |= VM_RESERVED;
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
-	/* For EVT0 : will be removed on EVT1 */
-	mmap_addr = soc_is_exynos5250() ? srp.obuf0_pa
-					: SRP_DMEM_BASE;
-
-	pfn = __phys_to_pfn(mmap_addr);
+	pfn = __phys_to_pfn(srp.mmap_base);
 
 	if (remap_pfn_range(vma, vma->vm_start, pfn, size, vma->vm_page_prot)) {
 		srp_err("failed to mmap for Obuf\n");
@@ -649,6 +650,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
 	unsigned int wakeup_decinfo = 0;
+	unsigned long i;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -686,9 +688,18 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
 				srp.obuf_fill_done[0] = 1;
+				/* For EVT0 : will be removed on EVT1 */
+				if (soc_is_exynos5250()) {
+					for (i = 0; i < srp.obuf_size; i += 4)
+						memcpy(&srp.pcm_obuf0[i], &srp.obuf0[i], 0x4);
+				}
 			} else {
 				srp_debug("OBUF1 FULL\n");
 				srp.obuf_fill_done[1] = 1;
+				if (soc_is_exynos5250()) {
+					for (i = 0; i < srp.obuf_size; i += 4)
+						memcpy(&srp.pcm_obuf1[i], &srp.obuf1[i], 0x4);
+				}
 			}
 
 			wakeup_read = 1;
@@ -749,20 +760,18 @@ static void srp_prepare_buff(struct device *dev)
 
 	srp.ibuf0 = soc_is_exynos5250() ? srp.dmem + srp.ibuf_offset
 					: srp.iram + srp.ibuf_offset;
+	srp.ibuf1 = srp.ibuf0 + srp.ibuf_size;
+
+	srp.obuf0 = srp.dmem + srp.obuf_offset;
+	srp.obuf1 = srp.obuf0 + srp.obuf_size;
 
 	/* For EVT0 : will be removed on EVT1 */
 	if (soc_is_exynos5250()) {
-		srp.obuf0 = dma_alloc_writecombine(dev, srp.obuf_size * 2,
-						&srp.obuf0_pa, GFP_KERNEL);
-		srp.pcm_obuf0 = srp.dmem + srp.obuf_offset;
+		srp.pcm_obuf0 = dma_alloc_writecombine(dev, srp.obuf_size * 2,
+						&srp.pcm_obuf_pa, GFP_KERNEL);
 		srp.pcm_obuf1 = srp.pcm_obuf0 + srp.obuf_size;
 		srp.obuf_offset = 0;
-	} else {
-		srp.obuf0 = srp.dmem + srp.obuf_offset;
 	}
-
-	srp.ibuf1 = srp.ibuf0 + srp.ibuf_size;
-	srp.obuf1 = srp.obuf0 + srp.obuf_size;
 
 	if (!srp.ibuf0_pa)
 		srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
@@ -775,6 +784,10 @@ static void srp_prepare_buff(struct device *dev)
 
 	srp.ibuf_num = IBUF_NUM;
 	srp.obuf_num = OBUF_NUM;
+
+	/* For EVT0 : will be removed on EVT1 */
+	srp.mmap_base = soc_is_exynos5250() ? srp.pcm_obuf_pa :
+					      SRP_DMEM_BASE;
 
 	srp_info("[VA]IBUF0[0x%p], [PA]IBUF0[0x%x]\n",
 						srp.ibuf0, srp.ibuf0_pa);
@@ -802,15 +815,15 @@ static int srp_prepare_fw_buff(struct device *dev)
 	mem_paddr = srp.fw_info.mem_base;
 	srp.fw_info.vliw_pa = mem_paddr;
 	srp.fw_info.vliw = phys_to_virt(srp.fw_info.vliw_pa);
-	mem_paddr += VLIW_SIZE_MAX;
+	mem_paddr += VLIW_SIZE;
 
 	srp.fw_info.cga_pa = mem_paddr;
 	srp.fw_info.cga = phys_to_virt(srp.fw_info.cga_pa);
-	mem_paddr += CGA_SIZE_MAX;
+	mem_paddr += CGA_SIZE;
 
 	srp.fw_info.data_pa = mem_paddr;
 	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
-	mem_paddr += DATA_SIZE_MAX;
+	mem_paddr += DATA_SIZE;
 
 	srp.wbuf = phys_to_virt(mem_paddr);
 	mem_paddr += WBUF_SIZE;
@@ -845,7 +858,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 		return -ENOMEM;
 	}
 
-	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
+	srp.wbuf = kzalloc(WBUF_SIZE, GFP_KERNEL);
 	if (!srp.wbuf) {
 		srp_err("Failed to allocation for WBUF!\n");
 		return -ENOMEM;
@@ -973,6 +986,7 @@ static void srp_request_pwr_mode(int mode)
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	unsigned long deadline = jiffies + (HZ / 100);
+	unsigned long i;
 
 	srp_info("Suspend\n");
 
@@ -980,8 +994,17 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 		if (srp.decoding_started && !srp.pm_suspended) {
 
 			/* IBUF/OBUF Save */
-			memcpy(srp.sp_data.ibuf, srp.ibuf0, IBUF_SIZE * 2);
-			memcpy(srp.sp_data.obuf, srp.obuf0, OBUF_SIZE * 2);
+			if (soc_is_exynos5250()) {
+				/* EVT0 : Work around code */
+				for (i = 0; i < srp.ibuf_size * 2; i += 4)
+					writel(readl(srp.ibuf0 + i), srp.sp_data.ibuf + i);
+
+				for (i = 0; i < srp.obuf_size * 2; i += 4)
+					writel(readl(srp.obuf0 + i), srp.sp_data.obuf + i);
+			} else {
+				memcpy(srp.sp_data.ibuf, srp.ibuf0, IBUF_SIZE * 2);
+				memcpy(srp.sp_data.obuf, srp.obuf0, OBUF_SIZE * 2);
+			}
 
 			/* Request Suspend mode */
 			srp_request_pwr_mode(SUSPEND);
@@ -995,7 +1018,14 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 			} while (time_before(jiffies, deadline));
 
 			srp_pending_ctrl(STALL);
-			memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
+
+			if (soc_is_exynos5250()) {
+				/* EVT0 : Work around code */
+				for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
+					writel(readl(srp.dmem + i), srp.fw_info.data + i);
+			} else
+				memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
+
 			memcpy(srp.sp_data.commbox, srp.commbox, COMMBOX_SIZE);
 			srp.pm_suspended = true;
 		}
@@ -1007,6 +1037,8 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int srp_resume(struct platform_device *pdev)
 {
+	unsigned long i;
+
 	srp_info("Resume\n");
 
 	if (srp.is_opened) {
@@ -1021,8 +1053,17 @@ static int srp_resume(struct platform_device *pdev)
 			srp_fw_download();
 
 			memcpy(srp.commbox, srp.sp_data.commbox, COMMBOX_SIZE);
-			memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
-			memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
+
+			if (soc_is_exynos5250()) {
+				for (i = 0; i < srp.ibuf_size * 2; i += 4)
+					writel(readl(srp.sp_data.ibuf + i), srp.ibuf0 + i);
+
+				for (i = 0; i < srp.obuf_size * 2; i += 4)
+					writel(readl(srp.sp_data.obuf + i), srp.obuf0 + i);
+			} else {
+				memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
+				memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
+			}
 
 			/* RESET */
 			writel(0x0, srp.commbox + SRP_CONT);
