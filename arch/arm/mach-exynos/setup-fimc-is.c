@@ -447,7 +447,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, CLK_OUT */
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPH0(3), 1, S3C_GPIO_SFN(2));
 
-	/* Camera A */
+	/* Camera A reset*/
 	ret = gpio_request(EXYNOS5_GPX1(2), "GPX1");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPX1_2 ####\n");
@@ -456,6 +456,37 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	gpio_direction_output(EXYNOS5_GPX1(2), 0);
 	gpio_direction_output(EXYNOS5_GPX1(2), 1);
 	gpio_free(EXYNOS5_GPX1(2));
+	/* CAM B port */
+	ret = gpio_request(EXYNOS5_GPG2(1), "GPG2");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPG2_1 ####\n");
+	s3c_gpio_cfgpin(EXYNOS5_GPG2(1), (0x2<<4));
+	s3c_gpio_setpull(EXYNOS5_GPG2(1), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS5_GPG2(1));
+
+	ret = gpio_request(EXYNOS5_GPF0(2), "GPF0");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPF0_2 ####\n");
+	s3c_gpio_cfgpin(EXYNOS5_GPF0(2), (0x2<<8));
+	s3c_gpio_setpull(EXYNOS5_GPF0(2), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS5_GPF0(2));
+
+	ret = gpio_request(EXYNOS5_GPF0(3), "GPF1");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPF0_3 ####\n");
+	s3c_gpio_cfgpin(EXYNOS5_GPF0(3), (0x2<<12));
+	s3c_gpio_setpull(EXYNOS5_GPF0(3), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS5_GPF0(3));
+
+	/* Camera B reset*/
+	ret = gpio_request(EXYNOS5_GPX1(0), "GPX1");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPX1_0 ####\n");
+
+	s3c_gpio_setpull(EXYNOS5_GPX1(0), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS5_GPX1(0), 0);
+	gpio_direction_output(EXYNOS5_GPX1(0), 1);
+	gpio_free(EXYNOS5_GPX1(0));
 }
 
 int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
@@ -571,13 +602,22 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	mout_mpll = clk_get(&pdev->dev, "mout_mpll_user");
 	if (IS_ERR(mout_mpll))
 		return PTR_ERR(mout_mpll);
-	sclk_mipi = clk_get(&pdev->dev, "sclk_gscl_wrap");
+	sclk_mipi = clk_get(&pdev->dev, "sclk_gscl_wrap0");
 	if (IS_ERR(sclk_mipi))
 		return PTR_ERR(sclk_mipi);
 
 	clk_set_parent(sclk_mipi, mout_mpll);
-	clk_set_rate(sclk_mipi, 266 * 1000000);
+	clk_set_rate(sclk_mipi, 267 * 1000000);
 
+	mout_mpll = clk_get(&pdev->dev, "mout_mpll_user");
+	if (IS_ERR(mout_mpll))
+		return PTR_ERR(mout_mpll);
+	sclk_mipi = clk_get(&pdev->dev, "sclk_gscl_wrap1");
+	if (IS_ERR(sclk_mipi))
+		return PTR_ERR(sclk_mipi);
+
+	clk_set_parent(sclk_mipi, mout_mpll);
+	clk_set_rate(sclk_mipi, 267 * 1000000);
 	mipi = clk_get_rate(mout_mpll);
 	printk(KERN_DEBUG "mipi_src : %ld\n", mipi);
 	mipi = clk_get_rate(sclk_mipi);
@@ -603,6 +643,22 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	clk_put(cam_src);
 	clk_put(cam_A_clk);
 
+	/* camera B */
+	cam_src = clk_get(&pdev->dev, "xxti");
+	if (IS_ERR(cam_src))
+		return PTR_ERR(cam_src);
+	cam_A_clk = clk_get(&pdev->dev, "sclk_cam1");
+	if (IS_ERR(cam_A_clk))
+		return PTR_ERR(cam_A_clk);
+
+	epll = clk_get_rate(cam_src);
+	printk(KERN_DEBUG "epll : %ld\n", epll);
+
+	clk_set_parent(cam_A_clk, cam_src);
+	clk_set_rate(cam_A_clk, 24 * 1000000);
+
+	clk_put(cam_src);
+	clk_put(cam_A_clk);
 	return 0;
 }
 
@@ -637,7 +693,14 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 	clk_enable(isp_ctrl);
 	clk_put(isp_ctrl);
 
-	mipi_ctrl = clk_get(&pdev->dev, "gscl_wrap");
+	mipi_ctrl = clk_get(&pdev->dev, "gscl_wrap0");
+	if (IS_ERR(mipi_ctrl))
+		return PTR_ERR(mipi_ctrl);
+
+	clk_enable(mipi_ctrl);
+	clk_put(mipi_ctrl);
+
+	mipi_ctrl = clk_get(&pdev->dev, "gscl_wrap1");
 	if (IS_ERR(mipi_ctrl))
 		return PTR_ERR(mipi_ctrl);
 
@@ -658,6 +721,12 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 	clk_enable(cam_A_clk);
 	clk_put(cam_A_clk);
 
+	cam_A_clk = clk_get(&pdev->dev, "sclk_cam1");
+	if (IS_ERR(cam_A_clk))
+		return PTR_ERR(cam_A_clk);
+
+	clk_enable(cam_A_clk);
+	clk_put(cam_A_clk);
 	return 0;
 }
 
@@ -713,6 +782,12 @@ int exynos5_fimc_is_clk_off(struct platform_device *pdev)
 	clk_disable(cam_A_clk);
 	clk_put(cam_A_clk);
 
+	cam_A_clk = clk_get(&pdev->dev, "sclk_cam1");
+	if (IS_ERR(cam_A_clk))
+		return PTR_ERR(cam_A_clk);
+
+	clk_disable(cam_A_clk);
+	clk_put(cam_A_clk);
 	return 0;
 }
 #endif

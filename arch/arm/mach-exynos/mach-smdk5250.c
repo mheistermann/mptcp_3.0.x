@@ -554,6 +554,68 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 };
 #endif
 
+#if defined CONFIG_VIDEO_EXYNOS5_FIMC_IS
+static struct exynos5_platform_fimc_is exynos5_fimc_is_data;
+
+#if defined CONFIG_VIDEO_S5K4E5
+static struct exynos5_fimc_is_sensor_info s5k4e5= {
+	.sensor_name = "S5K4E5",
+	.sensor_id = SENSOR_NAME_S5K4E5,
+#if defined CONFIG_S5K4E5_POSITION_FRONT
+	.sensor_position = SENSOR_POSITION_FRONT,
+#elif  defined CONFIG_S5K4E5_POSITION_REAR
+	.sensor_position = SENSOR_POSITION_REAR,
+#endif
+#if defined CONFIG_S5K4E5_CSI_C
+	.csi_id = CSI_ID_A,
+	.flite_id = FLITE_ID_A,
+	.i2c_channel = SENSOR_CONTROL_I2C0,
+#elif  defined CONFIG_S5K4E5_CSI_D
+	.csi_id = CSI_ID_B,
+	.flite_id = FLITE_ID_B,
+	.i2c_channel = SENSOR_CONTROL_I2C1,
+#endif
+
+	.max_width = 2560,
+	.max_height = 1920,
+	.max_frame_rate = 30,
+
+	.mipi_lanes = 2,
+	.mipi_settle = 12,
+	.mipi_align = 24,
+};
+#endif
+
+#if defined CONFIG_VIDEO_S5K6A3
+static struct exynos5_fimc_is_sensor_info s5k6a3= {
+	.sensor_name = "S5K6A3",
+	.sensor_id = SENSOR_NAME_S5K6A3,
+#if defined CONFIG_S5K6A3_POSITION_FRONT
+	.sensor_position = SENSOR_POSITION_FRONT,
+#elif  defined CONFIG_S5K6A3_POSITION_REAR
+	.sensor_position = SENSOR_POSITION_REAR,
+#endif
+#if defined CONFIG_S5K6A3_CSI_C
+	.csi_id = CSI_ID_A,
+	.flite_id = FLITE_ID_A,
+	.i2c_channel = SENSOR_CONTROL_I2C0,
+#elif  defined CONFIG_S5K6A3_CSI_D
+	.csi_id = CSI_ID_B,
+	.flite_id = FLITE_ID_B,
+	.i2c_channel = SENSOR_CONTROL_I2C1,
+#endif
+
+	.max_width = 1280,
+	.max_height = 720,
+	.max_frame_rate = 30,
+
+	.mipi_lanes = 1,
+	.mipi_settle = 12,
+	.mipi_align = 24,
+};
+#endif
+#endif
+
 #ifdef CONFIG_FB_MIPI_DSIM
 #if defined(CONFIG_LCD_MIPI_S6E8AB0)
 static struct mipi_dsim_config dsim_info = {
@@ -2795,17 +2857,27 @@ static void __init smdk5250_machine_init(void)
 			&exynos_device_flite1.dev);
 	dev_set_name(&exynos_device_flite1.dev, "exynos-fimc-lite.1");
 #endif
-#ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
+#if defined CONFIG_VIDEO_EXYNOS5_FIMC_IS
 	dev_set_name(&exynos5_device_fimc_is.dev, "s5p-mipi-csis.0");
-	clk_add_alias("gscl_wrap", "exynos5-fimc-is", "gscl_wrap", &exynos5_device_fimc_is.dev);
-	clk_add_alias("sclk_gscl_wrap", "exynos5-fimc-is", "sclk_gscl_wrap", &exynos5_device_fimc_is.dev);
-	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
-
+	clk_add_alias("gscl_wrap0", "exynos5-fimc-is", "gscl_wrap0", &exynos5_device_fimc_is.dev);
+	clk_add_alias("sclk_gscl_wrap0", "exynos5-fimc-is", "sclk_gscl_wrap0", &exynos5_device_fimc_is.dev);
+	dev_set_name(&exynos5_device_fimc_is.dev, "s5p-mipi-csis.1");
+	clk_add_alias("gscl_wrap1", "exynos5-fimc-is", "gscl_wrap1", &exynos5_device_fimc_is.dev);
+	clk_add_alias("sclk_gscl_wrap1", "exynos5-fimc-is", "sclk_gscl_wrap1", &exynos5_device_fimc_is.dev);
 	dev_set_name(&exynos5_device_fimc_is.dev, "exynos-gsc.0");
 	clk_add_alias("gscl", "exynos5-fimc-is", "gscl", &exynos5_device_fimc_is.dev);
 	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
 
-	exynos5_fimc_is_set_platdata(NULL);
+#if defined CONFIG_VIDEO_S5K6A3
+	exynos5_fimc_is_data.sensor_info[s5k6a3.sensor_position] = &s5k6a3;
+	printk("add s5k6a3 sensor info(pos : %d)\n", s5k6a3.sensor_position);
+#endif
+#if defined CONFIG_VIDEO_S5K4E5
+	exynos5_fimc_is_data.sensor_info[s5k4e5.sensor_position] = &s5k4e5;
+	printk("add s5k4e5 sensor info(pos : %d)\n", s5k4e5.sensor_position);
+#endif
+
+	exynos5_fimc_is_set_platdata(&exynos5_fimc_is_data);
 #if defined(CONFIG_EXYNOS_DEV_PD)
 	exynos5_device_pd[PD_ISP].dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos5_device_fimc_is.dev.parent = &exynos5_device_pd[PD_ISP].dev;

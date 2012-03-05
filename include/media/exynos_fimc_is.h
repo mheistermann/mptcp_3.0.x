@@ -14,6 +14,7 @@
 #include <linux/videodev2.h>
 
 #define FIMC_IS_MAX_CAMIF_CLIENTS	2
+#define FIMC_IS_MAX_SENSOR_NAME_LEN	16
 #define EXYNOS4_FIMC_IS_MAX_DIV_CLOCKS		2
 #define EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS	16
 
@@ -56,19 +57,25 @@ struct platform_device;
 
 #if defined(CONFIG_ARCH_EXYNOS5)
 /**
- * struct exynos4_fimc_is_sensor_info  - image sensor information required for host
+ * struct exynos5_fimc_is_sensor_info  - image sensor information required for host
  *			      interace configuration.
- *
- * @board_info: pointer to I2C subdevice's board info
- * @clk_frequency: frequency of the clock the host interface provides to sensor
- * @bus_type: determines bus type, MIPI, ITU-R BT.601 etc.
- * @csi_data_align: MIPI-CSI interface data alignment in bits
- * @i2c_bus_num: i2c control bus id the sensor is attached to
- * @mux_id: FIMC camera interface multiplexer index (separate for MIPI and ITU)
- * @flags: flags defining bus signals polarity inversion (High by default)
 */
-struct exynos4_fimc_is_sensor_info {
+struct exynos5_fimc_is_sensor_info {
+	char sensor_name[FIMC_IS_MAX_SENSOR_NAME_LEN];
+	enum exynos5_sensor_position sensor_position;
+	enum exynos5_sensor_id sensor_id;
+	enum exynos5_csi_id csi_id;
+	enum exynos5_flite_id flite_id;
+	enum exynos5_sensor_channel i2c_channel;
 
+	int max_width;
+	int max_height;
+	int max_frame_rate;
+
+
+	int mipi_lanes;     /* MIPI data lanes */
+	int mipi_settle;    /* MIPI settle */
+	int mipi_align;     /* MIPI data align: 24/32 */
 };
 #endif
 /**
@@ -91,7 +98,7 @@ struct exynos4_platform_fimc_is {
 #if defined(CONFIG_ARCH_EXYNOS5)
 struct exynos5_platform_fimc_is {
 	int	hw_ver;
-	struct exynos4_fimc_is_sensor_info
+	struct exynos5_fimc_is_sensor_info
 		*sensor_info[FIMC_IS_MAX_CAMIF_CLIENTS];
 	void	(*cfg_gpio)(struct platform_device *pdev);
 	int	(*clk_cfg)(struct platform_device *pdev);
