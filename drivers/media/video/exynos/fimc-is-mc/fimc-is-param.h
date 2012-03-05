@@ -3,7 +3,6 @@
  *
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd
- * Contact: Jiyoung Shin<idon.shin@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -340,33 +339,41 @@
 #define IS_SCALERC_SET_PARAM_EFFECT_ERR(dev, x) \
 	(dev->is_p_region->parameter.scalerc.effect.err = x)
 
-#define IS_SCALERC_SET_PARAM_CROP_CMD(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.cmd = x)
-#define IS_SCALERC_SET_PARAM_CROP_POS_X(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.pos_x = x)
-#define IS_SCALERC_SET_PARAM_CROP_POS_Y(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.pos_y = x)
-#define IS_SCALERC_SET_PARAM_CROP_WIDTH(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.crop_width = x)
-#define IS_SCALERC_SET_PARAM_CROP_HEIGHT(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.crop_height = x)
-#define IS_SCALERC_SET_PARAM_CROP_ERR(dev, x) \
-	(dev->is_p_region->parameter.scalerc.crop.err = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_CMD(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.cmd = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_POS_X(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.pos_x = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_POS_Y(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.pos_y = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.crop_width = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.crop_height = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_IN_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.in_width = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.in_height = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.out_width = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.out_height = x)
+#define IS_SCALERC_SET_PARAM_INPUT_CROP_ERR(dev, x) \
+	(dev->is_p_region->parameter.scalerc.input_crop.err = x)
 
-#define IS_SCALERC_SET_PARAM_SCALING_CMD(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.cmd = x)
-#define IS_SCALERC_SET_PARAM_SCALING_PRE_H_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.pre_h_ratio = x)
-#define IS_SCALERC_SET_PARAM_SCALING_PRE_V_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.pre_v_ratio = x)
-#define IS_SCALERC_SET_PARAM_SCALING_SH_FACTOR(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.sh_factor = x)
-#define IS_SCALERC_SET_PARAM_SCALING_H_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.h_ratio = x)
-#define IS_SCALERC_SET_PARAM_SCALING_V_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.v_ratio = x)
-#define IS_SCALERC_SET_PARAM_SCALING_ERR(dev, x) \
-	(dev->is_p_region->parameter.scalerc.scale.err = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_CMD(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.cmd = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_POS_X(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.pos_x = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_POS_Y(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.pos_y = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.crop_width = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.crop_height = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROPG_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.format = x)
+#define IS_SCALERC_SET_PARAM_OUTPUT_CROP_ERR(dev, x) \
+	(dev->is_p_region->parameter.scalerc.output_crop.err = x)
 
 #define IS_SCALERC_SET_PARAM_OTF_OUTPUT_CMD(dev, x) \
 	(dev->is_p_region->parameter.scalerc.otf_output.cmd = x)
@@ -574,33 +581,41 @@
 #define IS_SCALERP_SET_PARAM_EFFECT_ERR(dev, x) \
 	(dev->is_p_region->parameter.scalerp.effect.err = x)
 
-#define IS_SCALERP_SET_PARAM_CROP_CMD(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.cmd = x)
-#define IS_SCALERP_SET_PARAM_CROP_POS_X(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.pos_x = x)
-#define IS_SCALERP_SET_PARAM_CROP_POS_Y(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.pos_y = x)
-#define IS_SCALERP_SET_PARAM_CROP_WIDTH(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.crop_width = x)
-#define IS_SCALERP_SET_PARAM_CROP_HEIGHT(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.crop_height = x)
-#define IS_SCALERP_SET_PARAM_CROP_ERR(dev, x) \
-	(dev->is_p_region->parameter.scalerp.crop.err = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_CMD(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.cmd = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_POS_X(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.pos_x = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_POS_Y(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.pos_y = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.crop_width = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.crop_height = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_IN_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.in_width = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.in_height = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.out_width = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.out_height = x)
+#define IS_SCALERP_SET_PARAM_INPUT_CROP_ERR(dev, x) \
+	(dev->is_p_region->parameter.scalerp.input_crop.err = x)
 
-#define IS_SCALERP_SET_PARAM_SCALING_CMD(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.cmd = x)
-#define IS_SCALERP_SET_PARAM_SCALING_PRE_H_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.pre_h_ratio = x)
-#define IS_SCALERP_SET_PARAM_SCALING_PRE_V_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.pre_v_ratio = x)
-#define IS_SCALERP_SET_PARAM_SCALING_SH_FACTOR(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.sh_factor = x)
-#define IS_SCALERP_SET_PARAM_SCALING_H_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.h_ratio = x)
-#define IS_SCALERP_SET_PARAM_SCALING_V_RATIO(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.v_ratio = x)
-#define IS_SCALERP_SET_PARAM_SCALING_ERR(dev, x) \
-	(dev->is_p_region->parameter.scalerp.scale.err = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_CMD(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.cmd = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_POS_X(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.pos_x = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_POS_Y(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.pos_y = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_CROP_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.crop_width = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_CROP_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.crop_height = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROPG_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.format = x)
+#define IS_SCALERP_SET_PARAM_OUTPUT_CROP_ERR(dev, x) \
+	(dev->is_p_region->parameter.scalerp.output_crop.err = x)
 
 #define IS_SCALERP_SET_PARAM_ROTATION_CMD(dev, x) \
 	(dev->is_p_region->parameter.scalerp.rotation.cmd = x)
@@ -834,8 +849,8 @@ enum is_param_set_bit {
 	PARAM_SCALERC_CONTROL,
 	PARAM_SCALERC_OTF_INPUT,
 	PARAM_SCALERC_IMAGE_EFFECT,
-	PARAM_SCALERC_CROP,
-	PARAM_SCALERC_SCALING = 30,
+	PARAM_SCALERC_INPUT_CROP,
+	PARAM_SCALERC_OUTPUT_CROP = 30,
 	PARAM_SCALERC_OTF_OUTPUT,
 	PARAM_SCALERC_DMA_OUTPUT = 32,
 	PARAM_ODC_CONTROL,
@@ -852,8 +867,8 @@ enum is_param_set_bit {
 	PARAM_SCALERP_CONTROL,
 	PARAM_SCALERP_OTF_INPUT,
 	PARAM_SCALERP_IMAGE_EFFECT,
-	PARAM_SCALERP_CROP,
-	PARAM_SCALERP_SCALING,
+	PARAM_SCALERP_INPUT_CROP,
+	PARAM_SCALERP_OUTPUT_CROP,
 	PARAM_SCALERP_ROTATION,
 	PARAM_SCALERP_FLIP = 50,
 	PARAM_SCALERP_OTF_OUTPUT,
@@ -870,8 +885,8 @@ enum is_param_set_bit {
 #define IS_OFFSET_LOWBIT(offset)	(OFFSET_TO_NUM(offset) >= \
 						32 ? false : true)
 #define OFFSET_TO_BIT(offset) \
-		(IS_OFFSET_LOWBIT(offset) ? (1<<OFFSET_TO_NUM(offset)) \
-			: (1<<(OFFSET_TO_NUM(offset)-32))
+		{(IS_OFFSET_LOWBIT(offset) ? (1<<OFFSET_TO_NUM(offset)) \
+			: (1<<(OFFSET_TO_NUM(offset)-32))}
 #define LOWBIT_OF_NUM(num)		(num >= 32 ? 0 : BIT0<<num)
 #define HIGHBIT_OF_NUM(num)		(num >= 32 ? BIT0<<(num-32) : 0)
 
@@ -905,9 +920,9 @@ enum is_param_set_bit {
 #define PARAM_SCALERC_CONTROL		INC_NUM(PARAM_DRC_OTF_OUTPUT)
 #define PARAM_SCALERC_OTF_INPUT		INC_NUM(PARAM_SCALERC_CONTROL)
 #define PARAM_SCALERC_IMAGE_EFFECT	INC_NUM(PARAM_SCALERC_OTF_INPUT)
-#define PARAM_SCALERC_CROP		INC_NUM(PARAM_SCALERC_IMAGE_EFFECT)
-#define PARAM_SCALERC_SCALING		INC_NUM(PARAM_SCALERC_CROP)
-#define PARAM_SCALERC_OTF_OUTPUT	INC_NUM(PARAM_SCALERC_SCALING)
+#define PARAM_SCALERC_INPUT_CROP	INC_NUM(PARAM_SCALERC_IMAGE_EFFECT)
+#define PARAM_SCALERC_OUTPUT_CROP	INC_NUM(PARAM_SCALERC_INPUT_CROP)
+#define PARAM_SCALERC_OTF_OUTPUT	INC_NUM(PARAM_SCALERC_OUTPUT_CROP)
 
 /* 32~63 */
 #define PARAM_SCALERC_DMA_OUTPUT	INC_NUM(PARAM_SCALERC_OTF_OUTPUT)
@@ -925,9 +940,9 @@ enum is_param_set_bit {
 #define PARAM_SCALERP_CONTROL		INC_NUM(PARAM_TDNR_DMA_OUTPUT)
 #define PARAM_SCALERP_OTF_INPUT		INC_NUM(PARAM_SCALERP_CONTROL)
 #define PARAM_SCALERP_IMAGE_EFFECT	INC_NUM(PARAM_SCALERP_OTF_INPUT)
-#define PARAM_SCALERP_CROP		INC_NUM(PARAM_SCALERP_IMAGE_EFFECT)
-#define PARAM_SCALERP_SCALING		INC_NUM(PARAM_SCALERP_CROP)
-#define PARAM_SCALERP_ROTATION		INC_NUM(PARAM_SCALERP_SCALING)
+#define PARAM_SCALERP_INPUT_CROP	INC_NUM(PARAM_SCALERP_IMAGE_EFFECT)
+#define PARAM_SCALERP_OUTPUT_CROP	INC_NUM(PARAM_SCALERP_INPUT_CROP)
+#define PARAM_SCALERP_ROTATION		INC_NUM(PARAM_SCALERP_OUTPUT_CROP)
 #define PARAM_SCALERP_FLIP		INC_NUM(PARAM_SCALERP_ROTATION)
 #define PARAM_SCALERP_OTF_OUTPUT	INC_NUM(PARAM_SCALERP_FLIP)
 #define PARAM_SCALERP_DMA_OUTPUT	INC_NUM(PARAM_SCALERP_OTF_OUTPUT)
@@ -964,7 +979,7 @@ enum is_param_set_bit {
 *
 */
 /* ----------------------  INTR map-------------------------------- */
-enum interrupt_map{
+enum interrupt_map {
 	INTR_GENERAL = 0,
 	INTR_FRAME_DONE_ISP = 1,
 	INTR_FRAME_DONE_SCALERC = 2,
@@ -984,7 +999,7 @@ enum bypass_command {
 };
 
 enum control_error {
-	CONTROL_ERROR_NO			= 0
+	CONTROL_ERROR_NO		= 0
 };
 
 enum otf_input_command {
@@ -1011,7 +1026,7 @@ enum otf_input_bitwidth {
 };
 
 enum otf_input_order {
-	OTF_INPUT_ORDER_BAYER_GR_BG         = 0,
+	OTF_INPUT_ORDER_BAYER_GR_BG	= 0,
 };
 
 enum otf_intput_error {
@@ -1100,7 +1115,7 @@ enum otf_output_bitwidth {
 };
 
 enum otf_output_order {
-	OTF_OUTPUT_ORDER_BAYER_GR_BG         = 0,
+	OTF_OUTPUT_ORDER_BAYER_GR_BG	= 0,
 };
 
 enum otf_output_error {
@@ -1242,7 +1257,8 @@ enum isp_flash_error {
 /* --------------------------  AWB  ------------------------------------ */
 enum isp_awb_command {
 	ISP_AWB_COMMAND_AUTO		= 0,
-	ISP_AWB_COMMAND_ILLUMINATION	= 1
+	ISP_AWB_COMMAND_ILLUMINATION	= 1,
+	ISP_AWB_COMMAND_MANUAL	= 2
 };
 
 enum isp_awb_illumination {
@@ -1315,6 +1331,24 @@ enum isp_afc_manual {
 
 enum isp_afc_error {
 	ISP_AFC_ERROR_NO	= 0 /* AFC setting is done */
+};
+
+enum isp_scene_command {
+	ISP_SCENE_NONE		= 0,
+	ISP_SCENE_PORTRAIT	= 1,
+	ISP_SCENE_LANDSCAPE     = 2,
+	ISP_SCENE_SPORTS        = 3,
+	ISP_SCENE_PARTYINDOOR = 4,
+	ISP_SCENE_BEACHSNOW    = 5,
+	ISP_SCENE_SUNSET           = 6,
+	ISP_SCENE_DAWN              = 7,
+	ISP_SCENE_FALL                = 8,
+	ISP_SCENE_NIGHT              = 9,
+	ISP_SCENE_AGAINSTLIGHTWLIGHT  = 10,
+	ISP_SCENE_AGAINSTLIGHTWOLIGHT  = 11,
+	ISP_SCENE_FIRE                 = 12,
+	ISP_SCENE_TEXT                 = 13,
+	ISP_SCENE_CANDLE            = 14
 };
 
 /* --------------------------  Scaler  --------------------------------- */
@@ -1602,6 +1636,7 @@ struct param_scaler_imageeffect {
 	u32	err;
 };
 
+#if 0
 struct param_scaler_crop {
 	u32	cmd;
 	u32	pos_x;
@@ -1621,6 +1656,32 @@ struct param_scaler_scaling {
 	u32	v_ratio;
 	u32	reserved[PARAMETER_MAX_MEMBER-7];
 	u32	err;
+};
+#endif
+
+struct param_scaler_input_crop {
+	u32  cmd;
+	u32  pos_x;
+	u32  pos_y;
+	u32  crop_width;
+	u32  crop_height;
+	u32  in_width;
+	u32  in_height;
+	u32  out_width;
+	u32  out_height;
+	u32  reserved[PARAMETER_MAX_MEMBER-10];
+	u32  err;
+};
+
+struct param_scaler_output_crop {
+	u32  cmd;
+	u32  pos_x;
+	u32  pos_y;
+	u32  crop_width;
+	u32  crop_height;
+	u32  format;
+	u32  reserved[PARAMETER_MAX_MEMBER-7];
+	u32  err;
 };
 
 struct param_scaler_rotation {
@@ -1702,8 +1763,8 @@ struct scalerc_param {
 	struct param_control		control;
 	struct param_otf_input		otf_input;
 	struct param_scaler_imageeffect	effect;
-	struct param_scaler_crop	crop;
-	struct param_scaler_scaling	scale;
+	struct param_scaler_input_crop	input_crop;
+	struct param_scaler_output_crop	 output_crop;
 	struct param_otf_output		otf_output;
 	struct param_dma_output		dma_output;
 };
@@ -1732,8 +1793,8 @@ struct scalerp_param {
 	struct param_control			control;
 	struct param_otf_input			otf_input;
 	struct param_scaler_imageeffect		effect;
-	struct param_scaler_crop		crop;
-	struct param_scaler_scaling		scale;
+	struct param_scaler_input_crop	input_crop;
+	struct param_scaler_output_crop	 output_crop;
 	struct param_scaler_rotation		rotation;
 	struct param_scaler_flip		flip;
 	struct param_otf_output			otf_output;
@@ -1763,6 +1824,13 @@ struct is_param_region {
 
 #define	NUMBER_OF_GAMMA_CURVE_POINTS	32
 
+struct is_sensor_tune {
+	u32 exposure;
+	u32 analog_gain;
+	u32 frame_rate;
+	u32 actuator_pos;
+};
+
 struct is_tune_gammacurve {
 	u32 num_pts_x[NUMBER_OF_GAMMA_CURVE_POINTS];
 	u32 num_pts_y_r[NUMBER_OF_GAMMA_CURVE_POINTS];
@@ -1770,7 +1838,7 @@ struct is_tune_gammacurve {
 	u32 num_pts_y_b[NUMBER_OF_GAMMA_CURVE_POINTS];
 };
 
-struct is_tune_region {
+struct is_isp_tune {
 	/* Brightness level : range 0~100, default : 7 */
 	u32 brightness_level;
 	/* Contrast level : range -127~127, default : 0 */
@@ -1790,6 +1858,11 @@ struct is_tune_region {
 	/* Noise reduction : range -127~127, default : 0 */
 	s32 noise_reduction;
 	/* (32*4 + 9)*4 = 548 bytes */
+};
+
+struct is_tune_region {
+	struct is_sensor_tune sensor_tune;
+	struct is_isp_tune isp_tune;
 };
 
 struct rational_t {
@@ -1870,6 +1943,7 @@ struct is_face_marker {
 	struct is_fd_rect right_eye;
 	struct is_fd_rect mouth;
 	u32	roll_angle;
+	u32  yaw_angle;
 	u32	confidence;
 	u32	smile_level;
 	u32	blink_level;
@@ -1901,7 +1975,7 @@ struct is_debug_frame_descriptor {
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
-	s32	analog_gain;
+	u32	analog_gain;
 
 	u32	r_gain;
 	u32	g_gain;
@@ -1909,12 +1983,18 @@ struct is_share_region {
 
 	u32	af_position;
 	u32	af_status;
+	u32  af_scene_type;
 
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
+	u32  frame_descp_max_idx;
+
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
+
+	u32 chip_id;
+	u32 chip_rev_no;
 };
 
 #endif
