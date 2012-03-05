@@ -22,8 +22,39 @@
 
 #define to_fimc_is_plat(d)	(to_platform_device(d)->dev.platform_data)
 
+#if defined(CONFIG_ARCH_EXYNOS5)
+enum exynos5_csi_id {
+	CSI_ID_A = 0,
+	CSI_ID_B
+};
+
+enum exynos5_flite_id {
+	FLITE_ID_A = 0,
+	FLITE_ID_B
+};
+
+enum exynos5_sensor_position {
+	SENSOR_POSITION_REAR = 0,
+	SENSOR_POSITION_FRONT
+};
+enum exynos5_sensor_id {
+	SENSOR_NAME_S5K3H2	= 1,
+	SENSOR_NAME_S5K6A3	= 2,
+	SENSOR_NAME_S5K4E5	= 3,
+	SENSOR_NAME_S5K3H7	= 4,
+	SENSOR_NAME_CUSTOM	= 5,
+	SENSOR_NAME_END
+};
+
+enum exynos5_sensor_channel {
+	SENSOR_CONTROL_I2C0	= 0,
+	SENSOR_CONTROL_I2C1	= 1
+};
+#endif
+
 struct platform_device;
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 /**
  * struct exynos4_fimc_is_sensor_info  - image sensor information required for host
  *			      interace configuration.
@@ -39,7 +70,7 @@ struct platform_device;
 struct exynos4_fimc_is_sensor_info {
 
 };
-
+#endif
 /**
  * struct exynos4_platform_fimc_is - camera host interface platform data
  *
@@ -57,6 +88,7 @@ struct exynos4_platform_fimc_is {
 	int	(*clk_off)(struct platform_device *pdev);
 };
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 struct exynos5_platform_fimc_is {
 	int	hw_ver;
 	struct exynos4_fimc_is_sensor_info
@@ -66,10 +98,13 @@ struct exynos5_platform_fimc_is {
 	int	(*clk_on)(struct platform_device *pdev);
 	int	(*clk_off)(struct platform_device *pdev);
 };
+#endif
+
 extern struct exynos4_platform_fimc_is exynos4_fimc_is_default_data;
 extern void exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd);
+#if defined(CONFIG_ARCH_EXYNOS5)
 extern void exynos5_fimc_is_set_platdata(struct exynos5_platform_fimc_is *pd);
-
+#endif
 /* defined by architecture to configure gpio */
 extern void exynos_fimc_is_cfg_gpio(struct platform_device *pdev);
 
@@ -80,6 +115,7 @@ extern int exynos_fimc_is_clk_off(struct platform_device *pdev);
 extern int exynos_fimc_is_clk_get(struct platform_device *pdev);
 extern int exynos_fimc_is_clk_put(struct platform_device *pdev);
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 /* defined by architecture to configure gpio */
 extern void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev);
 
@@ -87,4 +123,5 @@ extern void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev);
 extern int exynos5_fimc_is_cfg_clk(struct platform_device *pdev);
 extern int exynos5_fimc_is_clk_on(struct platform_device *pdev);
 extern int exynos5_fimc_is_clk_off(struct platform_device *pdev);
+#endif
 #endif /* EXYNOS_FIMC_IS_H_ */
