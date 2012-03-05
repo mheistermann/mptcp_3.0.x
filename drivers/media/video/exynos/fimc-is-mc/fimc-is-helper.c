@@ -1301,6 +1301,7 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 #endif
 
 	printk(KERN_INFO "%s(%d)\n", __func__, on);
+	mutex_lock(&isp->lock);
 	if (on) {
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 		ret = pm_runtime_get_sync(dev);
@@ -1405,8 +1406,10 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 			timeout--;
 			mdelay(10);
 		}
+		msleep(100);
 #endif
 	}
+	mutex_unlock(&isp->lock);
 }
 
 void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
@@ -1455,7 +1458,7 @@ int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 	writel(atomic_read(&dev->p_region_num), dev->regs + ISSR3);
 	writel(dev->p_region_index1, dev->regs + ISSR4);
 	writel(dev->p_region_index2, dev->regs + ISSR5);
-	printk("### set param\n");
+	dbg("### set param\n");
 	dbg("cmd :0x%08x\n", HIC_SET_PARAMETER);
 	dbg("senorID :0x%08x\n", dev->sensor.id_dual);
 	dbg("parma1 :0x%08x\n", dev->scenario_id);
@@ -3528,14 +3531,14 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	/* TODO
 	* change equation to support various size
 	*/
-	printk("calulate crop size\n");
+	dbg("calulate crop size\n");
 	printk("front w: %d front h: %d\n", front_width, front_height);
 	printk("back w: %d back h: %d\n", back_width, back_height);
 
 	front_crop_ratio = front_width*1000/front_height;
 	back_crop_ratio = back_width*1000/back_height;
 
-	printk("front_crop_ratio: %d back_crop_ratio: %d\n", front_crop_ratio, back_crop_ratio);
+	dbg("front_crop_ratio: %d back_crop_ratio: %d\n", front_crop_ratio, back_crop_ratio);
 	if (front_crop_ratio > back_crop_ratio){
 		crop_width = front_width;
 		crop_height = front_height;

@@ -1509,6 +1509,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&isp->irq_queue);
 	spin_lock_init(&isp->slock);
+	mutex_init(&isp->vb_lock);
 	mutex_init(&isp->lock);
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1655,7 +1656,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.minor = -1;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.release
 						= video_device_release;
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.lock	= &isp->lock;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.lock	= &isp->vb_lock;
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd, isp);
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].dev = isp;
 
@@ -1697,7 +1698,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.v4l2_dev	= &isp->mdev->v4l2_dev;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.minor	= -1;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.release	= video_device_release;
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.lock	= &isp->lock;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.lock	= &isp->vb_lock;
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd, isp);
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].dev = isp;
 
@@ -1741,7 +1742,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.minor = -1;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.release
 						= video_device_release;
-	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.lock = &isp->lock;
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.lock = &isp->vb_lock;
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd, isp);
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].dev = isp;
 

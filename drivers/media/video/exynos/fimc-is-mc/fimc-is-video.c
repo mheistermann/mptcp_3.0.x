@@ -188,8 +188,8 @@ static int fimc_is_scalerc_video_close(struct file *file)
 		stop_fimc_lite(isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
 		stop_mipi_csi(isp->pdata->sensor_info[isp->sensor.id_position]->csi_id);
 
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		fimc_is_hw_a5_power(isp, 0);
+		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
 	return 0;
 
@@ -483,12 +483,20 @@ static int fimc_is_scalerc_buffer_prepare(struct vb2_buffer *vb)
 
 static inline void fimc_is_scalerc_lock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_lock(&isp->vb_lock);
 }
 
 static inline void fimc_is_scalerc_unlock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_unlock(&isp->vb_lock);
 }
 
 static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
@@ -855,8 +863,8 @@ static int fimc_is_scalerp_video_close(struct file *file)
 		stop_fimc_lite(isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
 		stop_mipi_csi(isp->pdata->sensor_info[isp->sensor.id_position]->csi_id);
 
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		fimc_is_hw_a5_power(isp, 0);
+		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
 	return 0;
 
@@ -1190,12 +1198,20 @@ static int fimc_is_scalerp_buffer_prepare(struct vb2_buffer *vb)
 
 static inline void fimc_is_scalerp_lock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_lock(&isp->vb_lock);
 }
 
 static inline void fimc_is_scalerp_unlock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_unlock(&isp->vb_lock);
 }
 
 static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
@@ -1556,8 +1572,8 @@ static int fimc_is_3dnr_video_close(struct file *file)
 		stop_fimc_lite(isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
 		stop_mipi_csi(isp->pdata->sensor_info[isp->sensor.id_position]->csi_id);
 
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		fimc_is_hw_a5_power(isp, 0);
+		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
 	return 0;
 
@@ -1852,12 +1868,20 @@ static int fimc_is_3dnr_buffer_prepare(struct vb2_buffer *vb)
 
 static inline void fimc_is_3dnr_lock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_lock(&isp->vb_lock);
 }
 
 static inline void fimc_is_3dnr_unlock(struct vb2_queue *vq)
 {
+	struct fimc_is_video_dev *video = vq->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+
 	dbg("%s\n", __func__);
+	mutex_unlock(&isp->vb_lock);
 }
 
 static int fimc_is_3dnr_start_streaming(struct vb2_queue *q)

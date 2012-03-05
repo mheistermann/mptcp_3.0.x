@@ -365,6 +365,7 @@ struct fimc_is_dev {
 	struct exynos5_platform_fimc_is		*pdata; /* depended on isp */
 	struct exynos_md			*mdev;
 	spinlock_t				slock;
+	struct mutex				vb_lock;
 	struct mutex				lock;
 
 	struct fimc_is_sensor_dev		sensor;
