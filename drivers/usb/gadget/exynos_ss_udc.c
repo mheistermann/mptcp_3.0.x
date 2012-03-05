@@ -34,6 +34,7 @@
 static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
 					    struct exynos_ss_udc_ep *udc_ep,
 					    int result);
+static void exynos_ss_udc_ep0_restart(struct exynos_ss_udc *udc);
 static void exynos_ss_udc_complete_setup(struct usb_ep *ep,
 					 struct usb_request *req);
 static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
@@ -1208,10 +1209,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 	if (ret < 0) {
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-
-		exynos_ss_udc_ep_sethalt(&ep0->ep, 1);
-		udc->ep0_state = EP0_SETUP_PHASE;
-		exynos_ss_udc_enqueue_setup(udc);
+		exynos_ss_udc_ep0_restart(udc);
 	}
 }
 
@@ -1350,6 +1348,22 @@ static void exynos_ss_udc_complete_request_lock(struct exynos_ss_udc *udc,
 	spin_lock_irqsave(&udc_ep->lock, flags);
 	exynos_ss_udc_complete_request(udc, udc_ep, udc_req, result);
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
+}
+
+/**
+ * exynos_ss_udc_ep0_restart - stall and restart EP0
+ * @udc: The device state.
+ *
+ * Stall EP0 and restart control transfer state machine.
+ */
+static void exynos_ss_udc_ep0_restart(struct exynos_ss_udc *udc)
+{
+	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
+
+	exynos_ss_udc_ep_sethalt(&ep0->ep, 1);
+	exynos_ss_udc_kill_all_requests(udc, ep0, -ECONNRESET);
+	udc->ep0_state = EP0_SETUP_PHASE;
+	exynos_ss_udc_enqueue_setup(udc);
 }
 
 /**
@@ -1508,9 +1522,7 @@ static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
 				dev_dbg(udc->dev, "Unexpected XferNotReady "
 						  "during EP0 Setup phase\n");
 
-				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
-				udc->ep0_state = EP0_SETUP_PHASE;
-				exynos_ss_udc_enqueue_setup(udc);
+				exynos_ss_udc_ep0_restart(udc);
 				return;
 			}
 
@@ -1527,9 +1539,7 @@ static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
 				dev_dbg(udc->dev, "Unexpected XferNotReady "
 						  "during EP0 Data phase\n");
 
-				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
-				udc->ep0_state = EP0_SETUP_PHASE;
-				exynos_ss_udc_enqueue_setup(udc);
+				exynos_ss_udc_ep0_restart(udc);
 				return;
 			}
 
@@ -1546,9 +1556,7 @@ static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
 				dev_dbg(udc->dev, "Unexpected XferNotReady "
 						  "during EP0 Wait NotReady\n");
 
-				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
-				udc->ep0_state = EP0_SETUP_PHASE;
-				exynos_ss_udc_enqueue_setup(udc);
+				exynos_ss_udc_ep0_restart(udc);
 				return;
 			}
 
@@ -1564,7 +1572,6 @@ static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
 			break;
 		}
 	}
-
 }
 
 /**
