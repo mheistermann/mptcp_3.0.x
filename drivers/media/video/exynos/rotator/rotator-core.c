@@ -1214,18 +1214,16 @@ err_v4l2_dev:
 
 static int rot_suspend(struct device *dev)
 {
-	struct platform_device *pdev;
 	struct rot_dev *rot;
 	struct rot_ctx *ctx;
 	int ret = 0;
 
-	pdev = to_platform_device(dev);
-	rot = (struct rot_dev *)platform_get_drvdata(pdev);
+	rot = dev_get_drvdata(dev);
 
 	set_bit(DEV_SUSPEND, &rot->state);
 
 	ret = wait_event_timeout(rot->irq.wait,
-		!test_bit(DEV_RUN, &rot->state),
+		test_bit(DEV_RUN, &rot->state),
 		ROT_TIMEOUT);
 	if (!ret)
 		rot_err("wait timeout\n");
@@ -1239,12 +1237,10 @@ static int rot_suspend(struct device *dev)
 
 static int rot_resume(struct device *dev)
 {
-	struct platform_device *pdev;
 	struct rot_dev *rot;
 	struct rot_ctx *ctx;
 
-	pdev = to_platform_device(dev);
-	rot = (struct rot_dev *)platform_get_drvdata(pdev);
+	rot = dev_get_drvdata(dev);
 
 	clear_bit(DEV_SUSPEND, &rot->state);
 
