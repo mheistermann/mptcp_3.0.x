@@ -272,7 +272,7 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 200, 160, 133, 100, 50Mhz");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 266,133Mhz");
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -299,7 +299,10 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	if(!kbdev->sclk_g3d)
 		return -ENODEV;
 
-	if (sysfs_streq("400", buf)) {
+	if (sysfs_streq("533", buf)) {
+	    cmd = 1;
+	    clk_set_rate(kbdev->sclk_g3d, 533000000);
+	} else if (sysfs_streq("400", buf)) {
 	    cmd = 1;
 	    clk_set_rate(kbdev->sclk_g3d, 400000000);
 	} else if (sysfs_streq("266", buf)) {
@@ -744,7 +747,7 @@ static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR_DVFS
-	if(kbdev->pm.metrics.timer.active == MALI_FALSE )
+	if(kbdev->pm.metrics.timer_active == MALI_FALSE )
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is off");
 	else
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is on");
@@ -778,16 +781,27 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 
 #ifdef CONFIG_VITHAR_DVFS
 	if (sysfs_streq("off", buf)) {
-		if(kbdev->pm.metrics.timer.active == MALI_FALSE )
+		if(kbdev->pm.metrics.timer_active == MALI_FALSE )
 			return count;
+
+		osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+		kbdev->pm.metrics.timer_active = MALI_FALSE;
+		osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+
 		osk_timer_stop(&kbdev->pm.metrics.timer);
+
 		kbase_platform_get_default_voltage(dev, &vol);
 		if(vol != 0)
 			kbase_platform_set_voltage(dev, vol);
 		clk_set_rate(kbdev->sclk_g3d, VITHAR_DEFAULT_CLOCK);
 	} else if (sysfs_streq("on", buf)) {
-		if(kbdev->pm.metrics.timer.active == MALI_TRUE )
+		if(kbdev->pm.metrics.timer_active == MALI_TRUE )
 			return count;
+
+		osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+		kbdev->pm.metrics.timer_active = MALI_TRUE;
+		osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+
 		ret = osk_timer_start(&kbdev->pm.metrics.timer, KBASE_PM_DVFS_FREQUENCY);
 		if (ret != OSK_ERR_NONE)
 		{
