@@ -36,6 +36,7 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 #define MODULE_NAME			"s5p-mipi-csis"
 #define DEFAULT_CSIS_SINK_WIDTH		800
 #define DEFAULT_CSIS_SINK_HEIGHT	480
+#define CLK_NAME_SIZE			20
 
 enum csis_input_entity {
 	CSIS_INPUT_NONE,
@@ -281,9 +282,11 @@ static int s5pcsis_clk_get(struct csis_state *state)
 {
 	struct device *dev = &state->pdev->dev;
 	int i;
+	char clk_name[CLK_NAME_SIZE];
 
 	for (i = 0; i < NUM_CSIS_CLOCKS; i++) {
-		state->clock[i] = clk_get(dev, csi_clock_name[i]);
+		sprintf(clk_name, "%s%d", csi_clock_name[i], state->pdev->id);
+		state->clock[i] = clk_get(dev, clk_name);
 		if (IS_ERR(state->clock[i])) {
 			s5pcsis_clk_put(state);
 			dev_err(dev, "failed to get clock: %s\n",
