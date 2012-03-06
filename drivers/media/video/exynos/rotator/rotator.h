@@ -108,9 +108,8 @@ static enum rot_log log_level = ROT_LOG_DEFAULT;
 #define CTX_STREAMING	(1 << 1)
 #define CTX_RUN		(1 << 2)
 #define CTX_ABORT	(1 << 3)
-#define CTX_SUSPEND	(1 << 4)
-#define CTX_SRC		(1 << 5)
-#define CTX_DST		(1 << 6)
+#define CTX_SRC		(1 << 4)
+#define CTX_DST		(1 << 5)
 
 enum rot_irq_src {
 	ISR_PEND_DONE = 8,

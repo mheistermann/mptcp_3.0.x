@@ -640,7 +640,7 @@ static int rot_ctx_stop_req(struct rot_ctx *ctx)
 			!test_bit(CTX_RUN, &ctx->flags), ROT_TIMEOUT);
 
 	/* TODO: How to handle case of timeout event */
-	if (!ret) {
+	if (ret == 0) {
 		rot_err("device failed to stop request\n");
 		ret = -EBUSY;
 	}
@@ -793,6 +793,7 @@ static int rot_open(struct file *file)
 	/* Default color format */
 	ctx->s_frame.rot_fmt = &rot_formats[0];
 	ctx->d_frame.rot_fmt = &rot_formats[0];
+	init_waitqueue_head(&rot->irq.wait);
 	spin_lock_init(&ctx->slock);
 
 	/* Setup the device context for mem2mem mode. */
@@ -1215,41 +1216,25 @@ err_v4l2_dev:
 static int rot_suspend(struct device *dev)
 {
 	struct rot_dev *rot;
-	struct rot_ctx *ctx;
 	int ret = 0;
 
 	rot = dev_get_drvdata(dev);
-
 	set_bit(DEV_SUSPEND, &rot->state);
 
 	ret = wait_event_timeout(rot->irq.wait,
-		test_bit(DEV_RUN, &rot->state),
-		ROT_TIMEOUT);
-	if (!ret)
+			!test_bit(DEV_RUN, &rot->state), ROT_TIMEOUT);
+	if (ret == 0)
 		rot_err("wait timeout\n");
 
-	ctx = rot->m2m.ctx;
-	if (ctx != NULL)
-		set_bit(CTX_SUSPEND, &ctx->flags);
-
-	return ret;
+	return 0;
 }
 
 static int rot_resume(struct device *dev)
 {
 	struct rot_dev *rot;
-	struct rot_ctx *ctx;
 
 	rot = dev_get_drvdata(dev);
-
 	clear_bit(DEV_SUSPEND, &rot->state);
-
-	ctx = rot->m2m.ctx;
-	if (ctx != NULL) {
-		clear_bit(CTX_SUSPEND, &ctx->flags);
-		rot->m2m.ctx = NULL;
-		v4l2_m2m_job_finish(rot->m2m.m2m_dev, ctx->m2m_ctx);
-	}
 
 	return 0;
 }
