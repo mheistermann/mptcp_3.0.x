@@ -234,6 +234,7 @@ static void dw_mci_set_timeout(struct dw_mci *host)
 static u32 dw_mci_prepare_command(struct mmc_host *mmc, struct mmc_command *cmd)
 {
 	struct mmc_data	*data;
+	struct dw_mci_slot *slot = mmc_priv(mmc);
 	u32 cmdr;
 	cmd->error = -EINPROGRESS;
 
@@ -263,6 +264,10 @@ static u32 dw_mci_prepare_command(struct mmc_host *mmc, struct mmc_command *cmd)
 			cmdr |= SDMMC_CMD_DAT_WR;
 	}
 
+	/* Use hold bit register */
+	if (slot->host->pdata->set_io_timing)
+		cmdr |= SDMMC_USE_HOLD_REG;
+
 	return cmdr;
 }
 
@@ -277,7 +282,7 @@ static void dw_mci_start_command(struct dw_mci *host,
 	mci_writel(host, CMDARG, cmd->arg);
 	wmb();
 
-	mci_writel(host, CMD, cmd_flags | SDMMC_CMD_START | host->hold_bit);
+	mci_writel(host, CMD, cmd_flags | SDMMC_CMD_START);
 }
 
 static void send_stop_cmd(struct dw_mci *host, struct mmc_data *data)
@@ -594,7 +599,7 @@ static void mci_send_cmd(struct dw_mci_slot *slot, u32 cmd, u32 arg)
 
 	mci_writel(host, CMDARG, arg);
 	wmb();
-	mci_writel(host, CMD, SDMMC_CMD_START | host->hold_bit | cmd);
+	mci_writel(host, CMD, SDMMC_CMD_START | cmd);
 
 	while (time_before(jiffies, timeout)) {
 		cmd_status = mci_readl(host, CMD);
@@ -781,7 +786,6 @@ static void dw_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
-	struct dw_mci_board *brd = slot->host->pdata;
 	u32 regs;
 
 	/* set default 1 bit mode */
@@ -1099,7 +1103,7 @@ static void dw_mci_push_data16(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 1;
 	while (cnt > 0) {
-		mci_writew(host, DATA + host->data_addr, *pdata++);
+		mci_writew(host, DATA(host->data_offset), *pdata++);
 		cnt--;
 	}
 }
@@ -1112,7 +1116,7 @@ static void dw_mci_pull_data16(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 1;
 	while (cnt > 0) {
-		*pdata++ = mci_readw(host, DATA + host->data_addr);
+		*pdata++ = mci_readw(host, DATA(host->data_offset));
 		cnt--;
 	}
 }
@@ -1126,7 +1130,7 @@ static void dw_mci_push_data32(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 2;
 	while (cnt > 0) {
-		mci_writel(host, DATA + host->data_addr, *pdata++);
+		mci_writel(host, DATA(host->data_offset), *pdata++);
 		cnt--;
 	}
 }
@@ -1140,7 +1144,7 @@ static void dw_mci_pull_data32(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 2;
 	while (cnt > 0) {
-		*pdata++ = mci_readl(host, DATA + host->data_addr);
+		*pdata++ = mci_readl(host, DATA(host->data_offset));
 		cnt--;
 	}
 }
@@ -1153,7 +1157,7 @@ static void dw_mci_push_data64(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 3;
 	while (cnt > 0) {
-		mci_writeq(host, DATA + host->data_addr, *pdata++);
+		mci_writeq(host, DATA(host->data_offset), *pdata++);
 		cnt--;
 	}
 }
@@ -1166,7 +1170,7 @@ static void dw_mci_pull_data64(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 3;
 	while (cnt > 0) {
-		*pdata++ = mci_readq(host, DATA + host->data_addr);
+		*pdata++ = mci_readq(host, DATA(host->data_offset));
 		cnt--;
 	}
 }
@@ -1732,15 +1736,6 @@ static int dw_mci_probe(struct platform_device *pdev)
 	if (!host)
 		return -ENOMEM;
 
-	/* IP version conrtol */
-	if (soc_is_exynos4210()) {
-		host->data_addr = 0x0;
-		host->hold_bit = 0;
-	} else {
-		host->data_addr = 0x100;
-		host->hold_bit = SDMMC_USE_HOLD_REG;
-	}
-
 	/* Set Phase Shift Register */
 
 	if (soc_is_exynos4210()) {
@@ -1900,6 +1895,18 @@ static int dw_mci_probe(struct platform_device *pdev)
 			goto err_init_slot;
 		}
 	}
+
+	/*
+	 * In 2.40a spec, Data offset is changed.
+	 * Need to check the version-id and set data-offset for DATA register.
+	 */
+	host->verid = SDMMC_GET_VERID(mci_readl(host, VERID));
+	dev_info(&pdev->dev, "Version ID is %04x\n", host->verid);
+
+	if (host->verid < DW_MMC_240A)
+		host->data_offset = DATA_OFFSET;
+	else
+		host->data_offset = DATA_240A_OFFSET;
 
 	/*
 	 * Enable interrupts for command done, data over, data empty, card det,

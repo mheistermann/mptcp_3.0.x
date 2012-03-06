@@ -32,6 +32,10 @@ static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 	return 0;
 }
 
+static void exynos_dwmci_set_io_timing(void *data, unsigned char timing)
+{
+}
+
 static struct resource exynos_dwmci_resource[] = {
 	[0] = {
 		.start	= EXYNOS_PA_DWMCI,
@@ -52,6 +56,7 @@ static struct dw_mci_board exynos_dwmci_def_platdata = {
 	.detect_delay_ms	= 200,
 	.init			= exynos_dwmci_init,
 	.get_bus_wd		= exynos_dwmci_get_bus_wd,
+	.set_io_timing		= exynos_dwmci_set_io_timing,
 };
 
 static u64 exynos_dwmci_dmamask = DMA_BIT_MASK(32);
@@ -79,4 +84,6 @@ void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd)
 		npd->init = exynos_dwmci_init;
 	if (!npd->get_bus_wd)
 		npd->get_bus_wd = exynos_dwmci_get_bus_wd;
+	if (!npd->set_io_timing)
+		npd->set_io_timing = exynos_dwmci_set_io_timing;
 }
