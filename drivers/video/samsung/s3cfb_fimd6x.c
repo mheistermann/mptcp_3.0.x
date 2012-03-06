@@ -644,6 +644,18 @@ int s3cfb_set_alpha_value(struct s3cfb_global *ctrl, int value)
 	return 0;
 }
 
+int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id)
+{
+	struct fb_var_screeninfo *var = &ctrl->fb[id]->var;
+
+	if (var->bits_per_pixel == 32 && var->transp.length > 4)
+		writel(1, ctrl->regs + S3C_BLENDCON);
+	else
+		writel(0, ctrl->regs + S3C_BLENDCON);
+
+	return 0;
+}
+
 int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id)
 {
 	struct s3c_platform_fb *pdata = to_fb_plat(ctrl->dev);

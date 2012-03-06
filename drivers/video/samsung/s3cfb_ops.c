@@ -446,6 +446,7 @@ void s3cfb_set_win_params(struct s3cfb_global *fbdev, int id)
 	if (id > 0) {
 		s3cfb_set_alpha_blending(fbdev, id);
 		s3cfb_set_chroma_key(fbdev, id);
+		s3cfb_set_alpha_value_width(fbdev, id);
 	}
 }
 
@@ -538,7 +539,7 @@ int s3cfb_init_fbinfo(struct s3cfb_global *fbdev, int id)
 	var->yoffset = 0;
 	var->width = 0;
 	var->height = 0;
-	var->transp.length = 0;
+	var->transp.length = 8;
 
 	fix->line_length = var->xres_virtual * var->bits_per_pixel / 8;
 	fix->smem_len = fix->line_length * var->yres_virtual;

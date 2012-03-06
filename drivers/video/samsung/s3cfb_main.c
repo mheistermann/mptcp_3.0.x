@@ -280,6 +280,7 @@ static int s3cfb_probe(struct platform_device *pdev)
 
 		s3cfb_update_power_state(fbdev[i], pdata->default_win,
 					FB_BLANK_UNBLANK);
+		s3cfb_set_alpha_value_width(fbdev[i], i);
 		s3cfb_display_on(fbdev[i]);
 
 #ifdef CONFIG_HAS_WAKELOCK
@@ -563,6 +564,7 @@ int s3cfb_resume(struct platform_device *pdev)
 				}
 			}
 
+			s3cfb_set_alpha_value_width(fbdev[i], i);
 			s3cfb_display_on(fbdev[i]);
 
 			if (pdata->backlight_on)
