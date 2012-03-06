@@ -43,7 +43,7 @@ void *rot_ion_init(struct rot_dev *rot)
 	struct vb2_ion vb2_ion;
 	struct vb2_drv vb2_drv = {0, };
 
-	vb2_ion.dev = &rot->pdev->dev;
+	vb2_ion.dev = rot->dev;
 	vb2_ion.name = "Rotator";
 	vb2_ion.contig = true;
 	vb2_ion.cacheable = false;
