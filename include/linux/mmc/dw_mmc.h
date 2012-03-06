@@ -151,10 +151,6 @@ struct dw_mci {
 	struct dw_mci_board	*pdata;
 	struct dw_mci_slot	*slot[MAX_MCI_SLOTS];
 
-	/* Phase Shift Value */
-	u32			sdr_timing;
-	u32			ddr_timing;
-
 	/* FIFO push and pull */
 	int			fifo_depth;
 	int			data_shift;
@@ -228,6 +224,11 @@ struct dw_mci_board {
 	int (*get_bus_wd)(u32 slot_id);
 	void (*cfg_gpio)(int width);
 	void (*set_io_timing)(void *data, unsigned char timing);
+
+	/* Phase Shift Value */
+	unsigned int sdr_timing;
+	unsigned int ddr_timing;
+
 	/*
 	 * Enable power to selected slot and set voltage to desired level.
 	 * Voltage levels are specified using MMC_VDD_xxx defines defined

@@ -803,19 +803,19 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		break;
 	}
 
+	regs = mci_readl(slot->host, UHS_REG);
+
 	/* DDR mode set */
-	if (ios->timing == MMC_TIMING_UHS_DDR50) {
-		regs = mci_readl(slot->host, UHS_REG);
+	if (ios->timing == MMC_TIMING_UHS_DDR50)
 		regs |= (0x1 << slot->id) << 16;
-		mci_writel(slot->host, UHS_REG, regs);
-		mci_writel(slot->host, CLKSEL, slot->host->ddr_timing);
-	} else {
+	 else
 		/* 1, 4, 8 Bit SDR */
-		regs = mci_readl(slot->host, UHS_REG);
 		regs &= ~(0x1 << slot->id) << 16;
-		mci_writel(slot->host, UHS_REG, regs);
-		mci_writel(slot->host, CLKSEL, slot->host->sdr_timing);
-	}
+
+	mci_writel(slot->host, UHS_REG, regs);
+
+	if (slot->host->pdata->set_io_timing)
+		slot->host->pdata->set_io_timing(slot->host, ios->timing);
 
 	if (ios->clock) {
 		/*
@@ -1735,19 +1735,6 @@ static int dw_mci_probe(struct platform_device *pdev)
 	host = kzalloc(sizeof(struct dw_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
-
-	/* Set Phase Shift Register */
-
-	if (soc_is_exynos4210()) {
-		host->sdr_timing = 0x00010001;
-		host->ddr_timing = 0x00020002;
-	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
-		host->sdr_timing = 0x00010001;
-		host->ddr_timing = 0x00010001;
-	} else if (soc_is_exynos5250()) {
-		host->sdr_timing = 0x00010000;
-		host->ddr_timing = 0x00010000;
-	}
 
 	host->pdev = pdev;
 	host->pdata = pdata = pdev->dev.platform_data;

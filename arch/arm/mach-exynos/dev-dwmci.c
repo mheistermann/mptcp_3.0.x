@@ -17,10 +17,14 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/mmc/dw_mmc.h>
+#include <linux/mmc/host.h>
 
 #include <plat/devs.h>
+#include <plat/cpu.h>
 
 #include <mach/map.h>
+
+#define DWMCI_CLKSEL	0x09c
 
 static int exynos_dwmci_get_bus_wd(u32 slot_id)
 {
@@ -29,11 +33,33 @@ static int exynos_dwmci_get_bus_wd(u32 slot_id)
 
 static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 {
+	struct dw_mci *host = (struct dw_mci *)data;
+
+	/* Set Phase Shift Register */
+	if (soc_is_exynos4210()) {
+		host->pdata->sdr_timing = 0x00010001;
+		host->pdata->ddr_timing = 0x00020002;
+	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		host->pdata->sdr_timing = 0x00010001;
+		host->pdata->ddr_timing = 0x00010002;
+	} else if (soc_is_exynos5250()) {
+		host->pdata->sdr_timing = 0x00010000;
+		host->pdata->ddr_timing = 0x00010000;
+	}
+
 	return 0;
 }
 
 static void exynos_dwmci_set_io_timing(void *data, unsigned char timing)
 {
+	struct dw_mci *host = (struct dw_mci *)data;
+
+	if (timing == MMC_TIMING_UHS_DDR50)
+		__raw_writel(host->pdata->ddr_timing,
+			host->regs + DWMCI_CLKSEL);
+	else
+		__raw_writel(host->pdata->sdr_timing,
+			host->regs + DWMCI_CLKSEL);
 }
 
 static struct resource exynos_dwmci_resource[] = {
@@ -77,8 +103,15 @@ void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd)
 {
 	struct dw_mci_board *npd;
 
-	npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
+	if ((soc_is_exynos4210()) ||
+		soc_is_exynos4212() || soc_is_exynos4412())
+		npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
 			&exynos_device_dwmci);
+	else if (soc_is_exynos5250())
+		npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
+			&exynos_device_dwmci);
+	else
+		npd = 0;
 
 	if (!npd->init)
 		npd->init = exynos_dwmci_init;
