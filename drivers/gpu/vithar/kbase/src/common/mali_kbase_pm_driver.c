@@ -679,9 +679,6 @@ void MOCKABLE(kbase_pm_disable_interrupts)(kbase_device *kbdev)
 
 void MOCKABLE(kbase_pm_clock_on)(kbase_device *kbdev)
 {
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_resume(kbdev->osdev.dev);
-#endif
 
 	/* The GPU is going to transition, so unset the wait queues until the policy
 	 * informs us that the transition is complete */
@@ -697,9 +694,6 @@ void MOCKABLE(kbase_pm_clock_off)(kbase_device *kbdev)
 	if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
 		kbase_reg_write(kbdev, 0x4008, 0, NULL);
 
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_suspend(kbdev->osdev.dev);
-#endif
 }
 
 struct kbasep_reset_timeout_data

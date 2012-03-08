@@ -45,7 +45,7 @@ obj-$(CONFIG_VITHAR_RT_PM) += $(KBASE_PATH)/platform/mali_kbase_runtime_pm.o
 obj-$(CONFIG_VITHAR) += $(KBASE_PATH)/platform/mali_kbase_dvfs.o
 RELATIVE_ROOT=../..
 ROOT=$(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
-MALI_KBASE_SRC_LINUX_PATH ?= $(PWD)/linux
+MALI_KBASE_SRC_LINUX_PATH ?= $(KBASE_PATH)/linux
 
 # Dummy model
 ifeq ($(MALI_NO_MALI), 1)

@@ -66,7 +66,6 @@ void kbase_device_runtime_init_workqueue(struct device *dev)
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 	INIT_DELAYED_WORK(&kbdev->runtime_pm_workqueue, kbase_device_runtime_workqueue_callback);
-	schedule_delayed_work(&kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME);
 #endif
 }
 
@@ -84,7 +83,9 @@ int kbase_device_runtime_suspend(struct device *dev)
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 
-	cancel_delayed_work(&kbdev->runtime_pm_workqueue);
+	if(delayed_work_pending(&kbdev->runtime_pm_workqueue)) {
+		cancel_delayed_work_sync(&kbdev->runtime_pm_workqueue);
+	}
 	schedule_delayed_work(&kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME);
 	return 0;
 #else
@@ -106,8 +107,8 @@ int kbase_device_runtime_resume(struct device *dev)
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 
-	if(work_pending(&kbdev->runtime_pm_workqueue.work)) {
-		cancel_delayed_work(&kbdev->runtime_pm_workqueue);
+	if(delayed_work_pending(&kbdev->runtime_pm_workqueue)) {
+		cancel_delayed_work_sync(&kbdev->runtime_pm_workqueue);
 	}
 #endif
 	return kbase_platform_cmu_pmu_control(dev, 1);
