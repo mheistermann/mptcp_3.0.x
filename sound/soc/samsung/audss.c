@@ -169,9 +169,9 @@ void audss_clk_enable(bool enable)
 		clk_disable(audss.srp_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_disable(audss.i2s_clk);
+		audss_reg_save();
 
 		audss.clk_enabled = false;
-		audss_reg_save();
 	}
 
 	pr_debug("%s: SRC[0x%x], DIV[0x%x], GATE[0x%x]\n", __func__,
