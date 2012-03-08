@@ -81,6 +81,7 @@ enum jpeg_frame_format {
 	YCRCB_422_2P,
 	YCBYCR_422_3P,
 	YCBCR_420_3P,
+	YCRCB_420_3P,
 	YCBCR_420_2P,
 	YCRCB_420_2P,
 	YCBCR_420_2P_M,

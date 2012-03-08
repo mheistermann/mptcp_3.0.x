@@ -168,10 +168,17 @@ static struct jpeg_fmt formats[] = {
 		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
-		.name		= "YUV 4:2:0 contiguous 3-planar, Y/Cr/Cb",
+		.name		= "YUV 4:2:0 contiguous 3-planar, Y/Cb/Cr",
 		.fourcc		= V4L2_PIX_FMT_YUV420,
 		.depth		= {8, 2, 2},
 		.color		= YCBCR_420_3P,
+		.memplanes	= 3,
+		.types		= M2M_CAPTURE,
+	}, {
+		.name		= "YUV 4:2:0 contiguous 3-planar, Y/Cr/Cb",
+		.fourcc		= V4L2_PIX_FMT_YVU420,
+		.depth		= {8, 2, 2},
+		.color		= YCRCB_420_3P,
 		.memplanes	= 3,
 		.types		= M2M_CAPTURE,
 	}, {

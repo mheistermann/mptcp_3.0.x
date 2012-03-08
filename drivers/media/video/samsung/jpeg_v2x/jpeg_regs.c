@@ -130,7 +130,14 @@ void jpeg_set_dec_out_fmt(void __iomem *base,
 
 	case YCBCR_420_3P:
 		reg = S5P_JPEG_DEC_YUV_420_IMG |
-				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG;
+				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG |
+				S5P_JPEG_SWAP_CHROMA_CbCr;
+		break;
+
+	case YCRCB_420_3P:
+		reg = S5P_JPEG_DEC_YUV_420_IMG |
+				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG |
+				S5P_JPEG_SWAP_CHROMA_CrCb;
 		break;
 
 	default:
@@ -223,7 +230,14 @@ void jpeg_set_enc_in_fmt(void __iomem *base,
 
 	case YCBCR_420_3P:
 		reg = reg | S5P_JPEG_DEC_YUV_420_IMG |
-				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG;
+				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG |
+				S5P_JPEG_SWAP_CHROMA_CbCr;
+		break;
+
+	case YCRCB_420_3P:
+		reg = reg | S5P_JPEG_DEC_YUV_420_IMG |
+				S5P_JPEG_YUV_420_IP_YUV_420_3P_IMG |
+				S5P_JPEG_SWAP_CHROMA_CrCb;
 		break;
 
 	default:
@@ -436,6 +450,7 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 		writel(address_3p, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
 	case YCBCR_420_3P:
+	case YCRCB_420_3P:
 		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
 		writel(address_2p, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
 		writel(address_3p, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
