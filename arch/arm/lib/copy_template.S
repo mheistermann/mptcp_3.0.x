@@ -103,10 +103,13 @@
 	PLD(	pld	[r1, #PLDSIZE*2-4]		)
 	PLD(	pld	[r1, #PLDSIZE*3-4]		)
 3:	PLD(	pld	[r1, #PLDSIZE*4-4]		)
-4:		ldr8w	r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
-		str8w	r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
-		ldr8w	r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
-		str8w	r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+4:		.irp	offset, #0, #8, #16, #24, #32, #40, #48, #56
+		ldrd	r4, r5, [r1, \offset]
+		strd	r4, r5, [r0, \offset]
+		.endr
+		add	r0, r0, #64
+		add	r1, r1, #64
+
 		subs	r2, r2, #PLDSIZE
 		bge	3b
 	PLD(	cmn	r2, #(PLDSIZE*3)		)
@@ -116,8 +119,12 @@
 	PLD(	blt	5f)
 
 .32copy:
-		ldr8w	r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
-		str8w	r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+		.irp	offset, #0, #8, #16, #24
+		ldrd	r4, r5, [r1, \offset]
+		strd	r4, r5, [r0, \offset]
+		.endr
+		add	r0, r0, #32
+		add	r1, r1, #32
 #else
 2:	PLD(	subs	r2, r2, #(PLDSIZE*3)		)
 	PLD(	pld	[r1, #(PLDSIZE-4)]		)
@@ -126,9 +133,14 @@
 	PLD(	pld	[r1, #(PLDSIZE*3-4)]		)
 
 3:	PLD(	pld	[r1, #(PLDSIZE*4-4)]		)
-4:		ldr8w	r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+4:		.irp	offset, #0, #8, #16, #24
+		ldrd	r4, r5, [r1, \offset]
+		strd	r4, r5, [r0, \offset]
+		.endr
+		add	r0, r0, #PLDSIZE
+		add	r1, r1, #PLDSIZE
 		subs	r2, r2, #PLDSIZE
-		str8w	r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+
 		bge	3b
 	PLD(	cmn	r2, #(PLDSIZE*3)			)
 	PLD(	bge	4b			)
