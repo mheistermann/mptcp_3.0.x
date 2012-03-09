@@ -1706,23 +1706,21 @@ static void exynos_dwmci_cfg_gpio(int width)
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 	}
 
-	width = (1 << width);
-
 	switch (width) {
-	case 8:
+	case MMC_BUS_WIDTH_8:
 		for (gpio = EXYNOS4_GPK1(3); gpio <= EXYNOS4_GPK1(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
 			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 		}
-	case 4:
+	case MMC_BUS_WIDTH_4:
 		for (gpio = EXYNOS4_GPK0(3); gpio <= EXYNOS4_GPK0(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
 			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 		}
 		break;
-	case 1:
+	case MMC_BUS_WIDTH_1:
 		gpio = EXYNOS4_GPK0(3);
 		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
 		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);

@@ -1601,16 +1601,9 @@ static int __init dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 	else
 		mmc->caps2 = 0;
 
-	if (host->pdata->get_bus_wd) {
-		if (host->pdata->get_bus_wd(slot->id) >= 4) {
+	if (host->pdata->get_bus_wd)
+		if (host->pdata->get_bus_wd(slot->id) >= 4)
 			mmc->caps |= MMC_CAP_4_BIT_DATA;
-			if (host->pdata->cfg_gpio)
-				host->pdata->cfg_gpio(mmc->ios.bus_width);
-		} else {
-			if (host->pdata->cfg_gpio)
-				host->pdata->cfg_gpio(mmc->ios.bus_width);
-		}
-	}
 
 	if (host->pdata->quirks & DW_MCI_QUIRK_HIGHSPEED)
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
