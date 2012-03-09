@@ -32,14 +32,14 @@
 #define IBUF_OFFSET	((soc_is_exynos4412() || soc_is_exynos4212()) ? \
 			(0x30000) : (0x10000))
 #elif defined(CONFIG_ARCH_EXYNOS5)
-#define IBUF_OFFSET	(0x8004)
+#define IBUF_OFFSET	(0x8104)
 #endif
 
 /* OBUF Offset */
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define OBUF_OFFSET	(0x4)
 #elif defined(CONFIG_ARCH_EXYNOS5)
-#define OBUF_OFFSET	(0x10004)
+#define OBUF_OFFSET	(0x10104)
 #endif
 
 /* SRP Input/Output buffer physical address */
@@ -48,7 +48,7 @@
 #elif defined(CONFIG_ARCH_EXYNOS5)
 #define SRP_IBUF_PHY_ADDR	(SRP_DMEM_BASE + IBUF_OFFSET)
 #endif
-#define SRP_OBUF_PHY_ADDR      (SRP_DMEM_BASE + OBUF_OFFSET)
+#define SRP_OBUF_PHY_ADDR	(SRP_DMEM_BASE + OBUF_OFFSET)
 
 /* IBUF/OBUF NUM */
 #define IBUF_NUM	(0x2)
@@ -61,7 +61,7 @@
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
-#define DATA_OFFSET	(0x8004)
+#define DATA_OFFSET	(0x18104)
 
 /* F/W Endian Configuration */
 #ifdef USE_FW_ENDIAN_CONVERT
