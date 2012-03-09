@@ -399,10 +399,9 @@ static int jpeg_m2m_open(struct file *file)
 		return err;
 	}
 
-	clk_enable(dev->clk);
-
 #ifdef CONFIG_PM_RUNTIME
 #if defined (CONFIG_CPU_EXYNOS5250)
+	clk_enable(dev->clk);
 	dev->vb2->resume(dev->alloc_ctx);
 #ifdef CONFIG_BUSFREQ_OPP
 	/* lock bus frequency */
@@ -439,11 +438,11 @@ static int jpeg_m2m_release(struct file *file)
 	/* Unlock bus frequency */
 	dev_unlock(ctx->dev->bus_dev, &ctx->dev->plat_dev->dev);
 #endif
+	clk_disable(ctx->dev->clk);
 #else
 	pm_runtime_put_sync(&ctx->dev->plat_dev->dev);
 #endif
 #endif
-	clk_disable(ctx->dev->clk);
 	kfree(ctx);
 
 	return 0;
