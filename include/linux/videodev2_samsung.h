@@ -994,6 +994,25 @@ typedef enum {
 #define V4L2_CID_CAMERA_BUSFREQ_LOCK		(V4L2_CID_PRIVATE_BASE+125)
 #define V4L2_CID_CAMERA_BUSFREQ_UNLOCK		(V4L2_CID_PRIVATE_BASE+126)
 
+/* control for post processing block in ISP */
+#define V4L2_CID_CAMERA_SET_ODC				(V4L2_CID_PRIVATE_BASE+127)
+enum set_odc_mode {
+	CAMERA_ODC_ON,
+	CAMERA_ODC_OFF
+};
+
+#define V4L2_CID_CAMERA_SET_DIS				(V4L2_CID_PRIVATE_BASE+128)
+enum set_dis_mode {
+	CAMERA_DIS_ON,
+	CAMERA_DIS_OFF
+};
+
+#define V4L2_CID_CAMERA_SET_3DNR				(V4L2_CID_PRIVATE_BASE+129)
+enum set_3dnr_mode {
+	CAMERA_3DNR_ON,
+	CAMERA_3DNR_OFF
+};
+
 /*      Pixel format FOURCC depth  Description  */
 enum v4l2_pix_format_mode {
 	V4L2_PIX_FMT_MODE_PREVIEW,
