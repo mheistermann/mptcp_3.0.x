@@ -12,7 +12,7 @@
 #ifndef FIMC_IS_PARAMS_H
 #define FIMC_IS_PARAMS_H
 
-#define IS_REGION_VER 115  /* IS REGION VERSION 1.15 */
+#define IS_REGION_VER 121  /* IS REGION VERSION 1.15 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -20,12 +20,13 @@
 		: set_bit(num, &dev->p_region_index1))
 #define IS_INC_PARAM_NUM(dev)		atomic_inc(&dev->p_region_num)
 
-#define IS_PARAM_GLOBAL		(dev->is_p_region->parameter.global)
-#define IS_PARAM_ISP		(dev->is_p_region->parameter.isp)
-#define IS_PARAM_DRC		(dev->is_p_region->parameter.drc)
-#define IS_PARAM_FD		(dev->is_p_region->parameter.fd)
-#define IS_HEADER		(dev->is_p_region->header)
-#define IS_FACE			(dev->is_p_region->face)
+#define IS_PARAM_GLOBAL(dev)		(dev->is_p_region->parameter.global)
+#define IS_PARAM_ISP(dev)		(dev->is_p_region->parameter.isp)
+#define IS_PARAM_DRC(dev)		(dev->is_p_region->parameter.drc)
+#define IS_PARAM_FD(dev)		(dev->is_p_region->parameter.fd)
+#define IS_HEADER(dev)		(dev->is_p_region->header)
+#define IS_FACE(dev)			(dev->is_p_region->face)
+#define IS_SHARED(dev)		(dev->is_shared_region)
 #define IS_PARAM_SIZE		(FIMC_IS_REGION_SIZE+1)
 
 /* Global control */
@@ -58,18 +59,20 @@
 		(dev->is_p_region->parameter.isp.otf_input.bitwidth = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.order = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_offset_x = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_offset_y = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_width = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_height = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.frametime_min = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.frametime_max = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.err = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED0(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[0] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED1(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[1] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED2(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[2] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[3] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[4] = x)
 
 #define IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.cmd = x)
@@ -119,12 +122,18 @@
 		(dev->is_p_region->parameter.isp.aa.target = x)
 #define IS_ISP_SET_PARAM_AA_MODE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.mode = x)
+#define IS_ISP_SET_PARAM_AA_SCENE(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.scene = x)
+#define IS_ISP_SET_PARAM_AA_SLEEP(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.sleep = x)
 #define IS_ISP_SET_PARAM_AA_FACE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.face = x)
-#define IS_ISP_SET_PARAM_AA_WIN_POS_X(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_pos_x = x)
-#define IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_pos_y = x)
+#define IS_ISP_SET_PARAM_AA_TOUCH_X(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.touch_x = x)
+#define IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.touch_y = x)
+#define IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.manual_af_setting = x)
 #define IS_ISP_SET_PARAM_AA_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.err = x)
 
@@ -168,10 +177,6 @@
 		(dev->is_p_region->parameter.isp.adjust.brightness = x)
 #define IS_ISP_SET_PARAM_ADJUST_HUE(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.hue = x)
-#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, x) \
-		(dev->is_p_region->parameter.isp.adjust.shutter_time_min = x)
-#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, x) \
-		(dev->is_p_region->parameter.isp.adjust.shutter_time_max = x)
 #define IS_ISP_SET_PARAM_ADJUST_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.err = x)
 
@@ -228,6 +233,8 @@
 		(dev->is_p_region->parameter.isp.dma1_output.buffer_number = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev, x) \
 	(dev->is_p_region->parameter.isp.dma1_output.buffer_address = x)
+#define IS_ISP_SET_PARAM_DMA_OUTPUT1_MASK(dev, x) \
+	(dev->is_p_region->parameter.isp.dma1_output.dma_out_mask = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_output.err = x)
 
@@ -249,6 +256,11 @@
 		(dev->is_p_region->parameter.isp.dma2_output.buffer_number = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev, x) \
 		(dev->is_p_region->parameter.isp.dma2_output.buffer_address = x)
+#define IS_ISP_SET_PARAM_DMA_OUTPUT2_MASK(dev, x) \
+		(dev->is_p_region->parameter.isp.dma2_output.dma_out_mask = x)
+#define IS_ISP_SET_PARAM_DMA_OUTPUT2_DMA_DONE(dev, x) \
+		(dev->is_p_region->parameter.isp.dma2_output.notify_dma_done = x)
+
 #define IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma2_output.err = x)
 
@@ -408,6 +420,8 @@
 	(dev->is_p_region->parameter.scalerc.dma_output.buffer_number = x)
 #define IS_SCALERC_SET_PARAM_DMA_OUTPUT_BUFFERADDR(dev, x) \
 	(dev->is_p_region->parameter.scalerc.dma_output.buffer_address = x)
+#define IS_SCALERC_SET_PARAM_DMA_OUTPUT_MASK(dev, x) \
+	(dev->is_p_region->parameter.scalerc.dma_output.dma_out_mask = x)
 #define IS_SCALERC_SET_PARAM_DMA_OUTPUT_OUTPATH(dev, x) \
 	(dev->is_p_region->parameter.scalerc.dma_output.reserved[0] = x)
 #define IS_SCALERC_SET_PARAM_DMA_OUTPUT_ERR(dev, x) \
@@ -416,6 +430,10 @@
 /* ODC Macros */
 #define IS_ODC_SET_PARAM_CONTROL_CMD(dev, x) \
 	(dev->is_p_region->parameter.odc.control.cmd = x)
+#define IS_ODC_SET_PARAM_CONTROL_BUFFERNUM(dev, x) \
+	(dev->is_p_region->parameter.odc.control.buffer_number = x)
+#define IS_ODC_SET_PARAM_CONTROL_BUFFERADDR(dev, x) \
+	(dev->is_p_region->parameter.odc.control.buffer_address = x)
 #define IS_ODC_SET_PARAM_CONTROL_BYPASS(dev, x) \
 	(dev->is_p_region->parameter.odc.control.bypass = x)
 #define IS_ODC_SET_PARAM_CONTROL_ERR(dev, x) \
@@ -454,6 +472,10 @@
 /* DIS Macros */
 #define IS_DIS_SET_PARAM_CONTROL_CMD(dev, x) \
 	(dev->is_p_region->parameter.dis.control.cmd = x)
+#define IS_DIS_SET_PARAM_CONTROL_BUFFERNUM(dev, x) \
+	(dev->is_p_region->parameter.dis.control.buffer_number = x)
+#define IS_DIS_SET_PARAM_CONTROL_BUFFERADDR(dev, x) \
+	(dev->is_p_region->parameter.dis.control.buffer_address = x)
 #define IS_DIS_SET_PARAM_CONTROL_BYPASS(dev, x) \
 	(dev->is_p_region->parameter.dis.control.bypass = x)
 #define IS_DIS_SET_PARAM_CONTROL_ERR(dev, x) \
@@ -494,6 +516,10 @@
 	(dev->is_p_region->parameter.tdnr.control.cmd = x)
 #define IS_TDNR_SET_PARAM_CONTROL_BYPASS(dev, x) \
 	(dev->is_p_region->parameter.tdnr.control.bypass = x)
+#define IS_TDNR_SET_PARAM_CONTROL_BUFFERNUM(dev, x) \
+	(dev->is_p_region->parameter.tdnr.control.buffer_number = x)
+#define IS_TDNR_SET_PARAM_CONTROL_BUFFERADDR(dev, x) \
+	(dev->is_p_region->parameter.tdnr.control.buffer_address = x)
 #define IS_TDNR_SET_PARAM_CONTROL_ERR(dev, x) \
 	(dev->is_p_region->parameter.tdnr.control.err = x)
 
@@ -550,6 +576,8 @@
 	(dev->is_p_region->parameter.tdnr.dma_output.buffer_number = x)
 #define IS_TDNR_SET_PARAM_DMA_OUTPUT_BUFFERADDR(dev, x) \
 	(dev->is_p_region->parameter.tdnr.dma_output.buffer_address = x)
+#define IS_TDNR_SET_PARAM_DMA_OUTPUT_MASK(dev, x) \
+	(dev->is_p_region->parameter.tdnr.dma_output.dma_out_mask = x)
 #define IS_TDNR_SET_PARAM_DMA_OUTPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.tdnr.dma_output.err = x)
 
@@ -660,6 +688,8 @@
 	(dev->is_p_region->parameter.scalerp.dma_output.buffer_number = x)
 #define IS_SCALERP_SET_PARAM_DMA_OUTPUT_BUFFERADDR(dev, x) \
 	(dev->is_p_region->parameter.scalerp.dma_output.buffer_address = x)
+#define IS_SCALERP_SET_PARAM_DMA_OUTPUT_MASK(dev, x) \
+	(dev->is_p_region->parameter.scalerp.dma_output.dma_out_mask = x)
 #define IS_SCALERP_SET_PARAM_DMA_OUTPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.scalerp.dma_output.err = x)
 
@@ -1124,7 +1154,8 @@ enum otf_output_error {
 
 enum dma_output_command {
 	DMA_OUTPUT_COMMAND_DISABLE	= 0,
-	DMA_OUTPUT_COMMAND_ENABLE	= 1
+	DMA_OUTPUT_COMMAND_ENABLE	= 1,
+	DMA_OUTPUT_UPDATE_MASK_BITS = 2
 };
 
 enum dma_output_format {
@@ -1227,6 +1258,16 @@ enum isp_af_face {
 	ISP_AF_FACE_ENABLE		= 1
 };
 
+enum isp_af_scene {
+	ISP_AF_SCENE_NORMAL		= 0,
+	ISP_AF_SCENE_MACRO		= 1
+};
+
+enum isp_af_sleep {
+	ISP_AF_SLEEP_OFF		= 0,
+	ISP_AF_SLEEP_ON			= 1
+};
+
 enum isp_af_continuous {
 	ISP_AF_CONTINUOUS_DISABLE	= 0,
 	ISP_AF_CONTINUOUS_ENABLE	= 1
@@ -1297,8 +1338,14 @@ enum iso_error {
 
 /* --------------------------  Adjust  ----------------------------------- */
 enum iso_adjust_command {
-	ISP_ADJUST_COMMAND_AUTO		= 0,
-	ISP_ADJUST_COMMAND_MANUAL	= 1
+	ISP_ADJUST_COMMAND_AUTO					= 0,
+	ISP_ADJUST_COMMAND_MANUAL_CONTRAST	= (1 << 0),
+	ISP_ADJUST_COMMAND_MANUAL_SATURATION	=(1 << 1),
+	ISP_ADJUST_COMMAND_MANUAL_SHARPNESS	=(1 << 2),
+	ISP_ADJUST_COMMAND_MANUAL_EXPOSURE	=(1 << 3),
+	ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS	=(1 << 4),
+	ISP_ADJUST_COMMAND_MANUAL_HUE			=(1 << 5),
+	ISP_ADJUST_COMMAND_MANUAL_ALL			=0x7F
 };
 
 enum isp_adjust_error {
@@ -1473,7 +1520,11 @@ enum fd_config_orientation {
 struct param_control {
 	u32	cmd;
 	u32	bypass;
-	u32	reserved[PARAMETER_MAX_MEMBER-3];
+	u32 buffer_address;
+	u32 buffer_number;
+	u32 first_drop_frame;
+	u32 run_mode;			/* 0: continuous, 1: single */
+	u32	reserved[PARAMETER_MAX_MEMBER-7];
 	u32	err;
 };
 
@@ -1488,7 +1539,9 @@ struct param_otf_input {
 	u32	crop_offset_y;
 	u32	crop_width;
 	u32	crop_height;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	frametime_min;
+	u32	frametime_max;
+	u32	reserved[PARAMETER_MAX_MEMBER-13];
 	u32	err;
 };
 
@@ -1528,7 +1581,8 @@ struct param_dma_output {
 	u32	buffer_number;
 	u32	buffer_address;
 	u32	notify_dma_done;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	dma_out_mask;
+	u32	reserved[PARAMETER_MAX_MEMBER-12];
 	u32	err;
 };
 
@@ -1545,33 +1599,19 @@ struct param_sensor_framerate {
 	u32	err;
 };
 
-#if 0
 struct param_isp_aa {
 	u32	cmd;
 	u32	target;
 	u32	mode;
+	u32	scene;
+	u32	sleep;
 	u32	face;
-	u32	continuous;
-	u32	win_pos_x;
-	u32	win_pos_y;
-	u32	win_width;
-	u32	win_height;
+	u32	touch_x;
+	u32	touch_y;
 	u32	manual_af_setting;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
-#else
-struct param_isp_aa {
-	u32	cmd;
-	u32	target;
-	u32	mode;
-	u32	face;
-	u32	win_pos_x;
-	u32	win_pos_y;
-	u32	reserved[PARAMETER_MAX_MEMBER-7];
-	u32	err;
-};
-#endif
 struct param_isp_flash {
 	u32	cmd;
 	u32	redeye;
@@ -1607,9 +1647,9 @@ struct param_isp_adjust {
 	s32	exposure;
 	s32	brightness;
 	s32	hue;
-	s32	shutter_time_min;
-	s32	shutter_time_max;
-	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	/*s32 shutter_time_min;
+	s32	shutter_time_max; */
+	u32	reserved[PARAMETER_MAX_MEMBER-8];
 	u32	err;
 };
 
@@ -1635,29 +1675,6 @@ struct param_scaler_imageeffect {
 	u32	reserved[PARAMETER_MAX_MEMBER-2];
 	u32	err;
 };
-
-#if 0
-struct param_scaler_crop {
-	u32	cmd;
-	u32	pos_x;
-	u32	pos_y;
-	u32	crop_width;
-	u32	crop_height;
-	u32	reserved[PARAMETER_MAX_MEMBER-6];
-	u32	err;
-};
-
-struct param_scaler_scaling {
-	u32	cmd;
-	u32	pre_h_ratio;
-	u32	pre_v_ratio;
-	u32	sh_factor;
-	u32	h_ratio;
-	u32	v_ratio;
-	u32	reserved[PARAMETER_MAX_MEMBER-7];
-	u32	err;
-};
-#endif
 
 struct param_scaler_input_crop {
 	u32  cmd;
@@ -1971,7 +1988,7 @@ struct is_debug_frame_descriptor {
 	u32	req_lei;
 };
 
-#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*30)	/* 30 sec */
+#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*20)	/* 600 frame */
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;

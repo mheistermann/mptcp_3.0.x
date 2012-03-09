@@ -198,7 +198,11 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 
 	fimc_is_bitproc_buf =
 		dev->vb2->ops->alloc(dev->alloc_ctx,
-					FIMC_IS_A5_MEM_SIZE+FIMC_IS_TDNR_MEM_SIZE);
+					FIMC_IS_A5_MEM_SIZE +
+					SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+					SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+					SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
+					SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF);
 	if (IS_ERR(fimc_is_bitproc_buf)) {
 		fimc_is_bitproc_buf = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -301,10 +305,50 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 	}
 
 	memset(dev->mem.kvaddr, 0,
-		FIMC_IS_A5_MEM_SIZE+FIMC_IS_TDNR_MEM_SIZE);
+		FIMC_IS_A5_MEM_SIZE +
+		SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+		SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+		SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
+		SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF);
+
 	dev->is_p_region =
 		(struct is_region *)(dev->mem.kvaddr +
 			FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE);
+
+
+	dev->is_shared_region =
+		(struct is_share_region *)(dev->mem.kvaddr +
+				FIMC_IS_SHARED_REGION_ADDR);
+
+	dev->mem.dvaddr_odc = (unsigned char *)(dev->mem.dvaddr + FIMC_IS_A5_MEM_SIZE);
+	dev->mem.kvaddr_odc = dev->mem.kvaddr + FIMC_IS_A5_MEM_SIZE;
+
+	dev->mem.dvaddr_dis = (unsigned char *)(dev->mem.dvaddr +
+											FIMC_IS_A5_MEM_SIZE +
+											SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF);
+	dev->mem.kvaddr_dis = dev->mem.kvaddr  +
+									FIMC_IS_A5_MEM_SIZE +
+									SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF;
+
+	dev->mem.dvaddr_3dnr = (unsigned char *)(dev->mem.dvaddr +
+											FIMC_IS_A5_MEM_SIZE +
+											SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+											SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF );
+	dev->mem.kvaddr_3dnr = dev->mem.kvaddr +
+									FIMC_IS_A5_MEM_SIZE +
+									SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+									SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF;
+
+	dev->mem.dvaddr_isp = (unsigned char *)(dev->mem.dvaddr +
+											FIMC_IS_A5_MEM_SIZE +
+											SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+											SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+											SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF);
+	dev->mem.kvaddr_isp = dev->mem.kvaddr +
+									FIMC_IS_A5_MEM_SIZE +
+									SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+									SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+									SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF;
 
 	dev->mem.dvaddr_shared = (unsigned char *)dev->mem.dvaddr +
 			((unsigned char *)&dev->is_p_region->shared[0] -
@@ -313,6 +357,7 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 			((unsigned char *)&dev->is_p_region->shared[0] -
 			dev->mem.kvaddr);
 
+	printk("isp buf phy addr : 0x%08x\n", (unsigned int)virt_to_phys(dev->mem.kvaddr_isp));
 	if (fimc_is_cache_flush(&dev->mem.vb2_buf,
 			(void *)dev->is_p_region, IS_PARAM_SIZE)) {
 		err("fimc_is_cache_flush-Err\n");
@@ -438,6 +483,8 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 	fimc_is_hw_diable_wdt(dev);
 	dev->sensor.sensor_type = val;
 	dev->sensor.id_dual = 0;
+	dev->setfile.sub_index = 0;
+
 	dbg("fimc_is_init\n");
 	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {
 		/* Init sequence 1: Open sensor */
@@ -462,11 +509,11 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 			dev->pdata->sensor_info[dev->sensor.id_position]->csi_id);
 		start_mipi_csi(dev->pdata->sensor_info[dev->sensor.id_position]->csi_id, &f_frame);
 
-		clear_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
+		clear_bit(IS_ST_OPEN_SENSOR, &dev->state);
 		fimc_is_hw_open_sensor(dev, dev->sensor.id_dual, val);
 
 		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state),
+			test_bit(IS_ST_OPEN_SENSOR, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
@@ -477,27 +524,37 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		if (dev->is_p_region->shared[MAX_SHARED_COUNT-1] != MAGIC_NUMBER)
 			dev_err(&dev->pdev->dev, "MAGIC NUMBER error\n");
 
+		dbg("v4l2 : setfile address\n");
+		fimc_is_hw_get_setfile_addr(dev);
 		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_SET_FILE, &dev->state),
+			test_bit(IS_ST_SETFILE_LOADED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout:%s\n", __func__);
-			return -EBUSY;
+			err("wait timeout - get setfile address\n");
+			/*fimc_is_hw_set_low_poweroff(dev, true);*/
+			return -EINVAL;
 		}
 
-		clear_bit(IS_ST_SET_FILE, &dev->state);
-		dbg(" Load setfile received\n");
 		fimc_is_load_setfile(dev);
 		dbg(" fimc_is_load_setfile end\n");
-		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		dbg(" fimc_is_hw_wait_intmsr0_intmsd0 end\n");
-		fimc_is_hw_set_load_setfile(dev);
-		fimc_is_hw_set_intgr0_gd0(dev);
+		clear_bit(IS_ST_SETFILE_LOADED, &dev->state);
+
+		fimc_is_hw_load_setfile(dev);
+
+		ret = wait_event_timeout(dev->irq_queue,
+		test_bit(IS_ST_SETFILE_LOADED, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			err("wait timeout - get setfile address\n");
+			/*fimc_is_hw_set_low_poweroff(dev, true);*/
+			return -EINVAL;
+		}
 		dbg("v4l2 : Load set file end\n");
 		/* Debug only */
 		dbg("Parameter region addr = 0x%08x\n",
-			dev->is_p_region);
+			(unsigned int)dev->is_p_region);
+		dbg("Parameter region phy addr = 0x%08x\n",
+			virt_to_phys(dev->is_p_region));
 		dbg("Parameter region addr = 0x%08x\n",
 			virt_to_phys(dev->is_p_region));
 		dbg("ISP region addr = 0x%08x\n",
@@ -520,7 +577,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 							.frame_number));
 		dev->frame_count = 0;
 
-		printk("Stream Off\n");
+		dbg("Stream Off\n");
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		fimc_is_hw_set_stream(dev, 0); /*stream off */
 		ret = wait_event_timeout(dev->irq_queue,
@@ -538,7 +595,6 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		fimc_is_hw_set_init(dev);
 		fimc_is_hw_change_size(dev);
-
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
 
@@ -546,6 +602,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 			virt_to_phys(&dev->is_p_region->shared[447]));
 
 		/* 1 */
+		set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue,
 			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
@@ -555,53 +612,26 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 				"wait timeout : %s\n", __func__);
 			return -EBUSY;
 		}
-#if 0 /* FW restrction, will be updated */
 
-		/* 2. */
-		dbg("Default setting : preview_video\n");
-		dev->scenario_id = ISS_PREVIEW_VIDEO;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		/* 3. */
-		dbg("Default setting : capture_still\n");
-		dev->scenario_id = ISS_CAPTURE_STILL;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		/* 4. */
-		dbg("Default setting : capture_video\n");
-		dev->scenario_id = ISS_CAPTURE_VIDEO;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_RUN, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
+#ifdef FIMC_IS_A5_DEBUG_ON
+		int debug_device; = 0;
+		/*set_bit(FIMC_IS_DEBUG_MAIN, &debug_device);
+		set_bit(FIMC_IS_DEBUG_EC, &debug_device);
+		set_bit(FIMC_IS_DEBUG_SENSOR, &debug_device);
+		set_bit(FIMC_IS_DEBUG_ISP, &debug_device);
+		set_bit(FIMC_IS_DEBUG_DRC, &debug_device);
+		set_bit(FIMC_IS_DEBUG_FD, &debug_device);
+		set_bit(FIMC_IS_DEBUG_SDK, &debug_device);
+		set_bit(FIMC_IS_DEBUG_SCALERC, &debug_device);
+		set_bit(FIMC_IS_DEBUG_ODC, &debug_device);
+		set_bit(FIMC_IS_DEBUG_TDNR, &debug_device);
+		set_bit(FIMC_IS_DEBUG_SCALERP, &debug_device);
+		*/
+		set_bit(FIMC_IS_DEBUG_DIS, &debug_device);
+
+
+		fimc_is_hw_set_debug_level(dev,	FIMC_IS_DEBUG_UART,
+						debug_device, FIMC_IS_DEBUG_LEVEL);
 #endif
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		set_bit(IS_ST_RUN, &dev->state);
@@ -1296,8 +1326,6 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			fimc_is_hw_wait_intmsr0_intmsd0(dev);
 			fimc_is_hw_set_sensor_num(dev);
 			break;
-		case IHC_LOAD_SET_FILE:
-			fimc_is_hw_get_param(dev, 2);
 		case IHC_SET_SHOT_MARK:
 			fimc_is_hw_get_param(dev, 3);
 			break;
@@ -1325,20 +1353,25 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			fimc_is_hw_set_intgr0_gd0(dev);
 			set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 			break;
-		case IHC_LOAD_SET_FILE:
-			dev->setfile.base = dev->i2h_cmd.arg[0];
-			dev->setfile.size = dev->i2h_cmd.arg[1];
-			set_bit(IS_ST_SET_FILE, &dev->state);
-			dbg("IHC_LOAD_SET_FILE\n");
-			break;
 		case IHC_SET_SHOT_MARK:
 			break;
 		case IHC_SET_FACE_MARK:
+			dbg("IHC_SET_FACE_MARK - %d, %d \n", dev->i2h_cmd.arg[0],
+			dev->i2h_cmd.arg[1] );
 			dev->fd_header.count = dev->i2h_cmd.arg[0];
 			dev->fd_header.index = dev->i2h_cmd.arg[1];
+			/* Implementation of AF with face */
+			if (dev->af.mode == IS_FOCUS_MODE_CONTINUOUS &&
+					dev->af.af_state == FIMC_IS_AF_LOCK) {
+				fimc_is_af_face(dev);
+			} else if (dev->af.mode == IS_FOCUS_MODE_FACEDETECT) {
+				/* Using face information once only */
+				fimc_is_af_face(dev);
+				dev->af.mode = IS_FOCUS_MODE_IDLE;
+			}
 			break;
 		case IHC_AA_DONE:
-			printk("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+			dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
 			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
 			switch (dev->i2h_cmd.arg[0]) {
 			/* SEARCH: Occurs when search is requested at continuous AF */
@@ -1387,6 +1420,8 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				dev->p_region_index1 = 0;
 				dev->p_region_index2 = 0;
 				atomic_set(&dev->p_region_num, 0);
+				set_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
+
 				if (test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state))
 					set_bit(IS_ST_RUN, &dev->state);
 				else if (test_bit(IS_ST_INIT_CAPTURE_STILL,
@@ -1415,17 +1450,23 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			case HIC_GET_STATUS:
 				break;
 			case HIC_OPEN_SENSOR:
-				set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
+				set_bit(IS_ST_OPEN_SENSOR, &dev->state);
 				dbg("reply HIC_OPEN_SENSOR");
 				break;
 			case HIC_CLOSE_SENSOR:
-				set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
+				clear_bit(IS_ST_OPEN_SENSOR, &dev->state);
 				dev->sensor.id_dual = 0;
 				break;
 			case HIC_POWER_DOWN:
 				clear_bit(FIMC_IS_PWR_ST_POWERED, &dev->power);
 				set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
 				break;
+			case HIC_GET_SET_FILE_ADDR:
+				dev->setfile.base = dev->i2h_cmd.arg[1];
+				set_bit(IS_ST_SETFILE_LOADED, &dev->state);
+				break;
+			case HIC_LOAD_SET_FILE:
+				set_bit(IS_ST_SETFILE_LOADED, &dev->state);
 			}
 			break;
 		case ISR_NDONE:
@@ -1441,25 +1482,37 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 			break;
 		}
-	} else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
-		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR24);
-		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR25);
+	}
+	else if (intr_pos == INTR_FRAME_DONE_ISP) {
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR20);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR21);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR22);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
-		buf_index = (dev->i2h_cmd.arg[1] - 1)
-					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+		buf_index =  dev->i2h_cmd.arg[2];
+		dbg("Bayer returned buf index : %d\n", buf_index);
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_BAYER].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+	}else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR24);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR25);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR26);
+		fimc_is_fw_clear_irq1(dev, intr_pos);
+
+		buf_index =  dev->i2h_cmd.arg[2];
+		dbg("ScalerC returned buf index : %d\n", buf_index);
 		vb2_buffer_done(
 				dev->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq.bufs[buf_index],
 				VB2_BUF_STATE_DONE);
 	} else if (intr_pos == INTR_FRAME_DONE_TDNR) {
 
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
-
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR30);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
-		buf_index = (dev->i2h_cmd.arg[1] - 1)
-					% dev->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf;
+		buf_index =  dev->i2h_cmd.arg[2];
+		dbg("3DNR returned buf index : %d\n", buf_index);
 		vb2_buffer_done(
 				dev->video[FIMC_IS_VIDEO_NUM_3DNR].vbq.bufs[buf_index],
 				VB2_BUF_STATE_DONE);
@@ -1467,14 +1520,16 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 	} else if (intr_pos == INTR_FRAME_DONE_SCALERP) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR32);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR33);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR34);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
-
-		buf_index = (dev->i2h_cmd.arg[1] - 1)
-					% dev->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf;
-		vb2_buffer_done(
-				dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index],
-				VB2_BUF_STATE_DONE);
+#ifdef DZOOM_EVT0
+		set_bit(IS_ST_SCALERP_FRAME_DONE, &dev->state);
+#endif
+		buf_index =  dev->i2h_cmd.arg[2];
+		dbg("ScalerP returned buf index : %d\n", buf_index);
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
 
 
 	}
@@ -1492,6 +1547,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	struct vb2_queue *scalerc_q;
 	struct vb2_queue *scalerp_q;
 	struct vb2_queue *dnr_q;
+	struct vb2_queue *bayer_q;
 
 	dbg("fimc_is_front_probe\n");
 
@@ -1769,6 +1825,48 @@ static int fimc_is_probe(struct platform_device *pdev)
 				1, &isp->video[FIMC_IS_VIDEO_NUM_3DNR].pads, 0);
 	if (ret) {
 		printk(KERN_ERR "Failed to media_entity_init 3DNR video device\n");
+		goto p_err3;
+	}
+
+	/* back video entity - bayer*/
+	snprintf(isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.name,
+			sizeof(isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.name),
+			"%s", FIMC_IS_VIDEO_BAYER_NAME);
+
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.fops
+							= &fimc_is_bayer_video_fops;
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.ioctl_ops
+							= &fimc_is_bayer_video_ioctl_ops;
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.v4l2_dev	= &isp->mdev->v4l2_dev;
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.minor	= -1;
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.release	= video_device_release;
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.lock	= &isp->vb_lock;
+	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd, isp);
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].dev = isp;
+
+	bayer_q = &isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq;
+	memset(bayer_q, 0, sizeof(*bayer_q));
+	bayer_q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	bayer_q->io_modes = VB2_MMAP | VB2_USERPTR;
+	bayer_q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
+	bayer_q->ops = &fimc_is_bayer_qops;
+	bayer_q->mem_ops = isp->vb2->ops;;
+
+	vb2_queue_init(bayer_q);
+
+	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd,
+				VFL_TYPE_GRABBER,
+				FIMC_IS_VIDEO_NUM_BAYER+EXYNOS_VIDEONODE_FIMC_IS);
+	dbg("scalerP minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.minor);
+	if (ret) {
+		printk(KERN_ERR "Failed to register ScalerP video device\n");
+		goto p_err3;
+	}
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].pads.flags = MEDIA_PAD_FL_SINK;
+	ret = media_entity_init(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vd.entity,
+				1, &isp->video[FIMC_IS_VIDEO_NUM_BAYER].pads, 0);
+	if (ret) {
+		printk(KERN_ERR "Failed to media_entity_init ScalerP video device\n");
 		goto p_err3;
 	}
 

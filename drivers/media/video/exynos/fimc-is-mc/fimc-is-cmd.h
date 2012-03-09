@@ -34,10 +34,12 @@ enum is_cmd {
 	HIC_SIMMIAN_WRITE,
 	HIC_SIMMIAN_READ,
 	HIC_POWER_DOWN,
+	HIC_GET_SET_FILE_ADDR,
+	HIC_LOAD_SET_FILE,
 	HIC_MSG_CONFIG,
+	HIC_MSG_TEST,
 	/* IS -> HOST */
 	IHC_GET_SENSOR_NUMBER = 0x1000,
-	IHC_LOAD_SET_FILE,
 	/* Parameter1 : Address of space to copy a setfile */
 	/* Parameter2 : Space szie */
 	IHC_SET_SHOT_MARK,
