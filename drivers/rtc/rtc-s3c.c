@@ -239,26 +239,30 @@ static int s3c_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	}
 
 	alrm_en = readb(base + S3C2410_RTCALM) & S3C2410_RTCALM_ALMEN;
-	alrm_en |= S3C2410_RTCALM_ALL;
 
-	writeb(alrm_en, base + S3C2410_RTCALM);
+	if (alrm->enabled) {
+		writeb(~S3C2410_RTCALM_ALL, base + S3C2410_RTCALM);
 
-	writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
-	writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
-	writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
-	writeb(bin2bcd(tm->tm_mday), base + S3C2410_ALMDATE);
-	writeb(bin2bcd(tm->tm_mon + 1), base + S3C2410_ALMMON);
+		writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
+		writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
+		writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
+		writeb(bin2bcd(tm->tm_mday), base + S3C2410_ALMDATE);
+		writeb(bin2bcd(tm->tm_mon + 1), base + S3C2410_ALMMON);
 
-	if (s3c_rtc_cpu_type == TYPE_EXYNOS) {
-		year = (((year / 100) << 8) + (((year % 100) / 10) << 4) + year % 10);
-		writew(year, base + S3C2410_ALMYEAR);
-	} else {
-		writeb(bin2bcd(year), base + S3C2410_ALMYEAR);
+		if (s3c_rtc_cpu_type == TYPE_EXYNOS) {
+			year = (((year / 100) << 8) + (((year % 100) / 10) << 4) + year % 10);
+			writew(year, base + S3C2410_ALMYEAR);
+		} else {
+			writeb(bin2bcd(year), base + S3C2410_ALMYEAR);
+		}
+
+		writeb(S3C2410_RTCALM_ALL, base + S3C2410_RTCALM);
+
+		pr_debug("setting S3C2410_RTCALM to %08x\n", alrm_en);
 	}
 
-	pr_debug("setting S3C2410_RTCALM to %08x\n", alrm_en);
-
-	s3c_rtc_setaie(dev, alrm->enabled);
+	if (alrm->enabled != alrm_en)
+		s3c_rtc_setaie(dev, alrm->enabled);
 
 	return 0;
 }
