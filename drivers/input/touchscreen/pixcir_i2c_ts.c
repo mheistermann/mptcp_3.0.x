@@ -359,7 +359,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	struct input_dev *input;
 	struct device *dev;
 	struct i2c_dev *i2c_dev;
-	int error;
+	int error = 0;
 
 	tsdata = kzalloc(sizeof(*tsdata), GFP_KERNEL);
 	if (!tsdata) {
@@ -375,8 +375,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	if (!input) {
 		dev_err(&client->dev, "failed to allocate input device!\n");
 		error = -ENOMEM;
-		input_free_device(input);
-		kfree(tsdata);
+		goto err_free_tsdata;
 	}
 
 	set_bit(EV_SYN, input->evbit);
@@ -412,14 +411,16 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	global_irq = client->irq;
 
 	if (input_register_device(input)) {
-		input_free_device(input);
-		kfree(tsdata);
+		error = -EIO;
+		goto err_free_input;
 	}
 
 
 	if (gpio_request(RESET, GPIO_NAME)) {
-		return error;
+		error = -EIO;
+		goto err_unregister_input;
 	}
+
 	RESETPIN_CFG;
 	RESETPIN_SET0;
 	mdelay(20);
@@ -430,8 +431,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	if (request_irq(tsdata->irq, pixcir_ts_isr, IRQF_TRIGGER_FALLING,
 				"pixcir_ts_irq", tsdata)) {
 		dev_err(&client->dev, "Unable to request touchscreen IRQ.\n");
-		input_unregister_device(input);
-		input = NULL;
+		goto err_unregister_input;
 	}
 
 	s3c_gpio_setpull(ATTB, S3C_GPIO_PULL_NONE);
@@ -441,7 +441,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	i2c_dev = get_free_i2c_dev(client->adapter);
 	if (IS_ERR(i2c_dev)) {
 		error = PTR_ERR(i2c_dev);
-		return error;
+		goto err_free_irq;
 	}
 
 	dev = device_create(i2c_dev_class, &client->adapter->dev,
@@ -449,12 +449,23 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 			"pixcir_i2c_ts%d", 0);
 	if (IS_ERR(dev)) {
 		error = PTR_ERR(dev);
-		return error;
+		goto err_free_irq;
 	}
 
 	dev_err(&tsdata->client->dev, "insmod successfully!\n");
 
 	return 0;
+
+err_free_irq:
+	free_irq(tsdata->irq, input);
+err_unregister_input:
+	input_unregister_device(input);
+err_free_input:
+	input_free_device(input);
+err_free_tsdata:
+	kfree(tsdata);
+
+	return error;
 }
 
 static int pixcir_i2c_ts_remove(struct i2c_client *client)
@@ -472,6 +483,7 @@ static int pixcir_i2c_ts_remove(struct i2c_client *client)
 	return_i2c_dev(i2c_dev);
 	device_destroy(i2c_dev_class, MKDEV(I2C_MAJOR, client->adapter->nr));
 	input_unregister_device(tsdata->input);
+	input_free_device(tsdata->input);
 	kfree(tsdata);
 	dev_set_drvdata(&client->dev, NULL);
 
@@ -504,7 +516,6 @@ static int pixcir_open(struct inode *inode, struct file *file)
 	struct i2c_client *client;
 	struct i2c_adapter *adapter;
 	struct i2c_dev *i2c_dev;
-	int ret = 0;
 
 	subminor = iminor(inode);
 
@@ -521,7 +532,7 @@ static int pixcir_open(struct inode *inode, struct file *file)
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
 	if (!client) {
 		i2c_put_adapter(adapter);
-		ret = -ENOMEM;
+		return -ENOMEM;
 	}
 	snprintf(client->name, I2C_NAME_SIZE, "pixcir_i2c_ts%d", adapter->nr);
 	client->driver = &pixcir_i2c_ts_driver;
