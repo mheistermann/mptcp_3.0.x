@@ -1108,10 +1108,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	ctx->codec_mode = fmt->codec_mode;
 	mfc_debug(2, "The codec number is: %d\n", ctx->codec_mode);
 	ctx->pix_format = pix_mp->pixelformat;
-	if (pix_mp->pixelformat != V4L2_PIX_FMT_FIMV1) {
-		pix_mp->height = 0;
-		pix_mp->width = 0;
-	} else {
+	if ((pix_mp->width > 0) && (pix_mp->height > 0)) {
 		ctx->img_height = pix_mp->height;
 		ctx->img_width = pix_mp->width;
 	}
