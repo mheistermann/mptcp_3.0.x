@@ -336,6 +336,11 @@ static ssize_t srp_read(struct file *file, char *buffer,
 
 static void srp_commbox_init(void)
 {
+	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
+	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
+	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
+	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
+
 	unsigned int reg = 0;
 
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
@@ -364,6 +369,17 @@ static void srp_commbox_init(void)
 	writel(srp.fw_info.vliw_pa, srp.commbox + SRP_CODE_START_ADDR);
 	writel(srp.fw_info.cga_pa, srp.commbox + SRP_CONF_START_ADDR);
 	writel(srp.fw_info.data_pa, srp.commbox + SRP_DATA_START_ADDR);
+
+	/* Initialize Suspended mode */
+	pwr_mode &= ~SRP_POWER_MODE_MASK;
+	intr_en &= ~SRP_INTR_EN;
+	intr_msk |= SRP_INTR_MASK;
+	intr_src &= ~SRP_INTRSRC_MASK;
+
+	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
+	writel(intr_en, srp.commbox + SRP_INTREN);
+	writel(intr_msk, srp.commbox + SRP_INTRMASK);
+	writel(intr_src, srp.commbox + SRP_INTRSRC);
 }
 
 static void srp_commbox_deinit(void)
@@ -952,6 +968,7 @@ static struct miscdevice srp_miscdev = {
 #ifdef CONFIG_PM
 static void srp_request_pwr_mode(int mode)
 {
+	unsigned long deadline = jiffies + (HZ / 100);
 	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
 	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
 	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
@@ -981,11 +998,25 @@ static void srp_request_pwr_mode(int mode)
 						readl(srp.commbox + SRP_INTREN),
 						readl(srp.commbox + SRP_INTRMASK),
 						readl(srp.commbox + SRP_INTRSRC));
+	if (!mode) {
+		srp_pending_ctrl(RUN);
+		do {
+			/* Waiting for completed suspended mode */
+			if ((readl(srp.commbox + SRP_POWER_MODE)
+					& SRP_SUSPENED_CHECKED))
+				break;
+		} while (time_before(jiffies, deadline));
+		srp_pending_ctrl(STALL);
+
+		/* Clear Suspend mode */
+		pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
+		pwr_mode &= ~SRP_SUSPENED_CHECKED;
+		writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
+	}
 }
 
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	unsigned long deadline = jiffies + (HZ / 100);
 	unsigned long i;
 
 	srp_info("Suspend\n");
@@ -1008,16 +1039,6 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 			/* Request Suspend mode */
 			srp_request_pwr_mode(SUSPEND);
-			srp_pending_ctrl(RUN);
-
-			do {
-				/* Waiting for completed suspended mode */
-				if ((readl(srp.commbox + SRP_POWER_MODE)
-						& SRP_SUSPENED_CHECKED))
-					break;
-			} while (time_before(jiffies, deadline));
-
-			srp_pending_ctrl(STALL);
 
 			if (soc_is_exynos5250()) {
 				/* EVT0 : Work around code */

@@ -138,6 +138,7 @@
 #define SRP_INTR_EN			(0x1)
 #define SRP_INTR_DI			(0x0)
 /* INTRMASK */
+#define SRP_INTR_MASK			(0x7F)
 #define SRP_ARM_INTR_MASK		(0x1 << 6)
 #define SRP_DMA_INTR_MASK		(0x1 << 5)
 #define SRP_TMR_INTR_MASK		(0x1F << 0)
