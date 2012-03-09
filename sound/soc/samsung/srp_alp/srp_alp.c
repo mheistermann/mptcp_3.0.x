@@ -377,7 +377,7 @@ static void srp_commbox_deinit(void)
 
 static void srp_clr_fw_data(void)
 {
-	memset(srp.fw_info.data, 0, DATA_SIZE);
+	memset(srp.fw_info.data, 0, DMEM_SIZE);
 	memcpy(srp.fw_info.data, srp_fw_data, sizeof(srp_fw_data));
 }
 
@@ -815,15 +815,15 @@ static int srp_prepare_fw_buff(struct device *dev)
 	mem_paddr = srp.fw_info.mem_base;
 	srp.fw_info.vliw_pa = mem_paddr;
 	srp.fw_info.vliw = phys_to_virt(srp.fw_info.vliw_pa);
-	mem_paddr += VLIW_SIZE;
+	mem_paddr += ICACHE_SIZE;
 
 	srp.fw_info.cga_pa = mem_paddr;
 	srp.fw_info.cga = phys_to_virt(srp.fw_info.cga_pa);
-	mem_paddr += CGA_SIZE;
+	mem_paddr += CMEM_SIZE;
 
 	srp.fw_info.data_pa = mem_paddr;
 	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
-	mem_paddr += DATA_SIZE;
+	mem_paddr += DMEM_SIZE;
 
 	srp.wbuf = phys_to_virt(mem_paddr);
 	mem_paddr += WBUF_SIZE;
@@ -837,21 +837,21 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.sp_data.commbox = phys_to_virt(mem_paddr);
 	mem_paddr += COMMBOX_SIZE;
 #else
-	srp.fw_info.vliw = dma_alloc_writecombine(dev, VLIW_SIZE,
+	srp.fw_info.vliw = dma_alloc_writecombine(dev, ICACHE_SIZE,
 				&srp.fw_info.vliw_pa, GFP_KERNEL);
 	if (!srp.fw_info.vliw) {
 		srp_err("Failed to alloc for vliw\n");
 		return -ENOMEM;
 	}
 
-	srp.fw_info.cga = dma_alloc_writecombine(dev, CGA_SIZE,
+	srp.fw_info.cga = dma_alloc_writecombine(dev, CMEM_SIZE,
 				&srp.fw_info.cga_pa, GFP_KERNEL);
 	if (!srp.fw_info.cga) {
 		srp_err("Failed to alloc for cga\n");
 		return -ENOMEM;
 	}
 
-	srp.fw_info.data = dma_alloc_writecombine(dev, DATA_SIZE,
+	srp.fw_info.data = dma_alloc_writecombine(dev, DMEM_SIZE,
 					&srp.fw_info.data_pa, GFP_KERNEL);
 	if (!srp.fw_info.data) {
 		srp_err("Failed to alloc for data\n");
@@ -887,17 +887,17 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.fw_info.cga_size = sizeof(srp_fw_cga);
 	srp.fw_info.data_size = sizeof(srp_fw_data);
 
-	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
-	memset(srp.fw_info.cga, 0, CGA_SIZE);
-	memset(srp.fw_info.data, 0, DATA_SIZE);
+	memset(srp.fw_info.vliw, 0, ICACHE_SIZE);
+	memset(srp.fw_info.cga, 0, CMEM_SIZE);
+	memset(srp.fw_info.data, 0, DMEM_SIZE);
 
 	memcpy(srp.fw_info.vliw, srp_fw_vliw, srp.fw_info.vliw_size);
 	memcpy(srp.fw_info.cga, srp_fw_cga, srp.fw_info.cga_size);
 	memcpy(srp.fw_info.data, srp_fw_data, srp.fw_info.data_size);
 
-	srp_info("VLIW_SIZE[%lu]Bytes\n", srp.fw_info.vliw_size);
-	srp_info("CGA_SIZE[%lu]Bytes\n", srp.fw_info.cga_size);
-	srp_info("DATA_SIZE[%lu]Bytes\n", srp.fw_info.data_size);
+	srp_info("VLIW[%lu]Bytes\n", srp.fw_info.vliw_size);
+	srp_info("CGA[%lu]Bytes\n", srp.fw_info.cga_size);
+	srp_info("DATA[%lu]Bytes\n", srp.fw_info.data_size);
 
 	return 0;
 }
@@ -907,11 +907,11 @@ static int srp_remove_fw_buff(struct device *dev)
 #if defined(CONFIG_S5P_MEM_CMA)
 	cma_free(srp.fw_info.mem_base);
 #else
-	dma_free_writecombine(dev, VLIW_SIZE, srp.fw_info.vliw,
+	dma_free_writecombine(dev, ICACHE_SIZE, srp.fw_info.vliw,
 					srp.fw_info.vliw_pa);
-	dma_free_writecombine(dev, CGA_SIZE, srp.fw_info.cga,
+	dma_free_writecombine(dev, CMEM_SIZE, srp.fw_info.cga,
 					srp.fw_info.cga_pa);
-	dma_free_writecombine(dev, DATA_SIZE, srp.fw_info.data,
+	dma_free_writecombine(dev, DMEM_SIZE, srp.fw_info.data,
 					srp.fw_info.data_pa);
 	kfree(srp.wbuf);
 	kfree(srp.sp_data.ibuf);

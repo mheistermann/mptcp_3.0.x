@@ -15,7 +15,7 @@
 			(0x28000) : (0x20000))
 #define ICACHE_SIZE	(soc_is_exynos5250() ? \
 			(0x18000) : (0x10000))
-#define CMEM_SIZE       0x9000
+#define CMEM_SIZE       (0x9000)
 
 /* SRAM & Commbox base address */
 #define SRP_ICACHE_ADDR		(SRP_DMEM_BASE + DMEM_SIZE)
@@ -57,15 +57,6 @@
 
 /* Commbox & Etc information */
 #define COMMBOX_SIZE	(0x200)
-
-/* F/W code size */
-#define VLIW_SIZE	(0x10000)	/* 128KBytes */
-#define CGA_SIZE	(0x9000)	/* 36KBytes */
-#if defined(CONFIG_ARCH_EXYNOS4)
-#define DATA_SIZE	(0x20000)	/* 128KBytes */
-#elif defined(CONFIG_ARCH_EXYNOS5)
-#define DATA_SIZE	(0x28000)	/* 160KBytes */
-#endif
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
