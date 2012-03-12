@@ -857,8 +857,8 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	crop_width &= 0xffe;
 	crop_height &= 0xffe;
 
-	crop_x = back_width - crop_width;
-	crop_y = back_height - crop_height;
+	crop_x = (back_width - crop_width)/2;
+	crop_y = (back_height - crop_height)/2;
 
 	crop_x &= 0xffe;
 	crop_y &= 0xffe;
@@ -896,140 +896,6 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	return 0;
 }
 
-
-#if 0 // JYSHIN
-
-int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
-{
-	int ret = 0;
-	switch (value) {
-#if 0 /* will be implemented*/
-	case AUTO_FOCUS_OFF:
-		if (!is_af_use(dev)) {
-			/* 6A3 can't support AF */
-			dev->af.af_state = FIMC_IS_AF_IDLE;
-		} else {
-			if (dev->af.af_state == FIMC_IS_AF_IDLE)
-				return ret;
-			/* Abort or lock AF */
-			dev->af.af_state = FIMC_IS_AF_ABORT;
-			IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
-			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
-			switch (dev->af.mode) {
-			case IS_FOCUS_MODE_AUTO:
-				IS_ISP_SET_PARAM_AA_MODE(dev,
-					ISP_AF_MODE_SINGLE);
-				IS_ISP_SET_PARAM_AA_SCENE(dev,
-					ISP_AF_SCENE_NORMAL);
-				IS_ISP_SET_PARAM_AA_SLEEP(dev,
-					ISP_AF_SLEEP_OFF);
-				IS_ISP_SET_PARAM_AA_FACE(dev,
-					ISP_AF_FACE_DISABLE);
-				IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
-				IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
-				IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
-					break;
-			case IS_FOCUS_MODE_MACRO:
-				IS_ISP_SET_PARAM_AA_MODE(dev,
-					ISP_AF_MODE_SINGLE);
-				IS_ISP_SET_PARAM_AA_SCENE(dev,
-					ISP_AF_SCENE_MACRO);
-				IS_ISP_SET_PARAM_AA_SLEEP(dev,
-					ISP_AF_SLEEP_OFF);
-				IS_ISP_SET_PARAM_AA_FACE(dev,
-					ISP_AF_FACE_DISABLE);
-				IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
-				IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
-				IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
-				ret = wait_event_timeout(dev->irq_queue,
-				(dev->af.af_state == FIMC_IS_AF_IDLE), HZ/5);
-				if (!ret) {
-					dev_err(&dev->pdev->dev,
-					"Focus change timeout:%s\n", __func__);
-					return -EBUSY;
-				}
-				break;
-			case IS_FOCUS_MODE_CONTINUOUS:
-				IS_ISP_SET_PARAM_AA_MODE(dev,
-					ISP_AF_MODE_CONTINUOUS);
-				IS_ISP_SET_PARAM_AA_SCENE(dev,
-					ISP_AF_SCENE_NORMAL);
-				IS_ISP_SET_PARAM_AA_SLEEP(dev,
-						ISP_AF_SLEEP_OFF);
-				IS_ISP_SET_PARAM_AA_FACE(dev,
-					ISP_AF_FACE_DISABLE);
-				IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
-				IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
-				IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
-				ret = wait_event_timeout(dev->irq_queue,
-				(dev->af.af_state == FIMC_IS_AF_IDLE), HZ/5);
-				if (!ret) {
-					dev_err(&dev->pdev->dev,
-					"Focus change timeout:%s\n", __func__);
-					return -EBUSY;
-				}
-				break;
-			default:
-				/* If other AF mode, there is no
-				cancelation process*/
-				break;
-			}
-			dev->af.mode = IS_FOCUS_MODE_IDLE;
-		}
-		break;
-#endif
-	case AUTO_FOCUS_ON:
-		if (!is_af_use(dev)) {
-			printk("6A3 doesn't use AF\n");
-			/* 6A3 can't support AF */
-			dev->af.af_state = FIMC_IS_AF_LOCK;
-			dev->af.af_lock_state = FIMC_IS_AF_LOCKED;
-		}
-		else{
-			printk("auto focus start\n");
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			dev->af.af_state = FIMC_IS_AF_SETCONFIG;
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue,
-			(dev->af.af_state == FIMC_IS_AF_RUNNING), HZ/5);
-			if (!ret) {
-				dev_err(&dev->pdev->dev,
-				"Focus change timeout:%s\n", __func__);
-				return -EBUSY;
-			}
-			printk("auto focus end\n");
-		}
-		break;
-
-	default:
-		break;
-	}
-	return ret;
-}
-#endif
 
 int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 {
