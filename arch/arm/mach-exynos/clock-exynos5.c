@@ -808,7 +808,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "hdmicec",
 		.enable		= exynos5_clk_ip_peris_ctrl,
-		.ctrlbit	= (1 << 11),
+		.ctrlbit	= (1 << 16),
 	}, {
 		.name		= "rtc",
 		.parent		= &exynos5_clk_aclk_66.clk,
