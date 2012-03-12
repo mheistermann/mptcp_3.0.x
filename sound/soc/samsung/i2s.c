@@ -73,6 +73,7 @@ struct i2s_dai {
 	bool	tx_active;
 	bool	rx_active;
 	bool	reg_saved;
+	bool	reg_saved_by_pm;
 
 	void	(*audss_clk_enable)(bool enable);
 	void	(*audss_suspend)(void);
@@ -1026,6 +1027,7 @@ static int i2s_suspend(struct snd_soc_dai *dai)
 	if (!i2s->reg_saved) {
 		i2s->audss_suspend();
 		i2s_reg_save(dai);
+		i2s->reg_saved_by_pm = true;
 	}
 
 	return 0;
@@ -1035,8 +1037,9 @@ static int i2s_resume(struct snd_soc_dai *dai)
 {
 	struct i2s_dai *i2s = to_info(dai);
 
-	if (i2s->reg_saved) {
+	if (i2s->reg_saved && i2s->reg_saved_by_pm) {
 		i2s_reg_restore(dai);
+		i2s->reg_saved_by_pm = false;
 		i2s->audss_resume();
 	}
 
@@ -1094,6 +1097,8 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 				0, SND_SOC_CLOCK_IN);
 
 	i2s_reg_save(dai);
+	i2s->reg_saved_by_pm = false;
+
 	i2s_clk_enable(i2s, false);
 
 probe_exit:
