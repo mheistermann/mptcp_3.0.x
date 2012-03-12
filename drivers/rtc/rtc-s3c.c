@@ -144,7 +144,7 @@ static int s3c_rtc_settime(struct device *dev, struct rtc_time *tm)
 
 	/* we get around y2k by simply not supporting it */
 
-	if (year < 0 || year >= 100) {
+	if (s3c_rtc_cpu_type != TYPE_EXYNOS && (year < 0 || year >= 100)) {
 		dev_err(dev, "rtc only supports 100 years\n");
 		return -EINVAL;
 	}
@@ -233,7 +233,7 @@ static int s3c_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 		 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 		 tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-	if (year < 0 || year >= 100) {
+	if (s3c_rtc_cpu_type != TYPE_EXYNOS && (year < 0 || year >= 100)) {
 		dev_err(dev, "rtc only supports 100 years\n");
 		return -EINVAL;
 	}
