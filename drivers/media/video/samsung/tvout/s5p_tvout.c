@@ -127,7 +127,7 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 		goto err;
 #elif defined(CONFIG_S5P_SYSMMU_TV) && defined(CONFIG_S5P_VMEM)
 	s5p_sysmmu_enable(&pdev->dev);
-	printk("sysmmu on\n");
+	printk(KERN_WARN "sysmmu on\n");
 	s5p_sysmmu_set_tablebase_pgd(&pdev->dev, __pa(swapper_pg_dir));
 #endif
 	if (s5p_tvout_clk_get(pdev, &s5ptv_status) < 0)
@@ -139,13 +139,13 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 	/* s5p_mixer_ctrl_constructor must be called
 		before s5p_tvif_ctrl_constructor */
 	if (s5p_mixer_ctrl_constructor(pdev) < 0)
-		goto err;
+		goto err_mixer;
 
 	if (s5p_tvif_ctrl_constructor(pdev) < 0)
-		goto err;
+		goto err_tvif;
 
 	if (s5p_tvout_v4l2_constructor(pdev) < 0)
-		goto err;
+		goto err_v4l2;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	spin_lock_init(&s5ptv_status.tvout_lock);
@@ -160,21 +160,29 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 #ifndef CONFIG_USER_ALLOC_TVOUT
 	s5p_hdmi_phy_power(true);
 	if (s5p_tvif_ctrl_start(TVOUT_720P_60, TVOUT_HDMI) < 0)
-		goto err;
+		goto err_tvif_start;
 #endif
 
 	/* prepare memory */
 	if (s5p_tvout_fb_alloc_framebuffer(&pdev->dev))
-		goto err;
+		goto err_tvif_start;
 
 	if (s5p_tvout_fb_register_framebuffer(&pdev->dev))
-		goto err;
+		goto err_tvif_start;
 #endif
 	on_stop_process = false;
 	on_start_process = false;
 
 	return 0;
 
+err_tvif_start:
+	s5p_tvout_v4l2_destructor();
+err_v4l2:
+	s5p_tvif_ctrl_destructor();
+err_tvif:
+	s5p_mixer_ctrl_destructor();
+err_mixer:
+	s5p_vp_ctrl_destructor();
 err:
 	return -ENODEV;
 }
