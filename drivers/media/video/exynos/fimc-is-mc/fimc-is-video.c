@@ -1641,6 +1641,9 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CAMERA_SET_3DNR:
 		ret = fimc_is_ctrl_3dnr(isp, ctrl->value);
 		break;
+	case V4L2_CID_CAMERA_ZOOM:
+		ret = fimc_is_digital_zoom(isp, ctrl->value);
+		break;
 	case V4L2_CID_CAMERA_SET_DIS:
 		/* blocked because of FW bug */
 		/*ret = fimc_is_ctrl_dis(isp, ctrl->value);*/
