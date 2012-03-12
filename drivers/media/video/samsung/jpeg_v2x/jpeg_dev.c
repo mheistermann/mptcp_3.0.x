@@ -570,10 +570,10 @@ static void jpeg_device_dec_run(void *priv)
 	if (dec_param.out_plane == 1)
 		jpeg_set_frame_buf_address(dev->reg_base,
 			dec_param.out_fmt, dev->vb2->plane_addr(vb, 0), 0, 0);
-	else if (dec_param.out_plane == 2) {
+	else if (dec_param.out_plane == 2)
 		jpeg_set_frame_buf_address(dev->reg_base,
 		dec_param.out_fmt, dev->vb2->plane_addr(vb, 0), dev->vb2->plane_addr(vb, 1), 0);
-	} else if (dec_param.out_plane == 3)
+	else if (dec_param.out_plane == 3)
 		jpeg_set_frame_buf_address(dev->reg_base,
 			dec_param.out_fmt, dev->vb2->plane_addr(vb, 0),
 			dev->vb2->plane_addr(vb, 1), dev->vb2->plane_addr(vb, 2));
