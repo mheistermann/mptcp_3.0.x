@@ -231,7 +231,7 @@ static struct v4l2_queryctrl controls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Cacheable flag",
 		.minimum = 0,
-		.maximum = 3,
+		.maximum = 2,
 		.step = 1,
 		.default_value = 0,
 	},
@@ -1213,6 +1213,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	int ret = 0;
 	unsigned long flags;
+	int cacheable;
 
 	mfc_debug_enter();
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
@@ -1227,8 +1228,8 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	vb2_ion_set_sharable(ctx->dev->alloc_ctx[1],(bool)ctx->fd_ion);
 #endif
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				ctx->cacheable);
+		cacheable = (ctx->cacheable & MFCMASK_SRC_CACHE) ? 1 : 0;
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], cacheable);
 		/* Can only request buffers after
 		   an instance has been opened.*/
 		if (ctx->state == MFCINST_GOT_INST) {
@@ -1254,9 +1255,10 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		dec->dst_memtype = reqbufs->memory;
 
 		/* cacheable setting */
+		cacheable = (ctx->cacheable & MFCMASK_DST_CACHE) ? 1 : 0;
 		if (!IS_MFCV6(dev))
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
+			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], cacheable);
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], cacheable);
 
 		if (reqbufs->count == 0) {
 			mfc_debug(2, "Freeing buffers.\n");
@@ -1618,10 +1620,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CACHEABLE:
 		/*if (stream_on)
 			return -EBUSY; */
-		if(ctrl->value >= 0 || ctrl->value <= 3)
-			ctx->cacheable = ctrl->value;
-		else
-			ctx->cacheable = 0;
+		ctx->cacheable |= ctrl->value;
 		break;
 #if defined(CONFIG_S5P_MFC_VB2_ION)
 	case V4L2_CID_SET_SHAREABLE:
