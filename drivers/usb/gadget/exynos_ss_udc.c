@@ -2504,7 +2504,6 @@ EXPORT_SYMBOL(usb_gadget_probe_driver);
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
 	struct exynos_ss_udc *udc = our_udc;
-	int ep;
 
 	if (!udc)
 		return -ENODEV;
@@ -2512,19 +2511,11 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	if (!driver || driver != udc->driver || !driver->unbind)
 		return -EINVAL;
 
-	/* all endpoints should be shutdown */
-	for (ep = 0; ep < EXYNOS_USB3_EPS; ep++)
-		exynos_ss_udc_ep_disable(&udc->eps[ep].ep);
-
-	call_gadget(udc, disconnect);
-
-	driver->unbind(&udc->gadget);
-	udc->driver = NULL;
-	udc->gadget.speed = USB_SPEED_UNKNOWN;
-
-	device_del(&udc->gadget.dev);
-
 	exynos_ss_udc_disable(udc);
+
+	udc->driver = NULL;
+	driver->unbind(&udc->gadget);
+	device_del(&udc->gadget.dev);
 
 	dev_info(udc->dev, "unregistered gadget driver '%s'\n",
 		 driver->driver.name);
