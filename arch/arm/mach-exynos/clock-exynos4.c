@@ -715,7 +715,6 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 16),
 	}, {
 		.name		= "rtc",
-		.devname	= "exynos-rtc",
 		.enable		= exynos4_clk_ip_perir_ctrl,
 		.ctrlbit	= (1 << 15),
 	}, {
