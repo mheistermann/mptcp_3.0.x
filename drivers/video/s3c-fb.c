@@ -1546,8 +1546,17 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	map_dma = (dma_addr_t)cma_alloc(sfb->dev, "fimd", (size_t)size, 0);
 	fbi->screen_base = cma_get_virt(map_dma, size, 1);
 #elif defined(CONFIG_ION_EXYNOS)
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	if (win->index == 0)
+		win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, SZ_1M,
+						ION_HEAP_EXYNOS_VIDEO_MASK);
+	else
+		win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, SZ_1M,
+						ION_HEAP_EXYNOS_CONTIG_MASK);
+#else
 	win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, SZ_1M,
 					ION_HEAP_EXYNOS_CONTIG_MASK);
+#endif
 	if (IS_ERR(win->fb_ion_handle)) {
 		dev_err(sfb->dev, "failed to ion_alloc\n");
 		return -ENOMEM;
