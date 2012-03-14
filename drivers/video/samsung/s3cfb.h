@@ -192,6 +192,10 @@ struct s3cfb_user_chroma {
 	unsigned char	blue;
 };
 
+#define BLENDING_NONE			0x0100
+#define BLENDING_PREMULT		0x0105
+#define BLENDING_COVERAGE		0x0405
+
 /* IOCTL commands */
 #define S3CFB_WIN_POSITION		_IOW('F', 203, \
 						struct s3cfb_user_window)
@@ -212,6 +216,7 @@ struct s3cfb_user_chroma {
 #define S3CFB_SET_WIN_MEM		_IOW('F', 309, \
 						enum s3cfb_mem_owner_t)
 #define S3CFB_GET_FB_PHY_ADDR           _IOR('F', 310, unsigned int)
+#define S3CFB_SET_ALPHA_MODE            _IOW('F', 313, unsigned int)
 
 extern struct fb_ops			s3cfb_ops;
 extern inline struct s3cfb_global	*get_fimd_global(int id);
@@ -279,6 +284,7 @@ extern int s3cfb_window_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_win_map_on(struct s3cfb_global *ctrl, int id, int color);
 extern int s3cfb_win_map_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_control(struct s3cfb_global *ctrl, int id);
+extern int s3cfb_set_alpha_mode(struct s3cfb_global *ctrl, int id, unsigned int mode);
 extern int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_alpha_value(struct s3cfb_global *ctrl, int value);

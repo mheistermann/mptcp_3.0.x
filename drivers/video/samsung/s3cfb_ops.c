@@ -447,6 +447,8 @@ void s3cfb_set_win_params(struct s3cfb_global *fbdev, int id)
 		s3cfb_set_alpha_blending(fbdev, id);
 		s3cfb_set_chroma_key(fbdev, id);
 		s3cfb_set_alpha_value_width(fbdev, id);
+		/* Set to premultiplied mode as default */
+		s3cfb_set_alpha_mode(fbdev, id, BLENDING_PREMULT);
 	}
 }
 
@@ -920,6 +922,7 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		struct s3cfb_user_plane_alpha user_alpha;
 		struct s3cfb_user_chroma user_chroma;
 		int vsync;
+		unsigned int alpha_mode;
 	} p;
 
 #ifdef CONFIG_EXYNOS_DEV_PD
@@ -1010,6 +1013,15 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		}
 
+		break;
+
+	case S3CFB_SET_ALPHA_MODE:
+		if (copy_from_user(&p.alpha_mode,
+				   (struct s3cfb_user_window __user *)arg,
+				   sizeof(p.alpha_mode)))
+			ret = -EFAULT;
+		else
+			s3cfb_set_alpha_mode(fbdev, win->id, p.alpha_mode);
 		break;
 	}
 
