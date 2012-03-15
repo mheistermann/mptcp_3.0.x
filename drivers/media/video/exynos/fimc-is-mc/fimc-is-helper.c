@@ -928,7 +928,6 @@ void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		// JYSHIN writel(1, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
@@ -990,9 +989,11 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 {
 	u32 length;
 
+
 	IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 0);
 	IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 	IS_INC_PARAM_NUM(dev);
+
 	IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_PREVIEW_STILL_FRAMERATE);
 	IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 	IS_INC_PARAM_NUM(dev);
@@ -1974,7 +1975,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		dis_width);
 	IS_SCALERC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
 		dis_height);
-	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OUTPUT_CROP);
+	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERC_SET_PARAM_DMA_OUTPUT_WIDTH(dev,

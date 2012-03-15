@@ -549,6 +549,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 			/*fimc_is_hw_set_low_poweroff(dev, true);*/
 			return -EINVAL;
 		}
+
 		dbg("v4l2 : Load set file end\n");
 		/* Debug only */
 		dbg("Parameter region addr = 0x%08x\n",
@@ -598,12 +599,10 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
 
-		printk(" phy :: &dev->is_p_region->shared[447]= 0x%08x\n",
-			virt_to_phys(&dev->is_p_region->shared[447]));
-
 		/* 1 */
 		set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
 		fimc_is_hw_set_param(dev);
+
 		ret = wait_event_timeout(dev->irq_queue,
 			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -1342,6 +1341,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			break;
 		case ISR_NDONE:
 			fimc_is_hw_get_param(dev, 4);
+
 			/* fimc_is_fw_clear_insr1(dev); */
 			break;
 		}
@@ -1371,8 +1371,8 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			}
 			break;
 		case IHC_AA_DONE:
-			dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
-			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
+			//printk("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+			//dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
 			switch (dev->i2h_cmd.arg[0]) {
 			/* SEARCH: Occurs when search is requested at continuous AF */
 			case 2:
@@ -1420,29 +1420,49 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				dev->p_region_index1 = 0;
 				dev->p_region_index2 = 0;
 				atomic_set(&dev->p_region_num, 0);
+
+				/* FW bug - should be removed*/
+				if(dev->i2h_cmd.arg[1] == 0 && dev->i2h_cmd.arg[2] == 0){
+					break;
+				}
+
 				set_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 
-				if (test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state))
-					set_bit(IS_ST_RUN, &dev->state);
-				else if (test_bit(IS_ST_INIT_CAPTURE_STILL,
-					&dev->state))
-					set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
-				else if (test_bit(IS_ST_INIT_PREVIEW_VIDEO,
-					&dev->state))
-					set_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
-				else if (test_bit(IS_ST_INIT_PREVIEW_STILL,
+#if (defined BUF_MASK)  && !defined(NO_WAIT_INTR_FOR_MASK)
+				if((dev->is_p_region->parameter.scalerp.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
+					test_bit(PARAM_SCALERP_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					set_bit(IS_ST_SCALERP_MASK_DONE, &dev->state);
+					break;
+				}
+				if((dev->is_p_region->parameter.scalerc.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
+					test_bit(PARAM_SCALERC_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					set_bit(IS_ST_SCALERC_MASK_DONE, &dev->state);
+					break;
+				}
+				if( (dev->is_p_region->parameter.tdnr.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
+					test_bit(PARAM_TDNR_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					set_bit(IS_ST_TDNR_MASK_DONE, &dev->state);
+				    	break;
+				}
+#endif
+				if (test_bit(PARAM_ISP_AA, (long unsigned int *)&dev->i2h_cmd.arg[1]) &&
+					dev->af.af_state == FIMC_IS_AF_SETCONFIG){
+					dev->af.af_state = FIMC_IS_AF_RUNNING;
+				}
+				else if (test_bit(PARAM_ISP_AA, (long unsigned int *)&dev->i2h_cmd.arg[1]) &&
+					dev->af.af_state == FIMC_IS_AF_ABORT){
+					dev->af.af_state = FIMC_IS_AF_IDLE;
+				}
+
+				if (test_bit(IS_ST_INIT_PREVIEW_STILL,
 					&dev->state))
 					set_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
 				else {
 					clear_bit(IS_ST_SET_PARAM, &dev->state);
 					set_bit(IS_ST_RUN, &dev->state);
 				}
-
-				if (dev->af.af_state == FIMC_IS_AF_SETCONFIG)
-					dev->af.af_state = FIMC_IS_AF_RUNNING;
-				else if (dev->af.af_state == FIMC_IS_AF_ABORT)
-					dev->af.af_state = FIMC_IS_AF_IDLE;
 				break;
+
 			case HIC_GET_PARAMETER:
 				break;
 			case HIC_SET_TUNE:
