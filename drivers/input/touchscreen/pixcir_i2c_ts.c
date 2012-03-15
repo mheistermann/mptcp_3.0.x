@@ -363,7 +363,7 @@ static ssize_t virtualkeys_sysfs_read(struct file *filp,
 
 	len = sprintf(buf, "0x01:32:50:835:50:50\n");
 	len += sprintf(buf + len, "0x01:30:240:835:50:50\n");
-	len += sprintf(buf + len, "0x01:48:430:835:50:50\n");
+	len += sprintf(buf + len, "0x01:48:430:835:50:50");
 
 	return len;
 }
