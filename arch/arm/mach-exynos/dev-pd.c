@@ -87,7 +87,11 @@ int exynos_pd_disable(struct device *dev)
 	/*  save clock source register */
 	if (data->clksrc_base)
 		tmp = __raw_readl(data->clksrc_base);
-
+#ifdef CONFIG_EXYNOS5_LOWPWR_IDLE
+	if (soc_is_exynos5250() &&
+		(pdata->base == EXYNOS5_ISP_CONFIGURATION))
+		return 0;
+#endif
 	/*
 	 * To ISP power domain off,
 	 * first, ISP_ARM power domain be off.

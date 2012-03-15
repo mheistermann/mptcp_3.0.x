@@ -23,12 +23,15 @@
 #include <plat/pm.h>
 #include <plat/gpio-cfg.h>
 #include <plat/gpio-core.h>
+#include <plat/regs-otg.h>
+#include <plat/devs.h>
 
 #include <mach/regs-pmu5.h>
 #include <mach/pm-core.h>
 #include <mach/pmu.h>
 #include <mach/regs-clock.h>
 #include <mach/smc.h>
+#include <mach/clock-domain.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_DIRECTGO_ADDR       (S5P_VA_SYSRAM_NS + 0x24)
@@ -57,7 +60,7 @@ struct check_reg_lpa {
  */
 static struct check_reg_lpa exynos5_power_domain[] = {
 	{.check_reg = EXYNOS5_GSCL_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_ISP_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_G3D_STATUS,	.check_bit = 0x7},
 };
 
 /*
@@ -65,10 +68,97 @@ static struct check_reg_lpa exynos5_power_domain[] = {
  * If clock of list is not gated, system can not enter LPA mode.
  */
 static struct check_reg_lpa exynos5_clock_gating[] = {
-	{.check_reg = EXYNOS5_CLKGATE_IP_GEN,	.check_bit = 0x4210},
-	{.check_reg = EXYNOS5_CLKGATE_IP_FSYS,	.check_bit = 0x0002},
-	{.check_reg = EXYNOS5_CLKGATE_IP_PERIC,	.check_bit = 0x3FC0},
+	{.check_reg = EXYNOS5_CLKSRC_MASK_DISP1_0,	.check_bit = 0x00000001},
+	{.check_reg = EXYNOS5_CLKGATE_IP_DISP1,		.check_bit = 0x00000008},
+	{.check_reg = EXYNOS5_CLKGATE_IP_MFC,		.check_bit = 0x00000001},
+	{.check_reg = EXYNOS5_CLKGATE_IP_GEN,		.check_bit = 0x00004016},
+	{.check_reg = EXYNOS5_CLKGATE_IP_FSYS,		.check_bit = 0x00000002},
+	{.check_reg = EXYNOS5_CLKGATE_IP_PERIC,		.check_bit = 0x00377FC0},
 };
+
+enum hc_type {
+	HC_SDHC,
+	HC_MSHC,
+};
+
+struct check_device_op {
+	void __iomem		*base;
+	struct platform_device	*pdev;
+	enum hc_type		type;
+};
+
+static struct check_device_op chk_sdhc_op[] = {
+#if defined(CONFIG_EXYNOS4_DEV_DWMCI)
+	{.base = 0, .pdev = &exynos_device_dwmci, .type = HC_MSHC},
+#endif
+#if defined(CONFIG_S3C_DEV_HSMMC)
+	{.base = 0, .pdev = &s3c_device_hsmmc0, .type = HC_SDHC},
+#endif
+#if defined(CONFIG_S3C_DEV_HSMMC1)
+	{.base = 0, .pdev = &s3c_device_hsmmc1, .type = HC_SDHC},
+#endif
+#if defined(CONFIG_S3C_DEV_HSMMC2)
+	{.base = 0, .pdev = &s3c_device_hsmmc2, .type = HC_SDHC},
+#endif
+#if defined(CONFIG_S3C_DEV_HSMMC3)
+	{.base = 0, .pdev = &s3c_device_hsmmc3, .type = HC_SDHC},
+#endif
+};
+
+#define S3C_HSMMC_PRNSTS	(0x24)
+#define S3C_HSMMC_CLKCON	(0x2c)
+#define S3C_HSMMC_CMD_INHIBIT	0x00000001
+#define S3C_HSMMC_DATA_INHIBIT	0x00000002
+#define S3C_HSMMC_CLOCK_CARD_EN	0x0004
+
+#define MSHCI_CLKENA	(0x10)  /* Clock enable */
+#define MSHCI_STATUS	(0x48)  /* Status */
+#define MSHCI_DATA_BUSY	(0x1<<9)
+#define MSHCI_DATA_STAT_BUSY	(0x1<<10)
+#define MSHCI_ENCLK	(0x1)
+
+static int sdmmc_dev_num;
+/* If SD/MMC interface is working: return = 1 or not 0 */
+static int check_sdmmc_op(unsigned int ch)
+{
+	unsigned int reg1, reg2;
+	void __iomem *base_addr;
+
+	if (unlikely(ch >= sdmmc_dev_num)) {
+		printk(KERN_ERR "Invalid ch[%d] for SD/MMC\n", ch);
+		return 0;
+	}
+
+	if (chk_sdhc_op[ch].type == HC_SDHC) {
+		base_addr = chk_sdhc_op[ch].base;
+		/* Check CLKCON [2]: ENSDCLK */
+		reg2 = readl(base_addr + S3C_HSMMC_CLKCON);
+		return !!(reg2 & (S3C_HSMMC_CLOCK_CARD_EN));
+	} else if (chk_sdhc_op[ch].type == HC_MSHC) {
+		base_addr = chk_sdhc_op[ch].base;
+		/* Check STATUS [9] for data busy */
+		reg1 = readl(base_addr + MSHCI_STATUS);
+		return (reg1 & (MSHCI_DATA_BUSY)) ||
+		       (reg1 & (MSHCI_DATA_STAT_BUSY));
+
+	}
+	/* should not be here */
+	return 0;
+}
+
+/* Check all sdmmc controller */
+static int loop_sdmmc_check(void)
+{
+	unsigned int iter;
+
+	for (iter = 0; iter < sdmmc_dev_num; iter++) {
+		if (check_sdmmc_op(iter)) {
+			printk(KERN_DEBUG "SDMMC [%d] working\n", iter);
+			return 1;
+		}
+	}
+	return 0;
+}
 
 static int exynos5_check_reg_status(struct check_reg_lpa *reg_list,
 				    unsigned int list_cnt)
@@ -110,6 +200,7 @@ static struct cpuidle_state exynos5_cpuidle_set[] = {
 		.name			= "IDLE",
 		.desc			= "ARM clock gating(WFI)",
 	},
+#ifdef CONFIG_EXYNOS5_LOWPWR_IDLE
 	[1] = {
 		.enter			= exynos5_enter_lowpower,
 		.exit_latency		= 300,
@@ -118,6 +209,7 @@ static struct cpuidle_state exynos5_cpuidle_set[] = {
 		.name			= "LOW_POWER",
 		.desc			= "ARM power down",
 	},
+#endif
 };
 
 static DEFINE_PER_CPU(struct cpuidle_device, exynos5_cpuidle_device);
@@ -186,12 +278,49 @@ static inline void vfp_enable(void *unused)
 	set_copro_access(access | CPACC_FULL(10) | CPACC_FULL(11));
 }
 
+static struct sleep_save exynos5_lpa_save[] = {
+	/* CMU side */
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_TOP),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_GSCL),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_DISP1_0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_MAUDIO),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_FSYS),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC1),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_ISP),
+	SAVE_ITEM(EXYNOS5_CLKDIV_ISP0),
+	SAVE_ITEM(EXYNOS5_CLKDIV_ISP1),
+	SAVE_ITEM(EXYNOS5_CLKDIV_ISP2),
+	SAVE_ITEM(EXYNOS5_CLKSRC_TOP3),
+	SAVE_ITEM(EXYNOS5_CLKGATE_ISP0),
+	SAVE_ITEM(EXYNOS5_CLKGATE_ISP1),
+};
+
+static struct sleep_save exynos5_set_clksrc[] = {
+	{ .reg = EXYNOS5_CLKSRC_MASK_TOP		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_GSCL		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_DISP1_0		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_MAUDIO		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_FSYS		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC0		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC1		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_ISP		, .val = 0xffffffff, },
+};
+
 static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 				   struct cpuidle_state *state)
 {
 	struct timeval before, after;
 	int idle_time;
+
 	unsigned long tmp;
+
+	s3c_pm_do_save(exynos5_lpa_save, ARRAY_SIZE(exynos5_lpa_save));
+	/*
+	 * Before enter central sequence mode, clock src register have to set
+	 */
+	s3c_pm_do_restore_core(exynos5_set_clksrc,
+			       ARRAY_SIZE(exynos5_set_clksrc));
 
 	local_irq_disable();
 
@@ -206,7 +335,6 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 	exynos5_gpio_set_pd_reg();
 
 	/* ensure at least INFORM0 has the resume address */
-	__raw_writel(virt_to_phys(exynos5_idle_resume), EXYNOS5_INFORM0);
 	__raw_writel(virt_to_phys(exynos5_idle_resume), REG_DIRECTGO_ADDR);
 	__raw_writel(0xfcba0d10, REG_DIRECTGO_FLAG);
 
@@ -214,12 +342,17 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 
 	exynos5_sys_powerdown_conf(SYS_LPA);
 
+	/* Disable USE_RETENTION of JPEG_MEM_OPTION */
+	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
+	tmp |= EXYNOS5_OPTION_USE_RETENTION;
+	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+
 	do {
 		/* Waiting for flushing UART fifo */
 	} while (exynos5_uart_fifo_check());
 
 	/*
-	 * GPS and JPEG power can not turn off.
+	 * GPS can not turn off.
 	 */
 	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
@@ -241,14 +374,20 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 	vfp_enable(NULL);
 
 	/* For release retention */
-	__raw_writel((1 << 28), S5P_PAD_RET_GPIO_OPTION);
-	__raw_writel((1 << 28), S5P_PAD_RET_UART_OPTION);
-	__raw_writel((1 << 28), S5P_PAD_RET_MMCA_OPTION);
-	__raw_writel((1 << 28), S5P_PAD_RET_MMCB_OPTION);
-	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
-	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MAU_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_GPIO_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_UART_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MMCA_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MMCB_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIA_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIB_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_SPI_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_GPIO_SYSMEM_OPTION);
 
 early_wakeup:
+	s3c_pm_do_restore_core(exynos5_lpa_save,
+			       ARRAY_SIZE(exynos5_lpa_save));
+
 	/* Clear wakeup state register */
 	__raw_writel(0x0, EXYNOS5_WAKEUP_STAT);
 
@@ -322,6 +461,12 @@ static int __maybe_unused exynos5_check_enter_mode(void)
 	/* Check clock gating */
 	if (exynos5_check_reg_status(exynos5_clock_gating,
 				    ARRAY_SIZE(exynos5_clock_gating)))
+		return S5P_CHECK_DIDLE;
+
+	if (clock_domain_enabled(LPA_DOMAIN))
+		return S5P_CHECK_DIDLE;
+
+	if (loop_sdmmc_check())
 		return S5P_CHECK_DIDLE;
 
 	return S5P_CHECK_LPA;
@@ -425,6 +570,8 @@ static int __init exynos5_init_cpuidle(void)
 {
 	int i, max_cpuidle_state, cpu_id;
 	struct cpuidle_device *device;
+	struct platform_device *pdev;
+	struct resource *res;
 
 	exynos5_core_down_clk();
 
@@ -451,6 +598,26 @@ static int __init exynos5_init_cpuidle(void)
 		if (cpuidle_register_device(device)) {
 			printk(KERN_ERR "CPUidle register device failed\n,");
 			return -EIO;
+		}
+	}
+
+	sdmmc_dev_num = ARRAY_SIZE(chk_sdhc_op);
+
+	for (i = 0; i < sdmmc_dev_num; i++) {
+
+		pdev = chk_sdhc_op[i].pdev;
+
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!res) {
+			printk(KERN_ERR "failed to get iomem region\n");
+			return -EINVAL;
+		}
+
+		chk_sdhc_op[i].base = ioremap(res->start, resource_size(res));
+
+		if (!chk_sdhc_op[i].base) {
+			printk(KERN_ERR "failed to map io region\n");
+			return -EINVAL;
 		}
 	}
 

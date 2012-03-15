@@ -101,6 +101,13 @@ config EXYNOS5_CPUIDLE
 	help
 	  Enable CPUIDLE for Exynos5 series.
 
+config EXYNOS5_LOWPWR_IDLE
+	bool "Exynos5 Lowpower IDLE Feature"
+	depends on EXYNOS5_CPUIDLE
+	default n
+	help
+	  Enable Low power IDLE for Exynos5 series.
+
 config EXYNOS_MCT
 	bool
 	default y
