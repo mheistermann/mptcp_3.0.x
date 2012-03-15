@@ -265,9 +265,9 @@ void __init exynos4_map_io(void)
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 #endif
 	if (soc_is_exynos4210())
-		s3c_adc_setname("s5pv210-adc");
+		s3c_adc_setname("samsung-adc-v3");
 	else
-		s3c_adc_setname("exynos4412-adc");
+		s3c_adc_setname("samsung-adc-v4");
 
 	s5p_hdmi_setname("exynos4-hdmi");
 
