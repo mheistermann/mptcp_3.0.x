@@ -1865,7 +1865,6 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0) {
 			mfc_err("Failed to unlock hardware.\n");
 		}
-		s5p_mfc_clock_off();
 	}
 }
 
