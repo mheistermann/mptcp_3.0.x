@@ -40,6 +40,7 @@
 #include <plat/exynos4.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/hwmon.h>
 #include <plat/keypad.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
@@ -1799,6 +1800,17 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_S3C_DEV_HWMON
+static struct s3c_hwmon_pdata smdk4x12_hwmon_pdata __initdata = {
+	/* Reference voltage (1.2V) */
+	.in[0] = &(struct s3c_hwmon_chcfg) {
+		.name		= "smdk:reference-voltage",
+		.mult		= 3300,
+		.div		= 4096,
+	},
+};
+#endif
+
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdk4x12_ehci_pdata;
 
@@ -2936,6 +2948,10 @@ static struct platform_device exynos4_busfreq = {
 
 static struct platform_device *smdk4412_devices[] __initdata = {
 	&s3c_device_adc,
+#ifdef CONFIG_S3C_DEV_HWMON
+	&s3c_device_hwmon,
+#endif
+
 };
 
 static struct platform_device *smdk4x12_devices[] __initdata = {
@@ -3948,6 +3964,9 @@ static void __init smdk4x12_machine_init(void)
 #endif
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 	smdk4x12_usbswitch_init();
+#endif
+#ifdef CONFIG_S3C_DEV_HWMON
+	s3c_hwmon_set_platdata(&smdk4x12_hwmon_pdata);
 #endif
 
 	samsung_bl_set(&smdk4x12_bl_gpio_info, &smdk4x12_bl_data);

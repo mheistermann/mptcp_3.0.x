@@ -590,6 +590,7 @@ config MACH_SMDK4X12
 	bool "SMDK4X12 board"
 	select CPU_EXYNOS4212
 	select CPU_EXYNOS4412
+	select S3C_DEV_HWMON if S3C_ADC
 	select S3C_DEV_WDT
 	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
