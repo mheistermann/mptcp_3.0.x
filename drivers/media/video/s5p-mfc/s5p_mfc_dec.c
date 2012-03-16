@@ -1940,6 +1940,8 @@ static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (ctx->cacheable & MFCMASK_DST_CACHE)
+			s5p_mfc_mem_cache_flush(vb, 2);
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
