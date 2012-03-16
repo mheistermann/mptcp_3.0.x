@@ -424,6 +424,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	int align_gap;
 	struct s5p_mfc_buf *buf;
 	struct list_head *buf_queue;
+	unsigned char *dpb_vir;
 
 	buf_addr1 = ctx->port_a_phys;
 	buf_size1 = ctx->port_a_size;
@@ -463,6 +464,16 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		WRITEL(buf->cookie.raw.luma, S5P_FIMV_D_LUMA_DPB + i * 4);
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
 		WRITEL(buf->cookie.raw.chroma, S5P_FIMV_D_CHROMA_DPB + i * 4);
+
+		if (i == 0) {
+			dpb_vir = vb2_plane_vaddr(&buf->vb, 0);
+			memset(dpb_vir, 0x0, ctx->luma_size);
+			s5p_mfc_cache_inv(buf->vb.planes[0].mem_priv);
+
+			dpb_vir = vb2_plane_vaddr(&buf->vb, 1);
+			memset(dpb_vir, 0x80, ctx->chroma_size);
+			s5p_mfc_cache_inv(buf->vb.planes[1].mem_priv);
+		}
 
 		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
 				ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC) {
