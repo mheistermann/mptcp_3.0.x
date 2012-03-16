@@ -270,7 +270,7 @@ static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 		.yres		= 800,
 	},
 	.virtual_x		= 1280,
-	.virtual_y		= 800 * 2,
+	.virtual_y		= 840 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -289,7 +289,7 @@ static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 		.yres		= 800,
 	},
 	.virtual_x		= 1280,
-	.virtual_y		= 800 * 2,
+	.virtual_y		= 840 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -386,7 +386,7 @@ static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 		.yres		= 800,
 	},
 	.virtual_x		= 1280,
-	.virtual_y		= 800 * 2,
+	.virtual_y		= 840 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -405,7 +405,7 @@ static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 		.yres		= 800,
 	},
 	.virtual_x		= 1280,
-	.virtual_y		= 800 * 2,
+	.virtual_y		= 840 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -473,6 +473,40 @@ static struct platform_device smdk5250_dp_lcd = {
 	},
 };
 
+static struct s3c_fb_pd_win smdk5250_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 37,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 6,
+		.xres		= 2560,
+		.yres		= 1600,
+	},
+	.virtual_x		= 2560,
+	.virtual_y		= 1640 * 2,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 37,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 6,
+		.xres		= 2560,
+		.yres		= 1600,
+	},
+	.virtual_x		= 2560,
+	.virtual_y		= 1640 * 2,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
 static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 80,
@@ -537,8 +571,8 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 	.win[1]		= &smdk5250_fb_win1,
 	.win[2]		= &smdk5250_fb_win2,
 #elif defined(CONFIG_S5P_DP)
-	.win[0]		= &smdk5250_fb_win2,
-	.win[1]		= &smdk5250_fb_win2,
+	.win[0]		= &smdk5250_fb_win0,
+	.win[1]		= &smdk5250_fb_win1,
 	.win[2]		= &smdk5250_fb_win2,
 #endif
 	.default_win	= 2,

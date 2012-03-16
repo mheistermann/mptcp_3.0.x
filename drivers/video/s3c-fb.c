@@ -1328,6 +1328,11 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 #ifdef CONFIG_ION_EXYNOS
 	struct fb_var_screeninfo *var = &info->var;
 	int offset;
+
+	struct s3c_fb_pd_win *windata = win->windata;
+	void __iomem *buf = sfb->regs + win->index * 8;
+	u32 buf_index;
+	u32 size;
 #endif
 
 	union {
@@ -1419,6 +1424,28 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 		ret = 0;
 		break;
+
+	case S3CFB_PAN_DISPLAY_INDEX:
+		if (get_user(buf_index, (u32 __user *)arg)) {
+			ret = -EFAULT;
+			break;
+		}
+		size = windata->win_mode.xres * windata->win_mode.yres
+			* var->bits_per_pixel/8;
+
+		shadow_protect_win(win, 1);
+
+		writel(info->fix.smem_start
+			+ (ALIGN(size, SZ_1M) * buf_index),
+			buf + sfb->variant.buf_start);
+		writel(info->fix.smem_start
+			+ (ALIGN(size, SZ_1M) * buf_index) + size,
+			buf + sfb->variant.buf_end);
+
+		shadow_protect_win(win, 0);
+		ret = 0;
+		break;
+
 #endif
 #ifdef CONFIG_VITHAR
 	case IOCTL_GET_FB_UMP_SECURE_ID:
