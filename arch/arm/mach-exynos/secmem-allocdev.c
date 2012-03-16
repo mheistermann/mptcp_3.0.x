@@ -32,14 +32,24 @@
 
 struct miscdevice secmem;
 struct secmem_crypto_driver_ftn *crypto_driver;
+#if defined(CONFIG_CPU_EXYNOS5250)
+extern struct ion_device *ion_exynos;
+#endif
 
 static char *secmem_info[] = {
+#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
 	"mfc",		/* 0 */
 	"fimc",		/* 1 */
 	"mfc-shm",	/* 2 */
 	"sectbl",	/* 3 */
 	"video",	/* 4 */
 	"fimd",		/* 5 */
+#elif defined(CONFIG_CPU_EXYNOS5250)
+	"mfc_sh",   /* 0 */
+	"video",    /* 1 */
+	"mfc_fw",   /* 2 */
+	"sectbl",   /* 3 */
+#endif
 	NULL
 };
 
@@ -102,8 +112,46 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		if (copy_to_user((void __user *)arg, &minfo, sizeof(minfo)))
 			return -EFAULT;
-	}
 		break;
+	}
+#if defined(CONFIG_CPU_EXYNOS5250)
+	case SECMEM_IOC_GET_FD_PHYS_ADDR:
+	{
+		struct ion_client *client;
+		struct secfd_info fd_info;
+		struct ion_fd_data data;
+		size_t len;
+
+		if (copy_from_user(&fd_info, (int __user *)arg,
+					sizeof(fd_info)))
+			return -EFAULT;
+
+		client = ion_client_create(ion_exynos, -1, "DRM");
+		if (IS_ERR(client))
+			printk(KERN_ERR "%s: Failed to get ion_client of DRM\n",
+				__func__);
+
+		data.fd = fd_info.fd;
+		data.handle = ion_import_fd(client, data.fd);
+		printk(KERN_DEBUG "%s: fd from user space = %d\n",
+				__func__, fd_info.fd);
+		if (IS_ERR(data.handle))
+			printk(KERN_ERR "%s: Failed to get ion_handle of DRM\n",
+				__func__);
+
+		if (ion_phys(client, data.handle, &fd_info.phys, &len))
+			printk(KERN_ERR "%s: Failed to get phys. addr of DRM\n",
+				__func__);
+
+		printk(KERN_DEBUG "%s: physical addr from kernel space = %lu\n",
+				__func__, fd_info.phys);
+		ion_client_destroy(client);
+
+		if (copy_to_user((void __user *)arg, &fd_info, sizeof(fd_info)))
+			return -EFAULT;
+		break;
+	}
+#endif
 	case SECMEM_IOC_GET_DRM_ONOFF:
 		if (copy_to_user((void __user *)arg, &drm_onoff, sizeof(int)))
 			return -EFAULT;
@@ -129,7 +177,9 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (drm_onoff == false) {
 				drm_onoff = true;
 				pm_runtime_forbid((*(secmem.this_device)).parent);
+#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
 				exynos_pd_enable(&exynos4_device_pd[PD_MFC].dev);
+#endif
 			} else
 				printk(KERN_ERR "%s: DRM is already on\n", __func__);
 		} else {
@@ -143,8 +193,8 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			} else
 				printk(KERN_ERR "%s: DRM is already off\n", __func__);
 		}
-	}
 		break;
+	}
 	case SECMEM_IOC_GET_CRYPTO_LOCK:
 	{
 		int i;

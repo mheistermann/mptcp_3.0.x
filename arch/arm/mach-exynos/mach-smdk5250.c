@@ -78,6 +78,9 @@
 #include <mach/dev.h>
 #include <mach/regs-pmu.h>
 #include <mach/dwmci.h>
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#include <mach/secmem.h>
+#endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
@@ -2705,7 +2708,11 @@ static void __init exynos_reserve_mem(void)
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;"
 		"s5p-mixer=tv;"
-		"exynos5-fimc-is=fimc_is;";
+		"exynos5-fimc-is=fimc_is;"
+		"s5p-smem/mfc_sh=drm_mfc_sh;"
+		"s5p-smem/video=drm_video;"
+		"s5p-smem/mfc_fw=drm_mfc_fw;"
+		"s5p-smem/sectbl=drm_sectbl;";
 
 	s5p_cma_region_reserve(regions, regions_secure, 0, map);
 }
@@ -3178,6 +3185,9 @@ static void __init smdk5250_machine_init(void)
 	exynos5_device_gsc1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos5_device_gsc2.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos5_device_gsc3.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+#endif
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+	secmem.parent = &exynos5_device_pd[PD_GSCL].dev;
 #endif
 	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
 		exynos5_gsc_set_pdev_name(0, "exynos5250-gsc");
