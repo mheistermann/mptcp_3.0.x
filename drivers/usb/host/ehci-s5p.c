@@ -67,10 +67,36 @@ EXPORT_SYMBOL_GPL(s5p_ehci_port_power_on);
 
 static int s5p_ehci_configurate(struct usb_hcd *hcd)
 {
+	int delay_count = 0;
+
+	/* This is for waiting phy before ehci configuration */
+	do {
+		if (readl(hcd->regs))
+			break;
+		udelay(1);
+		++delay_count;
+	} while (delay_count < 200);
+	if (delay_count)
+		dev_info(hcd->self.controller, "phy delay count = %d\n",
+			delay_count);
+
 	/* DMA burst Enable */
 	writel(readl(INSNREG00(hcd->regs)) | ENA_DMA_INCR,
 			INSNREG00(hcd->regs));
 	return 0;
+}
+
+static void s5p_ehci_phy_init(struct platform_device *pdev)
+{
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+
+	if (pdata && pdata->phy_init) {
+		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
+
+		s5p_ehci_configurate(hcd);
+	}
 }
 
 #ifdef CONFIG_PM
@@ -118,7 +144,6 @@ static int s5p_ehci_suspend(struct device *dev)
 static int s5p_ehci_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ehci->hcd;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
@@ -126,10 +151,7 @@ static int s5p_ehci_resume(struct device *dev)
 	clk_enable(s5p_ehci->clk);
 	pm_runtime_resume(&pdev->dev);
 
-	if (pdata->phy_init)
-		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
-
-	s5p_ehci_configurate(hcd);
+	s5p_ehci_phy_init(pdev);
 
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(10);
@@ -332,9 +354,7 @@ static ssize_t store_ehci_power(struct device *dev,
 			usb_remove_hcd(hcd);
 		}
 
-		if (pdata && pdata->phy_init)
-			pdata->phy_init(pdev, S5P_USB_PHY_HOST);
-		s5p_ehci_configurate(hcd);
+		s5p_ehci_phy_init(pdev);
 
 		irq = platform_get_irq(pdev, 0);
 		retval = usb_add_hcd(hcd, irq,
@@ -384,7 +404,6 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 	s5p_ehci = kzalloc(sizeof(struct s5p_ehci_hcd), GFP_KERNEL);
 	if (!s5p_ehci)
 		return -ENOMEM;
-
 	s5p_ehci->dev = &pdev->dev;
 
 	hcd = usb_create_hcd(&s5p_ehci_hc_driver, &pdev->dev,
@@ -431,15 +450,14 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	if (pdata->phy_init)
-		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
+	platform_set_drvdata(pdev, s5p_ehci);
+
+	s5p_ehci_phy_init(pdev);
 
 	ehci = hcd_to_ehci(hcd);
 	ehci->caps = hcd->regs;
 	ehci->regs = hcd->regs +
 		HC_LENGTH(ehci, readl(&ehci->caps->hc_capbase));
-
-	s5p_ehci_configurate(hcd);
 
 	dbg_hcs_params(ehci, "reset");
 	dbg_hcc_params(ehci, "reset");
@@ -452,8 +470,6 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to add USB HCD\n");
 		goto fail;
 	}
-
-	platform_set_drvdata(pdev, s5p_ehci);
 
 	create_ehci_sys_file(ehci);
 	s5p_ehci->power_on = 1;
