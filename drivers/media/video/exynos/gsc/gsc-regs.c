@@ -656,6 +656,9 @@ void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx)
 
 	u32 cfg = readl(SYSREG_GSCBLK_CFG1);
 
+	cfg &= ~GSC_BLK_SW_RESET_WB_DEST(dev->id);
+	writel(cfg, SYSREG_GSCBLK_CFG1);
+
 	cfg |= GSC_BLK_DISP1WB_DEST(dev->id);
 	cfg |= GSC_BLK_GSCL_WB_IN_SRC_SEL(dev->id);
 	cfg |= GSC_BLK_SW_RESET_WB_DEST(dev->id);

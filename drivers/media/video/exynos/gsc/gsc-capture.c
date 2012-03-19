@@ -90,6 +90,7 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 		return -ENODEV;
 
 	if (on) {
+		gsc_info("start stream");
 		ret = v4l2_subdev_call(p->sd_gsc, video, s_stream, 1);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			return ret;
@@ -107,9 +108,7 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 			ret = v4l2_subdev_call(p->sensor, video, s_stream, 1);
 		}
 	} else {
-		ret = v4l2_subdev_call(p->sd_gsc, video, s_stream, 0);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return ret;
+		gsc_info("stop stream");
 		if (p->disp) {
 			ret = v4l2_subdev_call(p->disp, video, s_stream, 0);
 			if (ret < 0 && ret != -ENOIOCTLCMD)
@@ -123,6 +122,10 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 				return ret;
 			ret = v4l2_subdev_call(p->flite, video, s_stream, 0);
 		}
+
+		ret = v4l2_subdev_call(p->sd_gsc, video, s_stream, 0);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
 	}
 
 	return ret == -ENOIOCTLCMD ? 0 : ret;
@@ -159,10 +162,7 @@ static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 	if (ret)
 		gsc_err("Failed to prepare output addr");
 
-	if (!test_bit(ST_CAPT_SUSPENDED, &gsc->state)) {
-		gsc_dbg("buf_index : %d", vb->v4l2_buf.index);
-		gsc_hw_set_output_buf_masking(gsc, vb->v4l2_buf.index, 0);
-	}
+	gsc_hw_set_output_buf_masking(gsc, vb->v4l2_buf.index, 0);
 
 	min_bufs = cap->reqbufs_cnt > 1 ? 2 : 1;
 
@@ -314,11 +314,10 @@ static int gsc_capture_state_cleanup(struct gsc_dev *gsc)
 	gsc->state &= ~(1 << ST_CAPT_RUN | 1 << ST_CAPT_STREAM |
 			1 << ST_CAPT_PIPE_STREAM | 1 << ST_CAPT_PEND);
 
-	set_bit(ST_CAPT_SUSPENDED, &gsc->state);
 	spin_unlock_irqrestore(&gsc->slock, flags);
 
 	if (streaming) {
-		if (mdev->is_flite_on)
+		if (!mdev->is_flite_on)
 			return gsc_cap_pipeline_s_stream(gsc, 0);
 		else
 			return v4l2_subdev_call(gsc->cap.sd_cap, video,
@@ -713,6 +712,7 @@ static int gsc_capture_open(struct file *file)
 	}
 
 	set_bit(ST_CAPT_OPEN, &gsc->state);
+
 	pm_runtime_get_sync(&gsc->pdev->dev);
 
 	if (++gsc->cap.refcnt == 1) {
@@ -784,7 +784,6 @@ static int gsc_capture_close(struct file *file)
 		gsc_hw_enable_control(gsc, false);
 		clear_bit(ST_CAPT_STREAM, &gsc->state);
 		gsc_cap_pipeline_shutdown(gsc);
-		clear_bit(ST_CAPT_SUSPENDED, &gsc->state);
 	}
 
 	pm_runtime_put(&gsc->pdev->dev);
