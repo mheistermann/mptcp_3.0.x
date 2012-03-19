@@ -19,6 +19,11 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <mach/videonode.h>
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+#include <mach/dev.h>
+#endif
+#endif
 #include <media/exynos_mc.h>
 #include <linux/cma.h>
 #include <asm/cacheflush.h>
@@ -157,6 +162,18 @@ static int fimc_is_scalerc_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	isp->busfreq_num++;
+	if (isp->busfreq_num == 1) {
+		dev_lock(isp->bus_dev, &isp->pdev->dev, (FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
+		printk(KERN_DEBUG "busfreq locked on <%d/%d>MHz\n", FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
+	}
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERC];
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = 0;
@@ -189,17 +206,18 @@ static int fimc_is_scalerc_video_close(struct file *file)
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power);
+
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 
 		if (!ret) {
-			err("wait timeout : %s\n", __func__);
+			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
 			ret = -EINVAL;
 		}
+
 		dbg("stop flite & mipi (pos:%d) (port:%d)\n",
 			isp->sensor.id_position,
 			isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
@@ -211,6 +229,21 @@ static int fimc_is_scalerc_video_close(struct file *file)
 	}
 	return 0;
 
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	if (isp->busfreq_num == 1) {
+		dev_unlock(isp->bus_dev, &isp->pdev->dev);
+		printk(KERN_DEBUG "busfreq locked off\n");
+	}
+	isp->busfreq_num--;
+	if(isp->busfreq_num < 0)
+		isp->busfreq_num = 0;
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
+	return 0;
 }
 
 static unsigned int fimc_is_scalerc_video_poll(struct file *file,
@@ -837,6 +870,18 @@ static int fimc_is_scalerp_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	isp->busfreq_num++;
+	if (isp->busfreq_num == 1) {
+		dev_lock(isp->bus_dev, &isp->pdev->dev, (FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
+		printk(KERN_DEBUG "busfreq locked on <%d/%d>MHz\n", FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
+	}
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf = 0;
@@ -869,15 +914,15 @@ static int fimc_is_scalerp_video_close(struct file *file)
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power);
+
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 
 		if (!ret) {
-			err("wait timeout : %s\n", __func__);
+			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
 			ret = -EINVAL;
 		}
 
@@ -890,6 +935,21 @@ static int fimc_is_scalerp_video_close(struct file *file)
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
+
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	if (isp->busfreq_num == 1) {
+		dev_unlock(isp->bus_dev, &isp->pdev->dev);
+		printk(KERN_DEBUG "busfreq locked off\n");
+	}
+	isp->busfreq_num--;
+	if(isp->busfreq_num < 0)
+		isp->busfreq_num = 0;
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
 	return 0;
 
 }
@@ -1277,7 +1337,6 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 	struct v4l2_ext_control *ctrl, int index)
 {
 	int ret = 0;
-	u32 tmp = 0;
 	switch (ctrl->id) {
 	/* Face Detection CID handler */
 	/* 1. Overall information */
@@ -1296,131 +1355,99 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_CONFIDENCE:
 		ctrl->value = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].confidence;
+			+ dev->fd_header.offset].confidence;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_SMILE_LEVEL:
 		ctrl->value = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].smile_level;
+			+ dev->fd_header.offset].smile_level;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_BLINK_LEVEL:
 		ctrl->value = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].blink_level;
+			+ dev->fd_header.offset].blink_level;
 		break;
 	/* 2. Face information */
 	case V4L2_CID_IS_FD_GET_FACE_TOPLEFT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.offset_x;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].face.offset_x;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_TOPLEFT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.offset_y;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].face.offset_y;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_BOTTOMRIGHT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.offset_x
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].face.offset_x
 			+ dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.width;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].face.width;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_BOTTOMRIGHT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.offset_y
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].face.offset_y
 			+ dev->is_p_region->face[dev->fd_header.index
-					+ dev->fd_header.offset].face.height;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].face.height;
 		break;
 	/* 3. Left eye information */
 	case V4L2_CID_IS_FD_GET_LEFT_EYE_TOPLEFT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.offset_x;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].left_eye.offset_x;
 		break;
 	case V4L2_CID_IS_FD_GET_LEFT_EYE_TOPLEFT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.offset_y;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].left_eye.offset_y;
 		break;
 	case V4L2_CID_IS_FD_GET_LEFT_EYE_BOTTOMRIGHT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.offset_x
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].left_eye.offset_x
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.width;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].left_eye.width;
 		break;
 	case V4L2_CID_IS_FD_GET_LEFT_EYE_BOTTOMRIGHT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.offset_y
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].left_eye.offset_y
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].left_eye.height;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].left_eye.height;
 		break;
 	/* 4. Right eye information */
 	case V4L2_CID_IS_FD_GET_RIGHT_EYE_TOPLEFT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.offset_x;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].right_eye.offset_x;
 		break;
 	case V4L2_CID_IS_FD_GET_RIGHT_EYE_TOPLEFT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.offset_y;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].right_eye.offset_y;
 		break;
 	case V4L2_CID_IS_FD_GET_RIGHT_EYE_BOTTOMRIGHT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.offset_x
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].right_eye.offset_x
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.width;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].right_eye.width;
 		break;
 	case V4L2_CID_IS_FD_GET_RIGHT_EYE_BOTTOMRIGHT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.offset_y
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].right_eye.offset_y
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].right_eye.height;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].right_eye.height;
 		break;
 	/* 5. Mouth eye information */
 	case V4L2_CID_IS_FD_GET_MOUTH_TOPLEFT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].mouth.offset_x;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].mouth.offset_x;
 		break;
 	case V4L2_CID_IS_FD_GET_MOUTH_TOPLEFT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].mouth.offset_y;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
 	case V4L2_CID_IS_FD_GET_MOUTH_BOTTOMRIGHT_X:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].mouth.offset_x
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].mouth.offset_x
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].mouth.width;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].mouth.width;
 		break;
 	case V4L2_CID_IS_FD_GET_MOUTH_BOTTOMRIGHT_Y:
-		tmp = dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].mouth.offset_y
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+			+ dev->fd_header.offset].mouth.offset_y
 			+ dev->is_p_region->face[dev->fd_header.index
-				+ dev->fd_header.offset].mouth.height;
-		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
-		ctrl->value = (s32)tmp - GED_FD_RANGE;
+			+ dev->fd_header.offset].mouth.height;
 		break;
 	/* 6. Angle information */
 	case V4L2_CID_IS_FD_GET_ANGLE:
@@ -1493,7 +1520,8 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		ret = fimc_is_v4l2_shot_mode(isp, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		ret = fimc_is_v4l2_frame_rate(isp, ctrl->value);
+		/* TODO */
+		/* ret = fimc_is_v4l2_frame_rate(isp, ctrl->value); */
 		break;
 	/* Focus */
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_X:
@@ -1606,6 +1634,8 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		ret = fimc_is_v4l2_isp_afc(isp, ctrl->value);
 		break;
 	case V4L2_CID_IS_FD_SET_MAX_FACE_NUMBER:
+		/* TODO */
+		/*
 		if (ctrl->value >= 0) {
 			IS_FD_SET_PARAM_FD_CONFIG_CMD(isp,
 				FD_CONFIG_COMMAND_MAXIMUM_NUMBER);
@@ -1616,6 +1646,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(isp);
 		}
+		*/
 		break;
 	case V4L2_CID_IS_FD_SET_ROLL_ANGLE:
 		ret = fimc_is_v4l2_fd_angle_mode(isp, ctrl->value);
@@ -1647,10 +1678,12 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 			printk(KERN_INFO "VT mode is selected\n");
 		break;
 	case V4L2_CID_CAMERA_SET_ODC:
-		ret = fimc_is_ctrl_odc(isp, ctrl->value);
+		/* TODO */
+		/* ret = fimc_is_ctrl_odc(isp, ctrl->value); */
 		break;
 	case V4L2_CID_CAMERA_SET_3DNR:
-		ret = fimc_is_ctrl_3dnr(isp, ctrl->value);
+		/* TODO */
+		/* ret = fimc_is_ctrl_3dnr(isp, ctrl->value); */
 		break;
 	case V4L2_CID_CAMERA_ZOOM:
 #ifdef DZOOM_EVT0
@@ -2098,6 +2131,18 @@ static int fimc_is_3dnr_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	isp->busfreq_num++;
+	if (isp->busfreq_num == 1) {
+		dev_lock(isp->bus_dev, &isp->pdev->dev, (FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
+		printk(KERN_DEBUG "busfreq locked on <%d/%d>MHz\n", FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
+	}
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_3DNR];
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf = 0;
@@ -2130,15 +2175,15 @@ static int fimc_is_3dnr_video_close(struct file *file)
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power);
+
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 
 		if (!ret) {
-			err("wait timeout : %s\n", __func__);
+			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
 			ret = -EINVAL;
 		}
 
@@ -2151,8 +2196,22 @@ static int fimc_is_3dnr_video_close(struct file *file)
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
-	return 0;
 
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	mutex_lock(&isp->busfreq_lock);
+	if (isp->busfreq_num == 1) {
+		dev_unlock(isp->bus_dev, &isp->pdev->dev);
+		printk(KERN_DEBUG "busfreq locked off\n");
+	}
+	isp->busfreq_num--;
+	if(isp->busfreq_num < 0)
+		isp->busfreq_num = 0;
+	mutex_unlock(&isp->busfreq_lock);
+#endif
+#endif
+
+	return 0;
 }
 
 static unsigned int fimc_is_3dnr_video_poll(struct file *file,
@@ -2817,11 +2876,10 @@ static int fimc_is_bayer_video_close(struct file *file)
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power);
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 
 		if (!ret) {

@@ -689,126 +689,151 @@ void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
 	fimc_is_hw_set_intgr0_gd0(dev);
 }
 
+int fimc_is_hw_a5_power_on(struct fimc_is_dev *isp)
+{
+	u32 cfg;
+	u32 timeout;
+
+	mutex_lock(&isp->lock);
+
+	if (test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power)) {
+		printk("%s:already power on\n", __func__);
+		goto done;
+	}
+
+	dbg("%s\n", __func__);
+
+	writel(0x7, PMUREG_ISP_CONFIGURATION);
+	timeout = 1000;
+	while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7) != 0x7) {
+		if (timeout == 0)
+			printk(KERN_ERR "A5 power on failed1\n");
+		timeout--;
+		msleep(1);
+	}
+
+	enable_mipi();
+
+	/* init Clock */
+	if (isp->pdata->clk_cfg) {
+		isp->pdata->clk_cfg(isp->pdev);
+	} else {
+		dev_err(&isp->pdev->dev, "failed to config clock\n");
+		goto done;
+	}
+
+	if (isp->pdata->clk_on) {
+		isp->pdata->clk_on(isp->pdev);
+	} else {
+		dev_err(&isp->pdev->dev, "failed to clock on\n");
+		goto done;
+	}
+
+	/* 1. A5 start address setting */
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+	cfg = isp->mem.base;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	cfg = isp->mem.dvaddr;
+	if (isp->alloc_ctx)
+		fimc_is_mem_resume(isp->alloc_ctx);
+#endif
+
+	dbg("mem.base(dvaddr) : 0x%08x\n", cfg);
+	dbg("mem.base(kvaddr) : 0x%08x\n", (unsigned int)isp->mem.kvaddr);
+	writel(cfg, isp->regs + BBOAR);
+
+	/* 2. A5 power on*/
+	writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
+
+	/* 3. enable A5 */
+	writel(0x00018000, PMUREG_ISP_ARM_OPTION);
+	timeout = 1000;
+	while ((__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) != 0x1) {
+		if (timeout == 0)
+			printk(KERN_ERR "A5 power on failed2\n");
+		timeout--;
+		msleep(1);
+	}
+
+	/* HACK : fimc_is_irq_handler() cannot set 1 on FIMC_IS_PWR_ST_POWER_ON_OFF */
+	set_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
+
+done:
+	mutex_unlock(&isp->lock);
+	return 0;
+}
+
+int fimc_is_hw_a5_power_off(struct fimc_is_dev *isp)
+{
+	u32 timeout;
+
+	dbg("%s\n", __func__);
+
+	mutex_lock(&isp->lock);
+
+#if defined(CONFIG_VIDEOBUF2_ION)
+	if (isp->alloc_ctx)
+		fimc_is_mem_suspend(isp->alloc_ctx);
+#endif
+
+	if (isp->pdata->clk_off) {
+		isp->pdata->clk_off(isp->pdev);
+	} else {
+		dev_err(&isp->pdev->dev, "failed to clock on\n");
+		goto done;
+	}
+	/* 1. disable A5 */
+	writel(0x00010000, PMUREG_ISP_ARM_OPTION);
+
+	/* 2. A5 power off*/
+	writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
+
+	/* 3. Check A5 power off status register */
+	timeout = 1000;
+	while (__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) {
+		if (timeout == 0)
+			printk(KERN_ERR "A5 power off failed\n");
+		timeout--;
+		msleep(1);
+	}
+
+	/* 4. ISP Power down mode (LOWPWR) */
+	writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
+
+	writel(0x0, PMUREG_ISP_CONFIGURATION);
+
+	timeout = 1000;
+	while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7)) {
+		if (timeout == 0)
+			printk(KERN_ERR "ISP power off failed\n");
+		timeout--;
+		msleep(1);
+	}
+
+done:
+	mutex_unlock(&isp->lock);
+	return 0;
+}
+
 void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 {
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
-	int ret = 0;
 	struct device *dev = &isp->pdev->dev;
-#else
-	u32 cfg;
-	u32 timeout;
 #endif
 
 	printk(KERN_INFO "%s(%d)\n", __func__, on);
-	mutex_lock(&isp->lock);
-	if (on) {
-#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
-		ret = pm_runtime_get_sync(dev);
-#else
-		writel(0x7, PMUREG_ISP_CONFIGURATION);
-		timeout = 1000;
-		while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7) != 0x7) {
-			if (timeout == 0)
-				printk(KERN_ERR "A5 power on failed1\n");
-			timeout--;
-			mdelay(1);
-		}
-
-		enable_mipi();
-
-		/* init Clock */
-		if (isp->pdata->clk_cfg) {
-			isp->pdata->clk_cfg(isp->pdev);
-		} else {
-			dev_err(&isp->pdev->dev, "failed to config clock\n");
-			return;
-		}
-
-		if (isp->pdata->clk_on) {
-			isp->pdata->clk_on(isp->pdev);
-		} else {
-			dev_err(&isp->pdev->dev, "failed to clock on\n");
-			return;
-		}
-
-		/* 1. A5 start address setting */
-#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
-		cfg = isp->mem.base;
-#elif defined(CONFIG_VIDEOBUF2_ION)
-		cfg = isp->mem.dvaddr;
-		if (isp->alloc_ctx)
-			fimc_is_mem_resume(isp->alloc_ctx);
-#endif
-
-		dbg("mem.base(dvaddr) : 0x%08x\n", cfg);
-		dbg("mem.base(kvaddr) : 0x%08x\n", (unsigned int)isp->mem.kvaddr);
-		writel(cfg, isp->regs + BBOAR);
-
-
-		/* 3. A5 power on*/
-		writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
-
-		/* 4. enable A5 */
-		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
-		timeout = 1000;
-		while ((__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) != 0x1) {
-			if (timeout == 0)
-				printk(KERN_ERR "A5 power on failed2\n");
-			timeout--;
-			msleep(1);
-		}
-#endif
-		/* 2. enable ISP */
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power);
-		set_bit(FIMC_IS_PWR_ST_POWERED, &isp->power);
-	} else {
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &isp->power);
-
-#if defined(CONFIG_VIDEOBUF2_ION)
-		if (isp->alloc_ctx)
-			fimc_is_mem_suspend(isp->alloc_ctx);
-#endif
-		if (isp->pdata->clk_off) {
-			isp->pdata->clk_off(isp->pdev);
-		} else {
-			dev_err(&isp->pdev->dev, "failed to clock on\n");
-			return;
-		}
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
-		ret = pm_runtime_put_sync(dev);
+	if (on)
+		pm_runtime_get_sync(dev);
+	else
+		pm_runtime_put_sync(dev);
 #else
-		/* 1. disable A5 */
-		writel(0x00010000, PMUREG_ISP_ARM_OPTION);
-
-		/* 2. A5 power off*/
-		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
-
-		/* 3. Check A5 power off status register */
-		timeout = 1000;
-		while (__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) {
-			if (timeout == 0)
-				printk(KERN_ERR "A5 power off failed\n");
-			timeout--;
-			msleep(1);
-		}
-
-		/* 4. ISP Power down mode (LOWPWR) */
-		writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
-
-		writel(0x0, PMUREG_ISP_CONFIGURATION);
-
-		timeout = 1000;
-		while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7)) {
-			if (timeout == 0)
-				printk(KERN_ERR "ISP power off failed\n");
-			timeout--;
-			msleep(1);
-		}
-		//msleep(100);
+	if (on)
+		fimc_is_hw_a5_power_on(isp);
+	else 
+		fimc_is_hw_a5_power_off(isp);
 #endif
-	}
-	mutex_unlock(&isp->lock);
 }
 
 void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
@@ -947,7 +972,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		//writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_PREVIEW_VIDEO:
@@ -957,7 +981,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		//writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_STILL:
@@ -967,7 +990,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_VIDEO:
@@ -977,7 +999,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	}

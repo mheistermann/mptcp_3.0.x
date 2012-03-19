@@ -1647,8 +1647,6 @@ struct param_isp_adjust {
 	s32	exposure;
 	s32	brightness;
 	s32	hue;
-	/*s32 shutter_time_min;
-	s32	shutter_time_max; */
 	u32	reserved[PARAMETER_MAX_MEMBER-8];
 	u32	err;
 };

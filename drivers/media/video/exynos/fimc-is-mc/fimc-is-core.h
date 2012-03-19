@@ -68,8 +68,6 @@
 #define FIMC_IS_DEBUG_REGION_ADDR		0x00840000
 #define FIMC_IS_SHARED_REGION_ADDR		0x008C0000
 
-#define GED_FD_RANGE			1000
-
 #define FIMC_IS_MAX_BUF_NUM				16
 #define FIMC_IS_MAX_BUf_PLANE_NUM			3
 
@@ -113,6 +111,13 @@
 #define NUM_3DNR_INTERNAL_BUF			2
 
 #define is_af_use(dev)		((dev->af.use_af) ? 1 : 0)
+
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+#define FIMC_IS_FREQ_MIF	(500)
+#define FIMC_IS_FREQ_INT	(267)
+#endif
+#endif
 
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -264,8 +269,8 @@ enum sensor_list {
 };
 
 enum fimc_is_power {
-	FIMC_IS_PWR_ST_POWEROFF = 0,
-	FIMC_IS_PWR_ST_POWERED,
+	FIMC_IS_PWR_ST_BASE = 0,
+	FIMC_IS_PWR_ST_POWER_ON_OFF,
 	FIMC_IS_PWR_ST_STREAMING,
 	FIMC_IS_PWR_ST_SUSPENDED,
 	FIMC_IS_PWR_ST_RESUMED,
@@ -460,6 +465,13 @@ struct fimc_is_dev {
 	struct is_fd_result_header		fd_header;
 
 	/* Shared parameter region */
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	struct device				*bus_dev;
+	struct mutex				busfreq_lock;
+	int					busfreq_num;
+#endif
+#endif
 	atomic_t				p_region_num;
 	unsigned long				p_region_index1;
 	unsigned long				p_region_index2;

@@ -19,6 +19,11 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <mach/videonode.h>
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+#include <mach/dev.h>
+#endif
+#endif
 #include <media/exynos_mc.h>
 #include <linux/cma.h>
 #include <asm/cacheflush.h>
@@ -653,7 +658,7 @@ static int fimc_is_front_s_stream(struct v4l2_subdev *sd, int enable)
 		printk(KERN_INFO "fimc_is_front_s_stream : OFF\n");
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&isp->pdev->dev,
@@ -1202,63 +1207,18 @@ static int fimc_is_resume(struct device *dev)
 
 static int fimc_is_runtime_suspend(struct device *dev)
 {
-	dbg("%s\n", __func__);
-	return 0;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct fimc_is_dev *isp = (struct fimc_is_dev *)platform_get_drvdata(pdev);
+
+	return fimc_is_hw_a5_power_off(isp);
 }
 
 static int fimc_is_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct fimc_is_dev *isp = (struct fimc_is_dev *)platform_get_drvdata(pdev);
-	u32 cfg;
-	u32 timeout;
 
-	dbg("%s\n", __func__);
-
-	enable_mipi();
-
-
-	/* init Clock */
-	if (isp->pdata->clk_cfg) {
-		isp->pdata->clk_cfg(isp->pdev);
-	} else {
-		dev_err(&isp->pdev->dev, "failed to config clock\n");
-		return 0;
-	}
-
-	if (isp->pdata->clk_on) {
-		isp->pdata->clk_on(isp->pdev);
-	} else {
-		dev_err(&isp->pdev->dev, "failed to clock on\n");
-		return 0;
-	}
-
-	/* 1. A5 start address setting */
-#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
-	cfg = isp->mem.base;
-#elif defined(CONFIG_VIDEOBUF2_ION)
-	cfg = isp->mem.dvaddr;
-	if (isp->alloc_ctx)
-		fimc_is_mem_resume(isp->alloc_ctx);
-#endif
-
-	dbg("mem.base(dvaddr) : 0x%08x\n", cfg);
-	dbg("mem.base(kvaddr) : 0x%08x\n", (unsigned int)isp->mem.kvaddr);
-	writel(cfg, isp->regs + BBOAR);
-
-	/* 2. A5 power on*/
-	writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
-
-	/* 3. enable A5 */
-	writel(0x00018000, PMUREG_ISP_ARM_OPTION);
-	timeout = 1000;
-	while ((__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) != 0x1) {
-		if (timeout == 0)
-			printk(KERN_ERR "A5 power on failed2\n");
-		timeout--;
-		mdelay(1);
-	}
-	return 0;
+	return fimc_is_hw_a5_power_on(isp);
 }
 
 static int fimc_is_get_md_callback(struct device *dev, void *p)
@@ -1371,8 +1331,6 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			}
 			break;
 		case IHC_AA_DONE:
-			//printk("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
-			//dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
 			switch (dev->i2h_cmd.arg[0]) {
 			/* SEARCH: Occurs when search is requested at continuous AF */
 			case 2:
@@ -1478,8 +1436,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				dev->sensor.id_dual = 0;
 				break;
 			case HIC_POWER_DOWN:
-				clear_bit(FIMC_IS_PWR_ST_POWERED, &dev->power);
-				set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
+				clear_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &dev->power);
 				break;
 			case HIC_GET_SET_FILE_ADDR:
 				dev->setfile.base = dev->i2h_cmd.arg[1];
@@ -1954,6 +1911,14 @@ static int fimc_is_probe(struct platform_device *pdev)
 		dbg("failed to fimc_is_init_mem (%d)\n", ret);
 		goto p_err3;
 	}
+
+#ifdef CONFIG_BUSFREQ_OPP
+#ifdef CONFIG_CPU_EXYNOS5250
+	isp->bus_dev = dev_get("exynos-busfreq");
+	mutex_init(&isp->busfreq_lock);
+	isp->busfreq_num = 0;
+#endif
+#endif
 
 	/*init gpio : should be moved to stream_on */
 	if (isp->pdata->cfg_gpio) {

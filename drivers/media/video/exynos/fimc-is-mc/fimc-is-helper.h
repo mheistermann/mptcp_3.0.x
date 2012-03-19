@@ -60,6 +60,8 @@ void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev);
 int fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev);
 int fimc_is_hw_wait_intmsr0_intmsd0(struct fimc_is_dev *dev);
 void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on);
+int fimc_is_hw_a5_power_on(struct fimc_is_dev *dev);
+int fimc_is_hw_a5_power_off(struct fimc_is_dev *dev);
 void fimc_is_hw_open_sensor(struct fimc_is_dev *dev,
 					u32 id, u32 sensor_index);
 void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on);
