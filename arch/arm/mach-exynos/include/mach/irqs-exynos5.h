@@ -242,7 +242,7 @@
 
 /* optional GPIO interrupts */
 #define S5P_GPIOINT_BASE	(S5P_IRQ_EINT_BASE + 32)
-#define IRQ_GPIO1_NR_GROUPS	13
+#define IRQ_GPIO1_NR_GROUPS	14
 #define IRQ_GPIO2_NR_GROUPS	9
 #define IRQ_GPIO3_NR_GROUPS	5
 #define IRQ_GPIO4_NR_GROUPS	1
