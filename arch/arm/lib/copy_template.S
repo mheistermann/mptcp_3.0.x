@@ -123,8 +123,9 @@
 	PLD(	pld	[r1, #(PLDSIZE*3-4)]		)
 
 3:	PLD(	pld	[r1, #(PLDSIZE*4-4)]		)
-4:		cpy8w	r0, r1, r4, r5, abort=20f
+4:		ldr8w   r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
 		subs	r2, r2, #PLDSIZE
+		str8w   r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
 
 		bge	3b
 	PLD(	cmn	r2, #(PLDSIZE*3)			)
