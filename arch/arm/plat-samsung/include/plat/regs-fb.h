@@ -32,7 +32,7 @@
 
 #define VIDCON0					(0x00)
 #define VIDCON0_INTERLACE			(1 << 29)
-#define VIDCON0_VIDOUT_MASK			(0x3 << 26)
+#define VIDCON0_VIDOUT_MASK			(0x7 << 26)
 #define VIDCON0_VIDOUT_SHIFT			(26)
 #define VIDCON0_VIDOUT_RGB			(0x0 << 26)
 #define VIDCON0_VIDOUT_TV			(0x1 << 26)
