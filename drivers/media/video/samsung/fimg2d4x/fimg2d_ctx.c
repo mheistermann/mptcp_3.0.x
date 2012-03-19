@@ -28,6 +28,7 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 	struct fimg2d_clip *clp;
 	struct fimg2d_rect *r;
 
+	/* dst is mandatory */
 	if (!u->dst)
 		return -1;
 
@@ -45,34 +46,34 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 		r = &img->rect;
 
 		/* 8000: max width & height */
-		if (w > 8000 || h > 8000 || r->x1 == r->x2 || r->y1 == r->y2)
-			return -1;
-	}
-
-	scl = &p->scaling;
-
-	if (scl->mode) {
-		img = buf[ISRC];
-		r = &img->rect;
-		/* src_w and src_h of scale must be the equal to src rect */
-		if (img->addr.type &&
-			((rect_w(r) != scl->src_w) ||
-			(rect_h(r) != scl->src_h)))
+		if (w > 8000 || h > 8000)
 			return -1;
 
-		if (!scl->src_w || !scl->src_h || !scl->dst_w || !scl->dst_h)
+		if (r->x1 < 0 || r->y1 < 0 ||
+			r->x1 >= w || r->y1 >= h ||
+			r->x1 >= r->x2 || r->y1 >= r->y2)
 			return -1;
 	}
 
 	clp = &p->clipping;
-
 	if (clp->enable) {
 		img = buf[IDST];
+
+		w = img->width;
+		h = img->height;
 		r = &img->rect;
 
-		/* clip rect must be within dst rect */
-		if (clp->x1 >= r->x2 || clp->x2 <= r->x1 ||
+		if (clp->x1 < 0 || clp->y1 < 0 ||
+			clp->x1 >= w || clp->y1 >= h ||
+			clp->x1 >= clp->x2 || clp->y1 >= clp->y2 ||
+			clp->x1 >= r->x2 || clp->x2 <= r->x1 ||
 			clp->y1 >= r->y2 || clp->y2 <= r->y1)
+			return -1;
+	}
+
+	scl = &p->scaling;
+	if (scl->mode) {
+		if (!scl->src_w || !scl->src_h || !scl->dst_w || !scl->dst_h)
 			return -1;
 	}
 
@@ -82,73 +83,40 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 {
 	struct fimg2d_param *p = &cmd->param;
-	struct fimg2d_scale *scl = &p->scaling;
-	struct fimg2d_repeat *rep = &p->repeat;
-	struct fimg2d_clip *clp = &p->clipping;
-	struct fimg2d_image *img, *src, *dst;
-	struct fimg2d_rect *r, *sr, *dr;
-	unsigned int ow, oh;
+	struct fimg2d_image *img;
+	struct fimg2d_scale *scl;
+	struct fimg2d_clip *clp;
+	struct fimg2d_rect *r;
 	int i;
 
-	/* fit dst rect to image width/height */
+	clp = &p->clipping;
+	scl = &p->scaling;
+
+	/* fix dst/clip rect */
 	for (i = 0; i < MAX_IMAGES; i++) {
 		img = &cmd->image[i];
-		if (!img)
+		if (!img->addr.type)
 			continue;
 
 		r = &img->rect;
 
-		if (r->x1 < 0)
-			r->x1 = 0;
-		if (r->y1 < 0)
-			r->y2 = 0;
-		if (r->x2 > img->width)
-			r->x2 = img->width;
-		if (r->y2 > img->height)
-			r->y2 = img->height;
+		if (i == IMAGE_DST && clp->enable) {
+			if (clp->x2 > img->width)
+				clp->x2 = img->width;
+			if (clp->y2 > img->height)
+				clp->y2 = img->height;
+		} else {
+			if (r->x2 > img->width)
+				r->x2 = img->width;
+			if (r->y2 > img->height)
+				r->y2 = img->height;
+		}
 	}
 
-	/* avoid devided by zero error */
+	/* avoid devided-by-zero */
 	if (scl->mode &&
 		(scl->src_w == scl->dst_w && scl->src_h == scl->dst_h))
 		scl->mode = NO_SCALING;
-
-	src = &cmd->image[ISRC];
-	dst = &cmd->image[IDST];
-
-	sr = &src->rect;
-	dr = &dst->rect;
-
-	/* fit dst rect to drawing output rect */
-	if (src->addr.type && !rep->mode) {
-		ow = rect_w(sr);
-		oh = rect_h(sr);
-
-		if (scl->mode) {
-			ow = scl->dst_w;
-			oh = scl->dst_h;
-		}
-
-		if (p->rotate == ROT_90 || p->rotate == ROT_270)
-			swap(ow, oh);
-
-		if (ow < rect_w(dr))
-			dr->x2 = dr->x1 + ow;
-		if (oh < rect_h(dr))
-			dr->y2 = dr->y1 + oh;
-	}
-
-	/* fit clip rect to dst rect */
-	if (clp->enable) {
-		if (clp->x1 < dr->x1)
-			clp->x1 = dr->x1;
-		if (clp->y1 < dr->y1)
-			clp->y1 = dr->y1;
-		if (clp->x2 > dr->x2)
-			clp->x2 = dr->x2;
-		if (clp->y2 > dr->y2)
-			clp->y2 = dr->y2;
-	}
 }
 
 static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
