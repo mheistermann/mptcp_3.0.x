@@ -21,6 +21,7 @@
 
 #include <asm/cacheflush.h>
 #include <asm/hardware/cache-l2x0.h>
+#include <asm/cputype.h>
 
 #include <plat/cpu.h>
 #include <plat/pm.h>
@@ -245,10 +246,22 @@ void exynos4_scu_enable(void __iomem *scu_base)
 {
 	u32 scu_ctrl;
 
+#ifdef CONFIG_ARM_ERRATA_764369
+	/* Cortex-A9 only */
+	if ((read_cpuid(CPUID_ID) & 0xff0ffff0) == 0x410fc090) {
+		scu_ctrl = __raw_readl(scu_base + 0x30);
+		if (!(scu_ctrl & 1))
+			__raw_writel(scu_ctrl | 0x1, scu_base + 0x30);
+	}
+#endif
+
 	scu_ctrl = __raw_readl(scu_base);
 	/* already enabled? */
 	if (scu_ctrl & 1)
 		return;
+
+	if (soc_is_exynos4412() && (samsung_rev() >= EXYNOS4412_REV_1_0))
+		scu_ctrl |= (1<<3);
 
 	scu_ctrl |= 1;
 	__raw_writel(scu_ctrl, scu_base);
