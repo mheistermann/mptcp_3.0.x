@@ -980,12 +980,12 @@ static struct clk exynos5_init_clocks_off[] = {
 		.ctrlbit	= (1 << 27),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(mfc_l, 13),
+		.devname	= SYSMMU_CLOCK_NAME(mfc_r, 14),
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(mfc_r, 14),
+		.devname	= SYSMMU_CLOCK_NAME(mfc_l, 13),
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 2),
 	}, {
