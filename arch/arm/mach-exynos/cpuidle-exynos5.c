@@ -25,6 +25,7 @@
 #include <plat/gpio-core.h>
 #include <plat/regs-otg.h>
 #include <plat/devs.h>
+#include <plat/cpu.h>
 
 #include <mach/regs-pmu5.h>
 #include <mach/pm-core.h>
@@ -354,7 +355,8 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 	/*
 	 * GPS can not turn off.
 	 */
-	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
+	if (samsung_rev() < EXYNOS5250_REV_1_0)
+		__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
 	if (exynos5_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 		/*
