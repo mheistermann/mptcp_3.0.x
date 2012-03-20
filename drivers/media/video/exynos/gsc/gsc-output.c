@@ -713,6 +713,7 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 			return;
 		}
 		gsc_hw_set_input_buf_masking(gsc, vb->v4l2_buf.index, false);
+		gsc_hw_set_in_pingpong_update(gsc);
 	} else {
 		gsc_err("All requested buffers have been queued already");
 		return;
@@ -723,6 +724,8 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 			gsc_disp_fifo_sw_reset(gsc);
 			gsc_pixelasync_sw_reset(gsc);
 		}
+		gsc_hw_set_one_frm_mode(gsc, false);
+		gsc_hw_set_clock_mode(gsc, 1);
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
 		if (ret < 0) {
