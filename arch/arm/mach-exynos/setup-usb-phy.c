@@ -745,6 +745,7 @@ static int __maybe_unused exynos_usb_hsic_exit(struct platform_device *pdev)
 static int exynos5_usb_phy30_init(struct platform_device *pdev)
 {
 	u32 reg;
+	bool use_ext_clk = true;
 
 	exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
 
@@ -755,10 +756,20 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 	writel(0x03fff820, EXYNOS_USB3_PHYPARAM1);
 	writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
-	/* REVISIT : Over-current pin is inactive on SMDK5250 */
-	if (soc_is_exynos5250())
+
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		/* Over-current pin is inactive on SMDK5250 rev 0.0 */
 		writel((readl(EXYNOS_USB3_LINKPORT) & ~(0x3<<4)) |
 			(0x3<<2), EXYNOS_USB3_LINKPORT);
+	} else {
+		/* REVISIT :use externel clock 100MHz */
+		if (use_ext_clk)
+			writel(readl(EXYNOS_USB3_PHYPARAM0) | (0x1<<31),
+				EXYNOS_USB3_PHYPARAM0);
+		else
+			writel(readl(EXYNOS_USB3_PHYPARAM0) & ~(0x1<<31),
+				EXYNOS_USB3_PHYPARAM0);
+	}
 
 	/* UTMI Power Control */
 	writel(EXYNOS_USB3_PHYUTMI_OTGDISABLE, EXYNOS_USB3_PHYUTMI);
