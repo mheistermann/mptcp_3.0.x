@@ -104,6 +104,27 @@ struct dw_mci_slot {
 	int			last_detect_state;
 };
 
+#define MAX_TUING_LOOP 40
+
+static const u8 tuning_blk_pattern[] = {
+	0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00,
+	0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc, 0xcc,
+	0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff, 0xff,
+	0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee, 0xff,
+	0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd, 0xdd,
+	0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff, 0xbb,
+	0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff, 0xff,
+	0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee, 0xff,
+	0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00,
+	0x00, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc,
+	0xcc, 0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff,
+	0xff, 0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee,
+	0xff, 0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd,
+	0xdd, 0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff,
+	0xbb, 0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff,
+	0xff, 0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee,
+};
+
 #if defined(CONFIG_DEBUG_FS)
 static int dw_mci_req_show(struct seq_file *s, void *v)
 {
@@ -896,6 +917,154 @@ static void dw_mci_enable_sdio_irq(struct mmc_host *mmc, int enb)
 	}
 }
 
+static u8 dw_mci_tuning_sampling(struct dw_mci * host)
+{
+	u32 clksel;
+	u8 sample;
+
+	clksel = mci_readl(host, CLKSEL);
+	sample = clksel & 0x7;
+	sample = (++sample == 8) ? 0 : sample;
+	clksel = (clksel & 0xfffffff8) | (sample & 0x7);
+	mci_writel(host, CLKSEL, clksel);
+
+	return sample;
+}
+
+static void dw_mci_set_sampling(struct dw_mci * host, u8 sample)
+{
+	u32 clksel;
+
+	clksel = mci_readl(host, CLKSEL);
+	clksel = (clksel & 0xfffffff8) | (sample & 0x7);
+	mci_writel(host, CLKSEL, clksel);
+}
+
+static u8 dw_mci_get_sampling(struct dw_mci * host)
+{
+	u32 clksel;
+	u8 sample;
+
+	clksel = mci_readl(host, CLKSEL);
+	sample = clksel & 0x7;
+
+	return sample;
+}
+
+static u8 get_median_sample(u8 map)
+{
+	u8 min = 0, max = 0;
+	u8 pos;
+	u8 i;
+
+	for (i = 0; i < 4; i++) {
+		if ((map >> (4 + i)) & 0x1)
+			max = 4 + i;
+		if ((map >> (3 - i)) & 0x1)
+			min = 3 - i;
+	}
+
+	pos = max;
+	do {
+		max = pos;
+		pos = DIV_ROUND_CLOSEST(min + max, 2);
+		if ((map >> pos) & 0x1)
+			break;
+
+	} while(pos != max);
+
+	return pos;
+}
+
+static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	unsigned int tuning_loop = MAX_TUING_LOOP;
+	u8 *tuning_blk;
+	u8 blksz;
+	u8 tune, start_tune;
+	u8 map = 0, mid;
+
+	if (opcode == MMC_SEND_TUNING_BLOCK_HS200) {
+		if (mmc->ios.bus_width == MMC_BUS_WIDTH_8)
+			blksz = 128;
+		else if (mmc->ios.bus_width == MMC_BUS_WIDTH_4)
+			blksz = 64;
+		else
+			return -EINVAL;
+	} else if (opcode == MMC_SEND_TUNING_BLOCK) {
+		blksz = 64;
+	} else {
+		dev_err(&mmc->class_dev,
+			"Undefined command(%d) for tuning\n",
+			opcode);
+		return -EINVAL;
+	}
+
+	tuning_blk = kmalloc(blksz, GFP_KERNEL);
+	if (!tuning_blk)
+		return -ENOMEM;
+
+	start_tune = dw_mci_get_sampling(host);
+
+	do {
+		struct mmc_command cmd = {0};
+		struct mmc_request mrq = {NULL};
+		struct mmc_data data = {0};
+		struct scatterlist sg;
+
+		cmd.opcode = opcode;
+		cmd.arg = 0;
+		cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+
+		data.blksz = blksz;
+		data.blocks = 1;
+		data.flags = MMC_DATA_READ;
+		data.sg = &sg;
+		data.sg_len = 1;
+
+		sg_init_one(&sg, tuning_blk, blksz);
+		dw_mci_set_timeout(host);
+
+		mrq.cmd = &cmd;
+		mrq.data = &data;
+		host->mrq = &mrq;
+
+		tune = dw_mci_tuning_sampling(host);
+
+		mmc_wait_for_req(mmc, &mrq);
+
+		if (!cmd.error && !data.error) {
+			if (!memcmp(tuning_blk_pattern, tuning_blk, blksz))
+				map |= (1 << tune);
+		} else {
+			dev_dbg(&mmc->class_dev,
+				"Tuning error: cmd.error:%d, data.error:%d\n",
+				cmd.error, data.error);
+		}
+
+		if (start_tune == tune) {
+			if (!map) {
+				tuning_loop = 0;
+				break;
+			}
+
+			mid = get_median_sample(map);
+			dw_mci_set_sampling(host, mid);
+			break;
+		}
+
+	} while(--tuning_loop);
+
+	kfree(tuning_blk);
+
+	if (!tuning_loop)
+		return -EIO;
+
+	return 0;
+}
+
 static const struct mmc_host_ops dw_mci_ops = {
 	.request		= dw_mci_request,
 	.pre_req		= dw_mci_pre_req,
@@ -904,6 +1073,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.get_ro			= dw_mci_get_ro,
 	.get_cd			= dw_mci_get_cd,
 	.enable_sdio_irq	= dw_mci_enable_sdio_irq,
+	.execute_tuning		= dw_mci_execute_tuning,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
