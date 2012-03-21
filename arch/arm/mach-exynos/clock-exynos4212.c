@@ -30,7 +30,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/exynos-clock.h>
-#include <mach/dev-sysmmu.h>
+#include <mach/sysmmu.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos4212_clock_save[] = {
@@ -355,30 +355,21 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 20 | 1 << 21),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(g2d_acp, 15),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(2d, 14),
 		.enable		= exynos4_clk_ip_dmc_ctrl,
 		.ctrlbit	= (1 << 24),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(is_isp, 16),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(isp, 9),
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
-		.ctrlbit	= (1 << 8),
+		.ctrlbit	= (7 << 8),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(is_drc, 17),
-		.enable		= exynos4212_clk_ip_isp0_ctrl,
-		.ctrlbit	= (1 << 9),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(is_fd, 18),
-		.enable		= exynos4212_clk_ip_isp0_ctrl,
-		.ctrlbit	= (1 << 10),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
+		.name		= SYSMMU_CLOCK_NAME2,
+		.devname	= SYSMMU_CLOCK_DEVNAME(isp, 9),
 		.enable		= exynos4212_clk_ip_isp1_ctrl,
 		.ctrlbit	= (1 << 4),
+	}, {
 	},
 #ifndef CONFIG_SAMSUNG_C2C
 	{

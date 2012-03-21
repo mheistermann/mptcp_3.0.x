@@ -139,6 +139,11 @@ config EXYNOS4_SETUP_DP
 	help
 	  Common setup code for DP.
 
+config EXYNOS_DEV_SYSMMU
+	bool
+	help
+	  Common setup code for SYSTEM MMU in EXYNOS
+
 config EXYNOS_DEV_PD
 	bool
 	help
@@ -462,7 +467,7 @@ config MACH_SMDKC210
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
-	select S5P_SYSTEM_MMU
+	select EXYNOS_DEV_SYSMMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -499,7 +504,7 @@ config MACH_SMDKV310
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
-	select S5P_SYSTEM_MMU
+	select EXYNOS_DEV_SYSMMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -526,7 +531,6 @@ config MACH_ARMLEX4210
 	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
-	select S5P_SYSTEM_MMU
 	select EXYNOS4_DEV_AHCI
 	select EXYNOS4_SETUP_SDHCI
 	help
@@ -592,7 +596,7 @@ config MACH_SMDK4X12
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
 	select S5P_DEV_THERMAL
-	select S5P_SYSTEM_MMU
+	select EXYNOS_DEV_SYSMMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
@@ -642,6 +646,7 @@ config MACH_SMDK5250
 	select S5P_DEV_I2C_HDMIPHY
 	select S5P_DEV_THERMAL
 	select EXYNOS_DEV_PD
+	select EXYNOS_DEV_SYSMMU
 	select EXYNOS4_DEV_FIMC_LITE
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_I2C2

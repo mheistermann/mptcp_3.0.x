@@ -27,7 +27,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
-#include <mach/dev-sysmmu.h>
+#include <mach/sysmmu.h>
 #include <mach/exynos-clock.h>
 #include <mach/clock-domain.h>
 
@@ -818,65 +818,50 @@ static struct clk exynos4_init_clocks_off[] = {
 		.enable         = exynos4_clk_dac_ctrl,
 		.ctrlbit        = (1 << 0),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(sss, 0),
-		.enable		= exynos4_clk_ip_dmc_ctrl,
-		.ctrlbit	= (1 << 12),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(mfc_lr, 0),
+		.enable		= exynos4_clk_ip_mfc_ctrl,
+		.ctrlbit	= (3 << 1),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc0, 1),
-		.enable		= exynos4_clk_ip_cam_ctrl,
-		.ctrlbit	= (1 << 7),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc1, 2),
-		.enable		= exynos4_clk_ip_cam_ctrl,
-		.ctrlbit	= (1 << 8),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc2, 3),
-		.enable		= exynos4_clk_ip_cam_ctrl,
-		.ctrlbit	= (1 << 9),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc3, 4),
-		.enable		= exynos4_clk_ip_cam_ctrl,
-		.ctrlbit	= (1 << 10),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(jpeg, 5),
-		.enable		= exynos4_clk_ip_cam_ctrl,
-		.ctrlbit	= (1 << 11),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimd0, 6),
-		.enable		= exynos4_clk_ip_lcd0_ctrl,
-		.ctrlbit	= (1 << 4),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(rot, 10),
-		.enable		= exynos4_clk_ip_image_ctrl,
-		.ctrlbit	= (1 << 4),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(mdma, 11),
-		.enable		= exynos4_clk_ip_image_ctrl,
-		.ctrlbit	= (1 << 5),
-	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(tv, 12),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(tv, 2),
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(mfc_l, 13),
-		.enable		= exynos4_clk_ip_mfc_ctrl,
-		.ctrlbit	= (1 << 1),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(jpeg, 3),
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 11),
 	}, {
-		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(mfc_r, 14),
-		.enable		= exynos4_clk_ip_mfc_ctrl,
-		.ctrlbit	= (1 << 2),
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(rot, 4),
+		.enable		= exynos4_clk_ip_image_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(fimc0, 5),
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(fimc1, 6),
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 8),
+	}, {
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(fimc2, 7),
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 9),
+	}, {
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(fimc3, 8),
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 10),
+	}, {
+		.name		= SYSMMU_CLOCK_NAME,
+		.devname	= SYSMMU_CLOCK_DEVNAME(fimd0, 10),
+		.enable		= exynos4_clk_ip_lcd0_ctrl,
+		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "ppmumfc",
 		.enable		= exynos4_clk_ip_mfc_ctrl,

@@ -70,7 +70,6 @@
 #include <plat/sdhci.h>
 #include <plat/mshci.h>
 #include <plat/iic.h>
-#include <plat/sysmmu.h>
 #include <plat/pd.h>
 #include <plat/backlight.h>
 #include <plat/regs-fb-v4.h>
@@ -86,7 +85,7 @@
 
 #include <mach/map.h>
 #include <mach/media.h>
-#include <mach/dev-sysmmu.h>
+#include <mach/sysmmu.h>
 #include <mach/regs-clock.h>
 #include <mach/exynos-ion.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -1816,23 +1815,6 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
-#ifdef CONFIG_S5P_SYSTEM_MMU
-	&SYSMMU_PLATDEV(sss),
-	&SYSMMU_PLATDEV(fimc0),
-	&SYSMMU_PLATDEV(fimc1),
-	&SYSMMU_PLATDEV(fimc2),
-	&SYSMMU_PLATDEV(fimc3),
-	&SYSMMU_PLATDEV(jpeg),
-	&SYSMMU_PLATDEV(fimd0),
-	&SYSMMU_PLATDEV(fimd1),
-	&SYSMMU_PLATDEV(pcie),
-	&SYSMMU_PLATDEV(2d),
-	&SYSMMU_PLATDEV(rot),
-	&SYSMMU_PLATDEV(mdma),
-	&SYSMMU_PLATDEV(tv),
-	&SYSMMU_PLATDEV(mfc_l),
-	&SYSMMU_PLATDEV(mfc_r),
-#endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
@@ -2292,46 +2274,35 @@ static void __init smdkv310_map_io(void)
 
 static void __init exynos_sysmmu_init(void)
 {
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc0, &exynos4_device_pd[PD_CAM].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc1, &exynos4_device_pd[PD_CAM].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc2, &exynos4_device_pd[PD_CAM].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc3, &exynos4_device_pd[PD_CAM].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos4_device_pd[PD_CAM].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimd0, &exynos4_device_pd[PD_LCD0].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(2d, &exynos4_device_pd[PD_LCD0].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(rot, &exynos4_device_pd[PD_LCD0].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(tv, &exynos4_device_pd[PD_TV].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos4_device_pd[PD_MFC].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos4_device_pd[PD_MFC].dev);
 #if defined CONFIG_VIDEO_FIMC
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc0).dev, &s3c_device_fimc0.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc1).dev, &s3c_device_fimc1.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc2).dev, &s3c_device_fimc2.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc3).dev, &s3c_device_fimc3.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc0).dev, &s3c_device_fimc0.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc1).dev, &s3c_device_fimc1.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc2).dev, &s3c_device_fimc2.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc3).dev, &s3c_device_fimc3.dev);
 #elif defined CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc0).dev, &s5p_device_fimc0.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc1).dev, &s5p_device_fimc1.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc2).dev, &s5p_device_fimc2.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc3).dev, &s5p_device_fimc3.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc0).dev, &s5p_device_fimc0.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc1).dev, &s5p_device_fimc1.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc2).dev, &s5p_device_fimc2.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc3).dev, &s5p_device_fimc3.dev);
 #endif
 #ifdef CONFIG_VIDEO_JPEG
-	sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
 #endif
 #ifdef CONFIG_FB_S3C
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimd0).dev, &s5p_device_fimd0.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(fimd0).dev, &s5p_device_fimd0.dev);
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
-	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
 #endif
 #ifdef CONFIG_VIDEO_TVOUT
-	sysmmu_set_owner(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
 #endif
 #if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(mfc_lr).dev, &s5p_device_mfc.dev);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
-	sysmmu_set_owner(&SYSMMU_PLATDEV(rot).dev, &exynos_device_rotator.dev);
+	platform_set_sysmmu(&SYSMMU_PLATDEV(rot).dev,
+						&exynos_device_rotator.dev);
 #endif
 }
 
