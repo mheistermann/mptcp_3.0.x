@@ -389,7 +389,7 @@ void gsc_set_prefbuf(struct gsc_dev *gsc, struct gsc_frame frm)
 			s_chk_len = frm.payload[high_plane];
 		}
 	}
-	s5p_sysmmu_set_prefbuf(&gsc->pdev->dev, f_chk_addr, f_chk_len,
+	exynos_sysmmu_set_prefbuf(&gsc->pdev->dev, f_chk_addr, f_chk_len,
 			       s_chk_addr, s_chk_len);
 	gsc_dbg("f_addr = 0x%08x, f_len = %d, s_addr = 0x%08x, s_len = %d\n",
 		f_chk_addr, f_chk_len, s_chk_addr, s_chk_len);
