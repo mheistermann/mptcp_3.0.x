@@ -2380,7 +2380,7 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	if (samsung_rev() != EXYNOS4210_REV_1_1)
 		exynos_dwmci_pdata.caps &= ~(MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR);
-	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
+	exynos_dwmci_set_platdata(&exynos_dwmci_pdata. 0);
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC
