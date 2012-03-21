@@ -155,10 +155,6 @@ static int ohci_hcd_s5p_drv_runtime_suspend(struct device *dev)
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	spin_unlock_irqrestore(&ohci->lock, flags);
 
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0())
-		ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
-#endif
 	if (pdata->phy_suspend)
 		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
 
@@ -171,9 +167,7 @@ static int ohci_hcd_s5p_drv_runtime_resume(struct device *dev)
 	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ohci->hcd;
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
-#endif
+
 	if (dev->power.is_suspended)
 		return 0;
 
@@ -182,12 +176,8 @@ static int ohci_hcd_s5p_drv_runtime_resume(struct device *dev)
 	/* Mark hardware accessible again as we are out of D3 state by now */
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0())
-		ohci_writel (ohci, RH_HS_LPSC, &ohci->regs->roothub.status);
-#endif
-
 	ohci_finish_controller_resume(hcd);
+
 	return 0;
 }
 #else
@@ -386,10 +376,6 @@ static int __devinit ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 
 	ohci = hcd_to_ohci(hcd);
 	ohci_hcd_init(ohci);
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0())
-		ohci->flags |= OHCI_QUIRK_SUPERIO;
-#endif
 
 	err = usb_add_hcd(hcd, irq,
 				IRQF_DISABLED | IRQF_SHARED);
@@ -404,16 +390,9 @@ static int __devinit ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 	create_ohci_sys_file(ohci);
 	s5p_ohci->power_on = 1;
 
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0()) {
-		ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
-		(void)ohci_readl(ohci, &ohci->regs->intrdisable);
-
-		ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
-	}
-#endif
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
+
 	return 0;
 
 fail:

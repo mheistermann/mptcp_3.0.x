@@ -202,26 +202,10 @@ static int s5p_ehci_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
-	struct usb_hcd *hcd = s5p_ehci->hcd;
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-#endif
+
 	if (pdata && pdata->phy_suspend)
 		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
 
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0()) {
-		ehci_hub_control(hcd,
-			ClearPortFeature,
-			USB_PORT_FEAT_POWER,
-			1, NULL, 0);
-		/* Flush those writes */
-		ehci_readl(ehci, &ehci->regs->command);
-
-		msleep(20);
-	}
-#endif
 	return 0;
 }
 
@@ -261,18 +245,6 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 		ehci_port_power(ehci, 1);
 
 		hcd->state = HC_STATE_SUSPENDED;
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	} else {
-		if (samsung_board_rev_is_0_0()) {
-			ehci_hub_control(ehci_to_hcd(ehci),
-					SetPortFeature,
-					USB_PORT_FEAT_POWER,
-					1, NULL, 0);
-			/* Flush those writes */
-			ehci_readl(ehci, &ehci->regs->command);
-			msleep(20);
-		}
-#endif
 	}
 
 	return 0;
@@ -474,13 +446,6 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 	create_ehci_sys_file(ehci);
 	s5p_ehci->power_on = 1;
 
-#ifdef CONFIG_USB_EXYNOS_SWITCH
-	if (samsung_board_rev_is_0_0())
-		ehci_hub_control(ehci_to_hcd(ehci),
-				ClearPortFeature,
-				USB_PORT_FEAT_POWER,
-				1, NULL, 0);
-#endif
 #ifdef CONFIG_USB_SUSPEND
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
