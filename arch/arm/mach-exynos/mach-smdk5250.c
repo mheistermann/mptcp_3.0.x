@@ -993,6 +993,12 @@ static struct dw_mci_board exynos5_dwmci0_pdata __initdata = {
 	.cfg_gpio		= exynos_dwmci0_cfg_gpio,
 };
 
+static int smdk5250_dwmci_get_ro(u32 slot_id)
+{
+	/* smdk5250 rev1.0 did not support SD/MMC card write pritect. */
+	return 0;
+}
+
 static void exynos_dwmci2_cfg_gpio(int width)
 {
 	unsigned int gpio;
@@ -1031,6 +1037,7 @@ static struct dw_mci_board exynos5_dwmci2_pdata __initdata = {
 	.hclk_name		= "dwmci",
 	.cclk_name		= "sclk_dwmci",
 	.cfg_gpio		= exynos_dwmci2_cfg_gpio,
+	.get_ro		= smdk5250_dwmci_get_ro,
 };
 
 #ifdef CONFIG_VIDEO_FIMG2D
