@@ -961,7 +961,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.devname	= "exynos5-fimc-is",
 		.enable		= exynos5_clk_ip_isp1_ctrl,
 		.ctrlbit	= (0x3007 << 0),
-	},{
+	}, {
 		.name		= "hdmi",
 		.devname	= "exynos5-hdmi",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
@@ -2331,7 +2331,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	clk_fout_vpll.rate = vpll;
 
 	printk(KERN_INFO "EXYNOS5: PLL settings, A=%ld, B=%ld, C=%ld\n"
-			"M=%ld, E=%ld V=%ld",
+			"M=%ld, E=%ld V=%ld\n",
 			apll, bpll, cpll, mpll, epll, vpll);
 
 	if ((soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0))
@@ -2354,7 +2354,6 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 			armclk, mclk_cdrex, aclk_400,
 			aclk_333, aclk_266, aclk_200,
 			aclk_166, aclk_66);
-
 
 	clk_fout_epll.ops = &exynos5_epll_ops;
 	clk_fout_vpll.ops = &exynos5_vpll_ops;
