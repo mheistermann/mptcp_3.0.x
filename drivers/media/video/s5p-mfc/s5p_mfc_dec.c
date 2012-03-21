@@ -231,7 +231,7 @@ static struct v4l2_queryctrl controls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Cacheable flag",
 		.minimum = 0,
-		.maximum = 2,
+		.maximum = 3,
 		.step = 1,
 		.default_value = 0,
 	},
