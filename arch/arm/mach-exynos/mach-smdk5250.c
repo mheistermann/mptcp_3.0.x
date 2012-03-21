@@ -74,9 +74,7 @@
 #include <mach/ppmu.h>
 #include <mach/dev.h>
 #include <mach/regs-pmu.h>
-#ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
-#endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
@@ -947,6 +945,46 @@ static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 	.cfg_gpio		= exynos_dwmci_cfg_gpio,
 };
 #endif
+
+static void exynos_dwmci2_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS5_GPC3(0); gpio < EXYNOS5_GPC3(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	}
+
+	switch (width) {
+	case MMC_BUS_WIDTH_4:
+		for (gpio = EXYNOS5_GPC3(3); gpio <= EXYNOS5_GPC3(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+		break;
+	case MMC_BUS_WIDTH_1:
+		gpio = EXYNOS5_GPC3(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos5_dwmci2_pdata __initdata = {
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz			= 22 * 1000 * 1000,
+	.caps			= MMC_CAP_CMD23,
+	.fifo_depth             = 0x80,
+	.detect_delay_ms	= 200,
+	.hclk_name		= "dwmci",
+	.cclk_name		= "sclk_dwmci",
+	.cfg_gpio		= exynos_dwmci2_cfg_gpio,
+};
 
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
@@ -2219,6 +2257,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
 #endif
+	&exynos5_device_dwmci2,
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
@@ -2778,8 +2817,16 @@ static void __init smdk5250_machine_init(void)
 	s3c_i2c5_set_platdata(NULL);
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		exynos_dwmci_set_platdata(&exynos5_dwmci2_pdata, 2);
+		dev_set_name(&exynos5_device_dwmci2.dev, "s3c-sdhci.2");
+		clk_add_alias("dwmci", "dw_mmc.2", "hsmmc",
+			&exynos5_device_dwmci2.dev);
+		clk_add_alias("sclk_dwmci", "dw_mmc.2", "sclk_mmc",
+			&exynos5_device_dwmci2.dev);
+	} else {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
-	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
+	exynos_dwmci_set_platdata(&exynos_dwmci_pdata, 0);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk5250_hsmmc0_pdata);
@@ -2793,6 +2840,7 @@ static void __init smdk5250_machine_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk5250_hsmmc3_pdata);
 #endif
+	}
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();
 #endif

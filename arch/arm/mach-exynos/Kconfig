@@ -671,6 +671,7 @@ config MACH_SMDK5250
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_MFC
 	select EXYNOS5_DEV_AHCI
+	select EXYNOS5_DEV_DWMCI2
 	select EXYNOS_DEV_SS_UDC
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
@@ -688,6 +689,21 @@ config EXYNOS4_DEV_DWMCI
 	default n
 	help
 	IF DWMCI is used, SDHC channel 0 is disabled.
+
+config EXYNOS5_DEV_DWMCI1
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 1
+
+config EXYNOS5_DEV_DWMCI2
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 2
+
+config EXYNOS5_DEV_DWMCI3
+	bool
+	help
+	  Compile in platform device definitions for DWMCI channel 3
 
 config S5P_DEV_MSHC
 	bool "MSHCI"
