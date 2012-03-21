@@ -113,8 +113,8 @@ int s5p_mfc_clock_on(void)
 #endif
 
 	ret = clk_enable(pm->clock);
-	if (atomic_read(&clk_ref) == 1)
-		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+	if (ret >= 0)
+		ret = s5p_mfc_mem_resume(dev->alloc_ctx[0]);
 
 	return ret;
 }
@@ -128,8 +128,8 @@ void s5p_mfc_clock_off(void)
 	mfc_debug(3, "- %d", atomic_read(&clk_ref));
 #endif
 
-	if (atomic_read(&clk_ref) == 0)
-		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+	s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+
 	clk_disable(pm->clock);
 }
 
@@ -239,17 +239,23 @@ int s5p_mfc_clock_on(void)
 
 	mfc_debug(3, "+ %d", state);
 
-	if (state == 1) {
-		ret = clk_enable(pm->clock);
-		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
-		if (dev->fw.date >= 0x120206) {
-			val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
-			val &= ~(0x1);
-			s5p_mfc_write_reg(val, S5P_FIMV_MFC_BUS_RESET_CTRL);
-		}
+	ret = clk_enable(pm->clock);
+	if (ret < 0)
+		return ret;
+
+	ret = s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+	if (ret < 0) {
+		clk_disable(pm->clock);
+		return ret;
 	}
 
-	return ret;
+	if (dev->fw.date >= 0x120206) {
+		val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
+		val &= ~(0x1);
+		s5p_mfc_write_reg(val, S5P_FIMV_MFC_BUS_RESET_CTRL);
+	}
+
+	return 0;
 }
 
 void s5p_mfc_clock_off(void)
@@ -262,23 +268,21 @@ void s5p_mfc_clock_off(void)
 
 	mfc_debug(3, "- %d", state);
 
-	if (state == 0) {
-		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
-		if (dev->fw.date >= 0x120206) {
-			s5p_mfc_write_reg(0x1, S5P_FIMV_MFC_BUS_RESET_CTRL);
+	s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+	if (dev->fw.date >= 0x120206) {
+		s5p_mfc_write_reg(0x1, S5P_FIMV_MFC_BUS_RESET_CTRL);
 
-			timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
-			/* Check bus status */
-			do {
-				if (time_after(jiffies, timeout)) {
-					mfc_err("Timeout while resetting MFC.\n");
-					break;
-				}
-				val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
-			} while ((val & 0x2) == 0);
-		}
-		clk_disable(pm->clock);
+		timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
+		/* Check bus status */
+		do {
+			if (time_after(jiffies, timeout)) {
+				mfc_err("Timeout while resetting MFC.\n");
+				break;
+			}
+			val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
+		} while ((val & 0x2) == 0);
 	}
+	clk_disable(pm->clock);
 
 	if (state < 0) {
 		mfc_err("Clock state is wrong(%d)\n", state);

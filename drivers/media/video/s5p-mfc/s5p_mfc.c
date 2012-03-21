@@ -853,7 +853,9 @@ static int s5p_mfc_open(struct file *file)
 		}
 
 #ifndef CONFIG_PM_RUNTIME
-		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+		ret = s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+		if (ret < 0)
+			goto err_mem_resume;
 #endif
 		dev->curr_ctx = ctx->num;
 
@@ -869,8 +871,8 @@ static int s5p_mfc_open(struct file *file)
 err_hw_init:
 #ifndef CONFIG_PM_RUNTIME
 	s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+err_mem_resume:
 #endif
-
 	if (s5p_mfc_power_off() < 0)
 		mfc_err("power off failed\n");
 

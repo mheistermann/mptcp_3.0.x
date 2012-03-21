@@ -169,9 +169,9 @@ void s5p_mfc_mem_suspend(void *alloc_ctx)
 	/* NOP */
 }
 
-void s5p_mfc_mem_resume(void *alloc_ctx)
+int s5p_mfc_mem_resume(void *alloc_ctx)
 {
-	/* NOP */
+	return 0;
 }
 
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
@@ -310,11 +310,12 @@ void s5p_mfc_mem_suspend(void *alloc_ctx)
 	s5p_mfc_clock_off();
 }
 
-void s5p_mfc_mem_resume(void *alloc_ctx)
+int s5p_mfc_mem_resume(void *alloc_ctx)
 {
 	s5p_mfc_clock_on();
 	vb2_sdvmm_resume(alloc_ctx);
 	s5p_mfc_clock_off();
+	return 0;
 }
 
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
@@ -389,9 +390,9 @@ void s5p_mfc_mem_suspend(void *alloc_ctx)
 	vb2_ion_suspend(alloc_ctx);
 }
 
-void s5p_mfc_mem_resume(void *alloc_ctx)
+int s5p_mfc_mem_resume(void *alloc_ctx)
 {
-	vb2_ion_resume(alloc_ctx);
+	return vb2_ion_resume(alloc_ctx);
 }
 
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
