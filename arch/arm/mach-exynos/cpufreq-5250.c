@@ -83,20 +83,20 @@ static unsigned int clkdiv_cpu0_5250[CPUFREQ_LEVEL_END][8] = {
 	{ 0, 5, 7, 7, 7, 1, 5, 0 },	/* L2: 2000Mhz */
 	{ 0, 4, 7, 7, 7, 1, 5, 0 },	/* L3: 1900Mhz */
 	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L4: 1800Mhz */
-	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L5: 1700Mhz */
-	{ 0, 4, 7, 7, 7, 1, 4, 0 },	/* L6: 1600MHz */
-	{ 0, 3, 7, 7, 7, 1, 4, 0 },	/* L7: 1500Mhz */
-	{ 0, 3, 7, 7, 6, 1, 3, 0 },	/* L8: 1400Mhz */
-	{ 0, 3, 7, 7, 6, 1, 3, 0 },	/* L9: 1300Mhz */
-	{ 0, 3, 7, 7, 5, 1, 3, 0 },	/* L10: 1200Mhz */
-	{ 0, 2, 7, 7, 5, 1, 2, 0 },	/* L11: 1100MHz */
-	{ 0, 2, 7, 7, 4, 1, 2, 0 },	/* L12: 1000MHz */
-	{ 0, 2, 7, 7, 4, 1, 2, 0 },	/* L13: 900MHz */
-	{ 0, 2, 7, 7, 3, 1, 1, 0 },	/* L14: 800MHz */
+	{ 0, 3, 7, 7, 7, 3, 5, 0 },	/* L5: 1700Mhz */
+	{ 0, 3, 7, 7, 7, 1, 4, 0 },	/* L6: 1600MHz */
+	{ 0, 2, 7, 7, 7, 1, 4, 0 },	/* L7: 1500Mhz */
+	{ 0, 2, 7, 7, 6, 1, 4, 0 },	/* L8: 1400Mhz */
+	{ 0, 2, 7, 7, 6, 1, 3, 0 },	/* L9: 1300Mhz */
+	{ 0, 2, 7, 7, 5, 1, 3, 0 },	/* L10: 1200Mhz */
+	{ 0, 3, 7, 7, 5, 1, 3, 0 },	/* L11: 1100MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L12: 1000MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L13: 900MHz */
+	{ 0, 1, 7, 7, 4, 1, 2, 0 },	/* L14: 800MHz */
 	{ 0, 1, 7, 7, 3, 1, 1, 0 },	/* L15: 700MHz */
-	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L16: 600MHz */
+	{ 0, 1, 7, 7, 3, 1, 1, 0 },	/* L16: 600MHz */
 	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L17: 500MHz */
-	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L18: 400MHz */
+	{ 0, 1, 7, 7, 2, 1, 1, 0 },	/* L18: 400MHz */
 	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L19: 300MHz */
 	{ 0, 1, 7, 7, 1, 1, 1, 0 },	/* L20: 200MHz */
 };
@@ -164,13 +164,13 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 0 },	/* L2 */
 	{ 0 },	/* L3 */
 	{ 0 },	/* L4 */
-	{ 0 },	/* L5 */
-	{ 0 },	/* L6 */
-	{ 0 },	/* L7 */
-	{ 1250000 },	/* L8 */
+	{ 1200000 },	/* L5 */
+	{ 1200000 },	/* L6 */
+	{ 1200000 },	/* L7 */
+	{ 1200000 },	/* L8 */
 	{ 1200000 },	/* L9 */
-	{ 1150000 },	/* L10 */
-	{ 1100000 },	/* L11 */
+	{ 1200000 },	/* L10 */
+	{ 1200000 },	/* L11 */
 	{ 1175000 },	/* L12 */
 	{ 1125000 },	/* L13 */
 	{ 1075000 },	/* L14 */
@@ -307,8 +307,10 @@ static void exynos5250_set_frequency(unsigned int old_index,
 #if defined(CONFIG_EXYNOS5250_ABB_WA)
 	unsigned int voltage;
 
-	voltage = asv_voltage[new_index][0];
-	exynos5250_set_arm_abbg(voltage, INT_VOLT);
+	if (samsung_rev() == EXYNOS5250_REV_0) {
+		voltage = asv_voltage[new_index][0];
+		exynos5250_set_arm_abbg(voltage, INT_VOLT);
+	}
 #endif
 	if (old_index > new_index) {
 		if (!exynos5250_pms_change(old_index, new_index)) {
@@ -357,26 +359,28 @@ static void __init set_volt_table(void)
 		exynos5250_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
-#ifdef CONFIG_EXYNOS5250_1400MHZ_SUPPORT
-		max_support_idx = L8;
-#elif defined(CONFIG_EXYNOS5250_1200MHZ_SUPPORT)
-		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
 
-		max_support_idx = L10;
-#else
-		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L10].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos5250_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
+		switch (samsung_rev()) {
+		case EXYNOS5250_REV_0:
+			exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L10].frequency = CPUFREQ_ENTRY_INVALID;
+			exynos5250_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
 
-		max_support_idx = L12;
-#endif
+			max_support_idx = L12;
+			break;
+		case EXYNOS5250_REV_1_0:
+			max_support_idx = L5;
+			break;
+		default:
+			pr_err("%s: Can't find cpu revision(%d) type\n", __func__,
+				samsung_rev());
+			break;
+		}
 	}
-
 	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
 	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
