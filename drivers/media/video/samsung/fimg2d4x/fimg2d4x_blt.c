@@ -77,7 +77,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		if (cmd->image[IDST].addr.type != ADDR_PHYS) {
 			pgd = (unsigned long *)ctx->mm->pgd;
-			s5p_sysmmu_enable(info->dev, (unsigned long)virt_to_phys(pgd));
+			exynos_sysmmu_enable(info->dev,
+					(unsigned long)virt_to_phys(pgd));
 			fimg2d_debug("sysmmu enable: pgd %p ctx %p seq_no(%u)\n",
 					pgd, ctx, cmd->seq_no);
 		}
@@ -95,7 +96,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		perf_end(cmd->ctx, PERF_BLIT);
 #endif
 		if (cmd->image[IDST].addr.type != ADDR_PHYS) {
-			s5p_sysmmu_disable(info->dev);
+			exynos_sysmmu_disable(info->dev);
 			fimg2d_debug("sysmmu disable\n");
 		}
 blitend:

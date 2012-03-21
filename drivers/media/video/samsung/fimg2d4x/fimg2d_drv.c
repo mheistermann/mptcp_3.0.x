@@ -62,7 +62,7 @@ static irqreturn_t fimg2d_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int fimg2d_sysmmu_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
+static int fimg2d_sysmmu_fault_handler(enum exynos_sysmmu_inttype itype,
 		unsigned long pgtable_base, unsigned long fault_addr)
 {
 	struct fimg2d_bltcmd *cmd;
@@ -341,7 +341,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 	fimg2d_debug("enable runtime pm\n");
 #endif
 
-	s5p_sysmmu_set_fault_handler(info->dev, fimg2d_sysmmu_fault_handler);
+	exynos_sysmmu_set_fault_handler(info->dev, fimg2d_sysmmu_fault_handler);
 	fimg2d_debug("register sysmmu page fault handler\n");
 
 	/* misc register */
