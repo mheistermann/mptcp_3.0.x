@@ -1692,8 +1692,9 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 #endif
 		break;
 	case V4L2_CID_CAMERA_SET_DIS:
+		/* TODO */
 		/* blocked because of FW bug */
-		ret = fimc_is_ctrl_dis(isp, ctrl->value);
+		/* ret = fimc_is_ctrl_dis(isp, ctrl->value); */
 		//err("DIS is not supported yet\n");
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
