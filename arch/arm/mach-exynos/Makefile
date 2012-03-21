@@ -69,7 +69,7 @@ obj-$(CONFIG_ARCH_EXYNOS4)		+= dev-pd-exynos4.o
 obj-$(CONFIG_ARCH_EXYNOS5)		+= dev-pd-exynos5.o
 endif
 obj-$(CONFIG_S5P_SYSTEM_MMU)		+= dev-sysmmu.o
-obj-$(CONFIG_EXYNOS4_DEV_DWMCI)		+= dev-dwmci.o
+obj-$(CONFIG_MMC_DW)			+= dev-dwmci.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_IS)	+= dev-fimc-is.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_LITE)	+= dev-fimc-lite.o
 obj-$(CONFIG_EXYNOS_DEV_C2C)		+= dev-c2c.o
