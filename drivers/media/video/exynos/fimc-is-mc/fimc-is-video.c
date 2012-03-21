@@ -227,7 +227,6 @@ static int fimc_is_scalerc_video_close(struct file *file)
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
-	return 0;
 
 #ifdef CONFIG_BUSFREQ_OPP
 #ifdef CONFIG_CPU_EXYNOS5250
