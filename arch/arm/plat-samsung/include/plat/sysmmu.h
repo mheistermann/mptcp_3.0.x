@@ -1,9 +1,8 @@
-/* linux/arch/arm/plat-s5p/include/plat/sysmmu.h
- *
- * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
+/*
+ * Copyright (c) 2010-2012 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * Samsung System MMU driver for S5P platform
+ * Samsung System MMU driver for Exynos platforms
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +16,7 @@
 #include <linux/atomic.h>
 #include <linux/spinlock.h>
 
-enum S5P_SYSMMU_INTERRUPT_TYPE {
+enum exynos_sysmmu_inttype {
 	SYSMMU_PAGEFAULT,
 	SYSMMU_AR_MULTIHIT,
 	SYSMMU_AW_MULTIHIT,
@@ -37,12 +36,12 @@ enum S5P_SYSMMU_INTERRUPT_TYPE {
  * @fault_addr: the device (virtual) address that the System MMU tried to
  *             translated. This is 0 if @itype is SYSMMU_BUSERROR.
  */
-typedef int (*s5p_sysmmu_fault_handler_t)(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
+typedef int (*sysmmu_fault_handler_t)(enum exynos_sysmmu_inttype itype,
 			unsigned long pgtable_base, unsigned long fault_addr);
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
+#ifdef CONFIG_EXYNOS_IOMMU
 /**
- * s5p_sysmmu_enable() - enable system mmu
+ * exynos_sysmmu_enable() - enable system mmu
  * @owner: The device whose System MMU is about to be enabled.
  * @pgd: Base physical address of the 1st level page table
  *
@@ -50,49 +49,38 @@ typedef int (*s5p_sysmmu_fault_handler_t)(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
  * from virtual address to physical address.
  * Return non-zero if it fails to enable System MMU.
  */
-int s5p_sysmmu_enable(struct device *owner, unsigned long pgd);
+int exynos_sysmmu_enable(struct device *owner, unsigned long pgd);
 
 /**
- * s5p_sysmmu_disable() - disable sysmmu mmu of ip
+ * exynos_sysmmu_disable() - disable sysmmu mmu of ip
  * @owner: The device whose System MMU is about to be disabled.
  *
  * This function disable system mmu to transfer address
  * from virtual address to physical address
  */
-void s5p_sysmmu_disable(struct device *owner);
+bool exynos_sysmmu_disable(struct device *owner);
 
 /**
- * s5p_sysmmu_set_tablebase_pgd() - set page table base to refer page table
- * @owner: The device whose System MMU.
- * @pgd: The page table base address.
- *
- * This function set page table base address
- * When system mmu transfer address from virtaul address to physical address,
- * system mmu refer address information from page table
- */
-void s5p_sysmmu_set_tablebase_pgd(struct device *owner, unsigned long pgd);
-
-/**
- * s5p_sysmmu_tlb_invalidate() - flush all TLB entry in system mmu
+ * exynos_sysmmu_tlb_invalidate() - flush all TLB entry in system mmu
  * @owner: The device whose System MMU.
  *
  * This function flush all TLB entry in system mmu
  */
-void s5p_sysmmu_tlb_invalidate(struct device *owner);
+void exynos_sysmmu_tlb_invalidate(struct device *owner);
 
-/** s5p_sysmmu_set_fault_handler() - Fault handler for System MMUs
+/** exynos_sysmmu_set_fault_handler() - Fault handler for System MMUs
  * Called when interrupt occurred by the System MMUs
  * The device drivers of peripheral devices that has a System MMU can implement
  * a fault handler to resolve address translation fault by System MMU.
  * The meanings of return value and parameters are described below.
-
+ *
  * return value: non-zero if the fault is correctly resolved.
  *         zero if the fault is not handled.
  */
-void s5p_sysmmu_set_fault_handler(struct device *sysmmu,
-					s5p_sysmmu_fault_handler_t handler);
+void exynos_sysmmu_set_fault_handler(struct device *sysmmu,
+					sysmmu_fault_handler_t handler);
 
-/** s5p_sysmmu_set_prefbuf() - Initialize prefetch buffers of System MMU v3
+/** exynos_sysmmu_set_prefbuf() - Initialize prefetch buffers of System MMU v3
  *  @owner: The device which need to set the prefetch buffers
  *  @base0: The start virtual address of the area of the @owner device that the
  *          first prefetch buffer loads translation descriptors
@@ -106,15 +94,14 @@ void s5p_sysmmu_set_fault_handler(struct device *sysmmu,
  *          prefetch buffer loads translation descriptors. This can be 0. See
  *          the description of @base1 for more information with @size1 = 0
  */
-void s5p_sysmmu_set_prefbuf(struct device *owner,
+void exynos_sysmmu_set_prefbuf(struct device *owner,
 				unsigned long base0, unsigned long size0,
 				unsigned long base1, unsigned long size1);
-#else /* !CONFIG_S5P_SYSTEM_MMU */
-#define s5p_sysmmu_enable(owner, pgd) do { } while (0)
-#define s5p_sysmmu_disable(owner) do { } while (0)
-#define s5p_sysmmu_set_tablebase_pgd(owner, pgd) do { } while (0)
-#define s5p_sysmmu_tlb_invalidate(owner) do { } while (0)
-#define s5p_sysmmu_set_fault_handler(sysmmu, handler) do { } while (0)
-#define s5p_sysmmu_set_prefbuf(owner, base, size) do { } while (0)
+#else /* CONFIG_EXYNOS_IOMMU */
+#define exynos_sysmmu_enable(owner, pgd) do { } while (0)
+#define exynos_sysmmu_disable(owner) do { } while (0)
+#define exynos_sysmmu_tlb_invalidate(owner) do { } while (0)
+#define exynos_sysmmu_set_fault_handler(sysmmu, handler) do { } while (0)
+#define exynos_sysmmu_set_prefbuf(owner, b0, s0, b1, s1) do { } while (0)
 #endif
 #endif /* __ASM_PLAT_SYSMMU_H */
