@@ -2011,6 +2011,17 @@ static void __init smdk5250_ehci_init(void)
 {
 	struct s5p_ehci_platdata *pdata = &smdk5250_ehci_pdata;
 
+#ifndef CONFIG_USB_EXYNOS_SWITCH
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		if (gpio_request_one(EXYNOS5_GPX2(6), GPIOF_OUT_INIT_HIGH,
+			"HOST_VBUS_CONTROL"))
+			printk(KERN_ERR "failed to request gpio_host_vbus\n");
+		else {
+			s3c_gpio_setpull(EXYNOS5_GPX2(6), S3C_GPIO_PULL_NONE);
+			gpio_free(EXYNOS5_GPX2(6));
+		}
+	}
+#endif
 	s5p_ehci_set_platdata(pdata);
 }
 #endif
