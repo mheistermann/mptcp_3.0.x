@@ -2480,7 +2480,7 @@ void __init exynos5_register_clocks(void)
 	s3c_register_clocks(exynos5_init_audss_clocks, ARRAY_SIZE(exynos5_init_audss_clocks));
 	s3c_disable_clocks(exynos5_init_audss_clocks, ARRAY_SIZE(exynos5_init_audss_clocks));
 
-	if (soc_is_exynos5250() && (samsung_rev() == EXYNOS5250_REV_0))
+	if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0))
 		exynos5_init_dmaclocks[2].ctrlbit = exynos5_init_dmaclocks[1].ctrlbit;
 	s3c_register_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
 	s3c_disable_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
