@@ -2381,6 +2381,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	&exynos_device_flite0,
 	&exynos_device_flite1,
+	&exynos_device_flite2,
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_MIPI_CSIS
 	&s5p_device_mipi_csis0,
@@ -2815,8 +2816,10 @@ static void __init exynos_sysmmu_init(void)
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	ASSIGN_SYSMMU_POWERDOMAIN(flite0, &exynos5_device_pd[PD_GSCL].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(flite1, &exynos5_device_pd[PD_GSCL].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(flite2, &exynos5_device_pd[PD_GSCL].dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(flite0).dev, &exynos_device_flite0.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(flite1).dev, &exynos_device_flite1.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(flite2).dev, &exynos_device_flite2.dev);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
 	sysmmu_set_owner(&SYSMMU_PLATDEV(rot).dev, &exynos_device_rotator.dev);
@@ -3026,6 +3029,7 @@ static void __init smdk5250_machine_init(void)
 #if defined(CONFIG_EXYNOS_DEV_PD)
 	exynos_device_flite0.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos_device_flite1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos_device_flite2.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 #endif
 	smdk5250_camera_gpio_cfg();
 	smdk5250_set_camera_platdata();
@@ -3033,16 +3037,20 @@ static void __init smdk5250_machine_init(void)
 			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
 	s3c_set_platdata(&exynos_flite1_default_data,
 			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
+	s3c_set_platdata(&exynos_flite2_default_data,
+			sizeof(exynos_flite2_default_data), &exynos_device_flite2);
 /* In EVT0, for using camclk, gscaler clock should be enabled */
-	dev_set_name(&exynos_device_flite0.dev, "exynos-gsc.0");
-	clk_add_alias("gscl", "exynos-fimc-lite.0", "gscl",
-			&exynos_device_flite0.dev);
-	dev_set_name(&exynos_device_flite0.dev, "exynos-fimc-lite.0");
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		dev_set_name(&exynos_device_flite0.dev, "exynos-gsc.0");
+		clk_add_alias("gscl", "exynos-fimc-lite.0", "gscl",
+				&exynos_device_flite0.dev);
+		dev_set_name(&exynos_device_flite0.dev, "exynos-fimc-lite.0");
 
-	dev_set_name(&exynos_device_flite1.dev, "exynos-gsc.0");
-	clk_add_alias("gscl", "exynos-fimc-lite.1", "gscl",
-			&exynos_device_flite1.dev);
-	dev_set_name(&exynos_device_flite1.dev, "exynos-fimc-lite.1");
+		dev_set_name(&exynos_device_flite1.dev, "exynos-gsc.0");
+		clk_add_alias("gscl", "exynos-fimc-lite.1", "gscl",
+				&exynos_device_flite1.dev);
+		dev_set_name(&exynos_device_flite1.dev, "exynos-fimc-lite.1");
+	}
 #endif
 #if defined CONFIG_VIDEO_EXYNOS5_FIMC_IS
 	dev_set_name(&exynos5_device_fimc_is.dev, "s5p-mipi-csis.0");
