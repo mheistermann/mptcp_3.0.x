@@ -2087,6 +2087,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_dout_arm2clk,
 	&exynos5_clk_mclk_cdrex,
 	&exynos5_clk_aclk_400,
+	&exynos5_clk_aclk_400_g3d_mid,
 	&exynos5_clk_mout_aclk_333,
 	&exynos5_clk_dout_aclk_333,
 	&exynos5_clk_aclk_333,
@@ -2142,6 +2143,7 @@ static struct clk *exynos5_clks[] __initdata = {
 	&clk_fout_cpll,
 	&clk_fout_mpll_div2,
 	&clk_fout_bpll_div2,
+	&clk_fout_gpll,
 	&exynos5_clk_armclk,
 };
 
