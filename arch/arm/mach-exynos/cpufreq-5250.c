@@ -307,7 +307,7 @@ static void exynos5250_set_frequency(unsigned int old_index,
 #if defined(CONFIG_EXYNOS5250_ABB_WA)
 	unsigned int voltage;
 
-	if (samsung_rev() == EXYNOS5250_REV_0) {
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
 		voltage = asv_voltage[new_index][0];
 		exynos5250_set_arm_abbg(voltage, INT_VOLT);
 	}
@@ -360,7 +360,7 @@ static void __init set_volt_table(void)
 		exynos5250_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
 
-		switch (samsung_rev()) {
+		switch (samsung_rev() & 0xf0) {
 		case EXYNOS5250_REV_0:
 			exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
 			exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
