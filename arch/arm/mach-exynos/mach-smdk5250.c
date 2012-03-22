@@ -44,6 +44,7 @@
 #include <media/exynos_flite.h>
 #include <media/exynos_fimc_is.h>
 #include <plat/gpio-cfg.h>
+#include <plat/adc.h>
 #include <plat/regs-serial.h>
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
@@ -2262,6 +2263,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&s5p_device_dp,
 	&smdk5250_dp_lcd,
 #endif
+#endif
+#ifdef CONFIG_S3C_ADC
+	&s3c_device_adc,
 #endif
 	&s3c_device_wdt,
 	&s3c_device_i2c0,

@@ -29,6 +29,7 @@
 #include <plat/ace-core.h>
 #include <plat/reset.h>
 #include <plat/rtc-core.h>
+#include <plat/adc-core.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
@@ -235,6 +236,8 @@ void __init exynos5_map_io(void)
 
 	s5p_fb_setname(1, "exynos5-fb");        /* FIMD1 */
 
+	s3c_adc_setname("samsung-adc-v4");
+
 	s5p_hdmi_setname("exynos5-hdmi");
 
 	/* The I2C bus controllers are directly compatible with s3c2440 */
@@ -359,6 +362,10 @@ int __init exynos5_init(void)
 	value = __raw_readl(EXYNOS5_MASK_WDT_RESET_REQUEST);
 	value &= ~EXYNOS5_SYS_WDTRESET;
 	__raw_writel(value, EXYNOS5_MASK_WDT_RESET_REQUEST);
+
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0) {
+		__raw_writel(0x1, EXYNOS5_ADC_PHY_CONTROL);
+	}
 
 	return sysdev_register(&exynos5_sysdev);
 }

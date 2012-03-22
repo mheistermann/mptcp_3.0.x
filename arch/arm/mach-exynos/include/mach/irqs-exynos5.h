@@ -243,6 +243,8 @@
 
 #define IRQ_TVOUT_HPD		(S5P_IRQ_EINT_BASE + 31)
 
+#define IRQ_ADC			IRQ_ADC0
+
 /* optional GPIO interrupts */
 #define S5P_GPIOINT_BASE	(S5P_IRQ_EINT_BASE + 32)
 #define IRQ_GPIO1_NR_GROUPS	14
