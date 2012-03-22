@@ -847,7 +847,8 @@ static int dw_mci_get_ro(struct mmc_host *mmc)
 	if (brd->get_ro)
 		read_only = brd->get_ro(slot->id);
 	else
-		read_only = 0;
+		read_only =
+			mci_readl(slot->host, WRTPRT) & (1 << slot->id) ? 1 : 0;
 
 	dev_dbg(&mmc->class_dev, "card is %s\n",
 		read_only ? "read-only" : "read-write");
