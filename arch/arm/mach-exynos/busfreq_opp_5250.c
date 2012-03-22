@@ -65,8 +65,8 @@ static const unsigned int idle_threshold[PPMU_TYPE_END] = {
 
 static struct device busfreq_for_int;
 
-/* To save/restore DMC_PAUSE_CTRL register */
-static unsigned int dmc_pause_ctrl;
+/* To save/restore DREX2_PAUSE_CTRL register */
+static unsigned int drex2_pause_ctrl;
 
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
@@ -356,13 +356,15 @@ static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX);
 	} while (tmp & 0x11111111);
 
-	tmp = data->cdrex2_divtable[div_index];
+	if(samsung_rev() < EXYNOS5250_REV_1_0) {
+		tmp = data->cdrex2_divtable[div_index];
 
-	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
+		__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
 
-	do {
-		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
-	} while (tmp & 0x1);
+		do {
+			tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
+		} while (tmp & 0x1);
+	}
 }
 
 static void exynos5250_target_for_int(struct busfreq_data *data, int div_index)
@@ -477,7 +479,7 @@ static void exynos5250_suspend(void)
 
 static void exynos5250_resume(void)
 {
-	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
+	__raw_writel(drex2_pause_ctrl, EXYNOS5_DREX2_PAUSE);
 }
 
 static void exynos5250_monitor(struct busfreq_data *data,
@@ -608,9 +610,9 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	int ret;
 
 	/* Enable pause function for DREX2 DVFS */
-	dmc_pause_ctrl = __raw_readl(EXYNOS5_DMC_PAUSE_CTRL);
-	dmc_pause_ctrl |= DMC_PAUSE_ENABLE;
-	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
+	drex2_pause_ctrl = __raw_readl(EXYNOS5_DREX2_PAUSE);
+	drex2_pause_ctrl |= DMC_PAUSE_ENABLE;
+	__raw_writel(drex2_pause_ctrl, EXYNOS5_DREX2_PAUSE);
 
 	clk = clk_get(NULL, "mclk_cdrex");
 	if (IS_ERR(clk)) {
@@ -707,15 +709,17 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		data->cdrex_divtable[i] = tmp;
 	}
 
-	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX2);
+	if(samsung_rev() < EXYNOS5250_REV_1_0) {
+		tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX2);
 
-	for (i = LV_0; i < LV_MIF_END; i++) {
-		tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
+		for (i = LV_0; i < LV_MIF_END; i++) {
+			tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
 
-		tmp |= clkdiv_cdrex[i][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
+			tmp |= clkdiv_cdrex[i][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
 
-		data->cdrex2_divtable[i] = tmp;
+			data->cdrex2_divtable[i] = tmp;
 
+		}
 	}
 
 	exynos5250_set_bus_volt();
