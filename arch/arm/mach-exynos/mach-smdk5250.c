@@ -946,6 +946,53 @@ static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 };
 #endif
 
+static void exynos_dwmci0_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS5_GPC0(0); gpio < EXYNOS5_GPC0(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+	}
+
+	switch (width) {
+	case MMC_BUS_WIDTH_8:
+		for (gpio = EXYNOS5_GPC1(0); gpio <= EXYNOS5_GPC1(3); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+		}
+	case MMC_BUS_WIDTH_4:
+		for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+		}
+		break;
+	case MMC_BUS_WIDTH_1:
+		gpio = EXYNOS5_GPC0(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos5_dwmci0_pdata __initdata = {
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz			= 100 * 1000 * 1000,
+	.caps			= MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR |
+				  MMC_CAP_8_BIT_DATA | MMC_CAP_CMD23,
+	.fifo_depth             = 0x80,
+	.detect_delay_ms	= 200,
+	.hclk_name		= "dwmci",
+	.cclk_name		= "sclk_dwmci",
+	.cfg_gpio		= exynos_dwmci0_cfg_gpio,
+};
+
 static void exynos_dwmci2_cfg_gpio(int width)
 {
 	unsigned int gpio;
@@ -2257,7 +2304,8 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
 #endif
-	&exynos5_device_dwmci2,
+	&exynos_device_dwmci0,
+	&exynos_device_dwmci2,
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
@@ -2818,12 +2866,19 @@ static void __init smdk5250_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		exynos_dwmci_set_platdata(&exynos5_dwmci0_pdata, 0);
+		dev_set_name(&exynos_device_dwmci0.dev, "s3c-sdhci.0");
+		clk_add_alias("dwmci", "dw_mmc.0", "hsmmc",
+			&exynos_device_dwmci0.dev);
+		clk_add_alias("sclk_dwmci", "dw_mmc.0", "sclk_mmc",
+			&exynos_device_dwmci0.dev);
+
 		exynos_dwmci_set_platdata(&exynos5_dwmci2_pdata, 2);
-		dev_set_name(&exynos5_device_dwmci2.dev, "s3c-sdhci.2");
+		dev_set_name(&exynos_device_dwmci2.dev, "s3c-sdhci.2");
 		clk_add_alias("dwmci", "dw_mmc.2", "hsmmc",
-			&exynos5_device_dwmci2.dev);
+			&exynos_device_dwmci2.dev);
 		clk_add_alias("sclk_dwmci", "dw_mmc.2", "sclk_mmc",
-			&exynos5_device_dwmci2.dev);
+			&exynos_device_dwmci2.dev);
 	} else {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	exynos_dwmci_set_platdata(&exynos_dwmci_pdata, 0);

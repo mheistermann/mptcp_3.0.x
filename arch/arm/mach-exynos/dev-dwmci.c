@@ -44,8 +44,8 @@ static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 		host->pdata->ddr_timing = 0x00010002;
 	} else if (soc_is_exynos5250()) {
 		if (samsung_rev() >= EXYNOS5250_REV_1_0) {
-			host->pdata->ddr_timing = 0x03010000;
-			host->pdata->sdr_timing = 0x03010000;
+			host->pdata->sdr_timing = 0x03030002;
+			host->pdata->ddr_timing = 0x03020001;
 		} else {
 			host->pdata->sdr_timing = 0x00010000;
 			host->pdata->ddr_timing = 0x00010000;
@@ -123,8 +123,8 @@ EXYNOS5_DWMCI_RESOURCE(1)
 EXYNOS5_DWMCI_RESOURCE(2)
 EXYNOS5_DWMCI_RESOURCE(3)
 
-#define EXYNOS5_DWMCI_DEF_PLATDATA(_channel)			\
-struct dw_mci_board exynos5_dwmci##_channel##_def_platdata = {	\
+#define EXYNOS_DWMCI_DEF_PLATDATA(_channel)			\
+struct dw_mci_board exynos_dwmci##_channel##_def_platdata = {	\
 	.num_slots		= 1,				\
 	.quirks			=				\
 		DW_MCI_QUIRK_BROKEN_CARD_DETECTION,		\
@@ -135,13 +135,13 @@ struct dw_mci_board exynos5_dwmci##_channel##_def_platdata = {	\
 	.set_io_timing		= exynos_dwmci_set_io_timing,	\
 };
 
-EXYNOS5_DWMCI_DEF_PLATDATA(0)
-EXYNOS5_DWMCI_DEF_PLATDATA(1)
-EXYNOS5_DWMCI_DEF_PLATDATA(2)
-EXYNOS5_DWMCI_DEF_PLATDATA(3)
+EXYNOS_DWMCI_DEF_PLATDATA(0)
+EXYNOS_DWMCI_DEF_PLATDATA(1)
+EXYNOS_DWMCI_DEF_PLATDATA(2)
+EXYNOS_DWMCI_DEF_PLATDATA(3)
 
-#define EXYNOS5_DWMCI_PLATFORM_DEVICE(_channel)			\
-struct platform_device exynos5_device_dwmci##_channel =		\
+#define EXYNOS_DWMCI_PLATFORM_DEVICE(_channel)			\
+struct platform_device exynos_device_dwmci##_channel =		\
 {								\
 	.name		= "dw_mmc",				\
 	.id		= _channel,				\
@@ -152,18 +152,18 @@ struct platform_device exynos5_device_dwmci##_channel =		\
 		.dma_mask		= &exynos_dwmci_dmamask,\
 		.coherent_dma_mask	= DMA_BIT_MASK(32),	\
 		.platform_data		=			\
-		&exynos5_dwmci##_channel##_def_platdata,	\
+		&exynos_dwmci##_channel##_def_platdata,	\
 	},							\
 };
 
-EXYNOS5_DWMCI_PLATFORM_DEVICE(0)
-EXYNOS5_DWMCI_PLATFORM_DEVICE(1)
-EXYNOS5_DWMCI_PLATFORM_DEVICE(2)
-EXYNOS5_DWMCI_PLATFORM_DEVICE(3)
+EXYNOS_DWMCI_PLATFORM_DEVICE(0)
+EXYNOS_DWMCI_PLATFORM_DEVICE(1)
+EXYNOS_DWMCI_PLATFORM_DEVICE(2)
+EXYNOS_DWMCI_PLATFORM_DEVICE(3)
 
 void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd, u32 slot_id)
 {
-	struct dw_mci_board *npd;
+	struct dw_mci_board *npd = NULL;
 
 	if ((soc_is_exynos4210()) ||
 		soc_is_exynos4212() || soc_is_exynos4412()) {
@@ -171,27 +171,27 @@ void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd, u32 slot_id)
 			&exynos_device_dwmci);
 	} else if (soc_is_exynos5250()) {
 		if (slot_id == 0) {
-			if (samsung_rev() >= EXYNOS5250_REV_1_0) {
-				exynos_device_dwmci.resource[0].start =
-					S3C_PA_HSMMC0;
-				exynos_device_dwmci.resource[0].end =
-					S3C_PA_HSMMC0 + SZ_4K - 1;
-				exynos_device_dwmci.resource[1].start =
-					IRQ_HSMMC0;
-				exynos_device_dwmci.resource[1].end =
-					IRQ_HSMMC0;
-			};
+			if (samsung_rev() < EXYNOS5250_REV_1_0) {
+				exynos_device_dwmci0.resource[0].start =
+					EXYNOS_PA_DWMCI;
+				exynos_device_dwmci0.resource[0].end =
+					EXYNOS_PA_DWMCI + SZ_4K - 1;
+				exynos_device_dwmci0.resource[1].start =
+					IRQ_DWMCI;
+				exynos_device_dwmci0.resource[1].end =
+					IRQ_DWMCI;
+			}
 			npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
-				&exynos_device_dwmci);
+				&exynos_device_dwmci0);
 		} else if (slot_id == 1) {
 			npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
-				&exynos5_device_dwmci1);
+				&exynos_device_dwmci1);
 		} else if (slot_id == 2) {
 			npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
-				&exynos5_device_dwmci2);
+				&exynos_device_dwmci2);
 		} else if (slot_id == 3) {
 			npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
-				&exynos5_device_dwmci3);
+				&exynos_device_dwmci3);
 		} else {
 			pr_err("This channel %d Cannot support.\n", slot_id);
 		}
