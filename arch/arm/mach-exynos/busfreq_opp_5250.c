@@ -356,7 +356,7 @@ static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX);
 	} while (tmp & 0x11111111);
 
-	if(samsung_rev() < EXYNOS5250_REV_1_0) {
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
 		tmp = data->cdrex2_divtable[div_index];
 
 		__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
@@ -709,7 +709,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		data->cdrex_divtable[i] = tmp;
 	}
 
-	if(samsung_rev() < EXYNOS5250_REV_1_0) {
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX2);
 
 		for (i = LV_0; i < LV_MIF_END; i++) {
