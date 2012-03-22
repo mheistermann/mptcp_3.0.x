@@ -265,6 +265,10 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 			}
 			if (cam->use_isp)
 				flite_hw_set_output_dma(flite, false);
+
+			if (soc_is_exynos5250_rev1)
+				flite_hw_set_output_gscaler(flite, true);
+
 			int_src = FLITE_REG_CIGCTRL_IRQ_OVFEN0_ENABLE |
 				FLITE_REG_CIGCTRL_IRQ_LASTEN0_ENABLE |
 				FLITE_REG_CIGCTRL_IRQ_ENDEN0_DISABLE |
@@ -350,7 +354,8 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 			buf = active_queue_pop(flite);
 			if (!test_bit(FLITE_ST_RUN, &flite->state)) {
 				flite_info("error interrupt");
-				vb2_buffer_done(&buf->vb, VB2_BUF_STATE_ERROR);
+				vb2_buffer_done(&buf->vb,
+						VB2_BUF_STATE_ERROR);
 				goto unlock;
 			}
 			vb2_buffer_done(&buf->vb, VB2_BUF_STATE_DONE);
@@ -1005,6 +1010,11 @@ static int flite_start_streaming(struct vb2_queue *q)
 	struct flite_dev *flite = q->drv_priv;
 
 	flite_hw_reset(flite);
+	if (soc_is_exynos5250_rev1) {
+		flite_info("");
+		flite_hw_set_framecnt_seq_masking(flite, flite->reqbufs_cnt);
+	}
+
 	flite->active_buf_cnt = 0;
 	flite->pending_buf_cnt = 0;
 
@@ -1147,7 +1157,7 @@ static void flite_buf_queue(struct vb2_buffer *vb)
 	}
 
 	if (vb2_is_streaming(&flite->vbq) &&
-		(flite->pending_buf_cnt >= min_bufs) &&
+		(available_buf_cnt(flite) >= min_bufs) &&
 		!test_bit(FLITE_ST_STREAM, &flite->state)) {
 		if (!test_and_set_bit(FLITE_ST_PIPE_STREAM, &flite->state)) {
 			spin_unlock_irqrestore(&flite->slock, flags);
