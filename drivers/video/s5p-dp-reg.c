@@ -72,6 +72,19 @@ void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable)
 	writel(reg, dp->reg_base + S5P_DP_LANE_MAP);
 }
 
+void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
+{
+	writel(0x10, dp->reg_base + S5P_DP_ANALOG_CTL_1);
+
+	writel(0x0C, dp->reg_base + S5P_DP_ANALOG_CTL_2);
+
+	writel(0x85, dp->reg_base + S5P_DP_ANALOG_CTL_3);
+
+	writel(0x66, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
+
+	writel(0x0, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
+}
+
 void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 {
 	/* Set interrupt pin assertion polarity as high */
@@ -118,7 +131,8 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 
 	s5p_dp_lane_swap(dp, 0);
 
-	writel(0x75, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0)
+		writel(0x75, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
 
 	writel(0x0, dp->reg_base + S5P_DP_SYS_CTL_1);
 	writel(0x40, dp->reg_base + S5P_DP_SYS_CTL_2);
@@ -143,6 +157,8 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 
 	writel(0x00000101, dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
 
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		s5p_dp_init_analog_param(dp);
 	s5p_dp_init_interrupt(dp);
 }
 
@@ -283,6 +299,7 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 void s5p_dp_init_analog_func(struct s5p_dp_device *dp)
 {
 	u32 reg;
+	int timeout_loop = 0;
 
 	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
 
@@ -294,8 +311,18 @@ void s5p_dp_init_analog_func(struct s5p_dp_device *dp)
 	writel(reg, dp->reg_base + S5P_DP_DEBUG_CTL);
 
 	/* Power up PLL */
-	if (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED)
+	if (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED) {
 		s5p_dp_set_pll_power_down(dp, 0);
+
+		while (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED) {
+			timeout_loop++;
+			if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
+				dev_err(dp->dev, "failed to get pll lock status\n");
+				return;
+			}
+			udelay(10);
+		}
+	}
 
 	/* Enable Serdes FIFO function and Link symbol clock domain module */
 	reg = readl(dp->reg_base + S5P_DP_FUNC_EN_2);
