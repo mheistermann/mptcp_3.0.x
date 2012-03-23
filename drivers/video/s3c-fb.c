@@ -2612,6 +2612,11 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		writel(reg, sfb->regs + VIDCON1);
 	}
 
+	/* disable auto-clock gate mode */
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		writel(REG_CLKGATE_MODE_NON_CLOCK_GATE,
+			sfb->regs + REG_CLKGATE_MODE);
+
 	/* zero all windows before we do anything */
 
 	for (win = 0; win < fbdrv->variant.nr_windows; win++)
@@ -2705,9 +2710,6 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 			goto err_mc_wb_link_create_fail;
 	}
 #endif
-	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
-		writel(REG_CLKGATE_MODE_NON_CLOCK_GATE,
-			sfb->regs + REG_CLKGATE_MODE);
 
 #ifdef CONFIG_S5P_DP
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
