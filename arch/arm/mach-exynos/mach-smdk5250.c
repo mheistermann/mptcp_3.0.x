@@ -3089,7 +3089,7 @@ static void __init smdk5250_machine_init(void)
 #endif
 
 #ifdef CONFIG_S3C64XX_DEV_SPI
-	sclk = clk_get(spi0_dev, "dout_spi0");
+	sclk = clk_get(spi0_dev, "sclk_spi0");
 	if (IS_ERR(sclk))
 		dev_err(spi0_dev, "failed to get sclk for SPI-0\n");
 	prnt = clk_get(spi0_dev, "mout_mpll_user");
@@ -3113,7 +3113,7 @@ static void __init smdk5250_machine_init(void)
 
 	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
 
-	sclk = clk_get(spi1_dev, "dout_spi1");
+	sclk = clk_get(spi1_dev, "sclk_spi1");
 	if (IS_ERR(sclk))
 		dev_err(spi1_dev, "failed to get sclk for SPI-1\n");
 	prnt = clk_get(spi1_dev, "mout_mpll_user");
@@ -3137,7 +3137,7 @@ static void __init smdk5250_machine_init(void)
 
 	spi_register_board_info(spi1_board_info, ARRAY_SIZE(spi1_board_info));
 
-	sclk = clk_get(spi2_dev, "dout_spi2");
+	sclk = clk_get(spi2_dev, "sclk_spi2");
 	if (IS_ERR(sclk))
 		dev_err(spi2_dev, "failed to get sclk for SPI-2\n");
 	prnt = clk_get(spi2_dev, "mout_mpll_user");
