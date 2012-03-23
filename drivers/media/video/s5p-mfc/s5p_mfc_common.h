@@ -158,6 +158,7 @@ struct s5p_mfc_fw {
 	const struct firmware	*info;
 	int			state;
 	int			ver;
+	int			date;
 };
 
 struct s5p_mfc_buf_align {
@@ -476,6 +477,7 @@ struct s5p_mfc_dec {
 	int display_delay;
 	int is_packedpb;
 	int slice_enable;
+	int mv_count;
 
 	int crc_enable;
 	int crc_luma0;

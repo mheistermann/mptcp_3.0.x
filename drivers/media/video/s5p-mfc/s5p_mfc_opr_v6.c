@@ -85,7 +85,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 			  ctx->luma_size, ctx->chroma_size, ctx->mv_size);
 		mfc_debug(2, "Totals bufs: %d\n", dec->total_dpb_count);
 	} else if (ctx->type == MFCINST_ENCODER) {
-		enc->tmv_buffer_size = 2 * ALIGN((mb_width + 1) * (mb_height + 1) * 8, 16);
+		enc->tmv_buffer_size = 2 * ALIGN((mb_width + 1) * (mb_height + 3) * 8, 32);
 		enc->luma_dpb_size = ALIGN((mb_width * mb_height) * 256, 256);
 		enc->chroma_dpb_size = ALIGN((mb_width * mb_height) * 128, 256);
 		enc->me_buffer_size = ALIGN( ((((ctx->img_width+63)/64) * 16) *
@@ -102,11 +102,13 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
 	case S5P_FIMV_CODEC_H264_MVC_DEC:
+		if (dev->fw.date < 0x120206)
+			dec->mv_count = dec->total_dpb_count;
 		ctx->scratch_buf_size = (mb_width * 128) + 65536;
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size =
 			ctx->scratch_buf_size +
-			(dec->total_dpb_count * ctx->mv_size);
+			(dec->mv_count * ctx->mv_size);
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
 	case S5P_FIMV_CODEC_FIMV1_DEC:
@@ -454,11 +456,12 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	mfc_debug(2, "Frame size: %d ch: %d mv: %d\n", frame_size, frame_size_ch,
 								frame_size_mv);
 
-	i = 0;
 	if (dec->dst_memtype == V4L2_MEMORY_USERPTR)
 		buf_queue = &ctx->dst_queue;
 	else
 		buf_queue = &dec->dpb_queue;
+
+	i = 0;
 	list_for_each_entry(buf, buf_queue, list) {
 		mfc_debug(2, "Luma %x\n", buf->cookie.raw.luma);
 		WRITEL(buf->cookie.raw.luma, S5P_FIMV_D_LUMA_DPB + i * 4);
@@ -474,9 +477,13 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 			memset(dpb_vir, 0x80, ctx->chroma_size);
 			s5p_mfc_cache_inv(buf->vb.planes[1].mem_priv);
 		}
+		i++;
+	}
 
-		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
-				ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC) {
+	WRITEL(dec->mv_count, S5P_FIMV_D_NUM_MV);
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
+			ctx->codec_mode == S5P_FIMV_CODEC_H264_MVC_DEC) {
+		for (i = 0; i < dec->mv_count; i++) {
 			/* To test alignment */
 			align_gap = buf_addr1;
 			buf_addr1 = ALIGN(buf_addr1, 16);
@@ -488,8 +495,6 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 			buf_addr1 += frame_size_mv;
 			buf_size1 -= frame_size_mv;
 		}
-
-		i++;
 	}
 
 	mfc_debug(2, "Buf1: %u, buf_size1: %d (frames %d)\n",

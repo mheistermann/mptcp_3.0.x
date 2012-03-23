@@ -12,12 +12,14 @@
 
 #include <linux/err.h>
 #include <linux/clk.h>
+#include <linux/jiffies.h>
 #include <plat/s5p-mfc.h>
 
 #include "s5p_mfc_common.h"
 
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_pm.h"
+#include "s5p_mfc_reg.h"
 
 #if defined(CONFIG_ARCH_EXYNOS4)
 #include <linux/platform_device.h>
@@ -229,32 +231,54 @@ void s5p_mfc_final_pm(struct s5p_mfc_dev *dev)
 
 int s5p_mfc_clock_on(void)
 {
-	int ret, state;
+	int ret = 0;
+	int state, val;
 	struct s5p_mfc_dev *dev = platform_get_drvdata(to_platform_device(pm->device));
 
 	state = atomic_inc_return(&clk_ref);
 
 	mfc_debug(3, "+ %d", state);
 
-	ret = clk_enable(pm->clock);
-	if (state == 1)
+	if (state == 1) {
+		ret = clk_enable(pm->clock);
 		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+		if (dev->fw.date >= 0x120206) {
+			val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
+			val &= ~(0x1);
+			s5p_mfc_write_reg(val, S5P_FIMV_MFC_BUS_RESET_CTRL);
+		}
+	}
 
 	return ret;
 }
 
 void s5p_mfc_clock_off(void)
 {
-	int state;
+	int state, val;
+	unsigned long timeout;
 	struct s5p_mfc_dev *dev = platform_get_drvdata(to_platform_device(pm->device));
 
 	state = atomic_dec_return(&clk_ref);
 
 	mfc_debug(3, "- %d", state);
 
-	if (state == 0)
+	if (state == 0) {
 		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
-	clk_disable(pm->clock);
+		if (dev->fw.date >= 0x120206) {
+			s5p_mfc_write_reg(0x1, S5P_FIMV_MFC_BUS_RESET_CTRL);
+
+			timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
+			/* Check bus status */
+			do {
+				if (time_after(jiffies, timeout)) {
+					mfc_err("Timeout while resetting MFC.\n");
+					break;
+				}
+				val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
+			} while ((val & 0x2) == 0);
+		}
+		clk_disable(pm->clock);
+	}
 
 	if (state < 0) {
 		mfc_err("Clock state is wrong(%d)\n", state);
