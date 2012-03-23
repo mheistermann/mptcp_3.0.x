@@ -76,7 +76,7 @@ static int kbase_platform_power_clock_init(struct device *dev)
 
 	/* Turn on G3D clock */
 
-#if CONFIG_VITHAR_HWVER_R0P0
+#ifdef CONFIG_VITHAR_HWVER_R0P0
 	kbdev->sclk_g3d = clk_get(dev, "aclk_400");
 	if(IS_ERR(kbdev->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
