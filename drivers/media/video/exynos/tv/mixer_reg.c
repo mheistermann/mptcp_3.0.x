@@ -65,6 +65,12 @@ static inline void mxr_write_mask(struct mxr_device *mdev, u32 reg_id,
 	writel(val, mdev->res.mxr_regs + reg_id);
 }
 
+void mxr_layer_sync(struct mxr_device *mdev, int en)
+{
+	mxr_write_mask(mdev, MXR_STATUS, en ? MXR_STATUS_LAYER_SYNC : 0,
+		MXR_STATUS_LAYER_SYNC);
+}
+
 void mxr_vsync_set_update(struct mxr_device *mdev, int en)
 {
 	/* block update on vsync */

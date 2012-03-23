@@ -488,6 +488,7 @@ void mxr_get_mbus_fmt(struct mxr_device *mdev,
 
 /* accessing Mixer's and Video Processor's registers */
 
+void mxr_layer_sync(struct mxr_device *mdev, int en);
 void mxr_vsync_set_update(struct mxr_device *mdev, int en);
 void mxr_reg_reset(struct mxr_device *mdev);
 void mxr_reg_set_layer_prio(struct mxr_device *mdev);

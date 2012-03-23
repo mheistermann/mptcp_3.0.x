@@ -122,6 +122,7 @@
 /* bits for MXR_STATUS */
 #define MXR_STATUS_16_BURST		(1 << 7)
 #define MXR_STATUS_BURST_MASK		(1 << 7)
+#define MXR_STATUS_LAYER_SYNC		(1 << 6)
 #define MXR_STATUS_SYNC_ENABLE		(1 << 2)
 #define MXR_STATUS_REG_RUN		(1 << 0)
 

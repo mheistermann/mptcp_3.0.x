@@ -130,6 +130,9 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 				local += sub_mxr->local;
 			}
 		}
+		if (local == 2)
+			mxr_layer_sync(mdev, MXR_ENABLE);
+
 		/* Set the TVOUT register about gsc-mixer local path */
 		mxr_reg_local_path_set(mdev, mdev->mxr0_gsc, mdev->mxr1_gsc, mdev->flags);
 	}
@@ -229,6 +232,8 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				local += sub_mxr->local;
 			}
 		}
+		if (local == 2)
+			mxr_layer_sync(mdev, MXR_DISABLE);
 	}
 
 	if ((mdev->n_streamer == 0 && local == 1) ||
