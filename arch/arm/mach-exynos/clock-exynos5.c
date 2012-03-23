@@ -675,7 +675,7 @@ static struct clksrc_clk exynos5_clk_aclk_400 = {
 	.clk	= {
 		.name		= "aclk_400",
 	},
-	.sources = &exynos5_clkset_aclk_g3d,
+	.sources = &exynos5_clkset_aclk,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP1, .shift = 28, .size = 1 },
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 24, .size = 3 },
 };
@@ -2463,6 +2463,7 @@ void __init exynos5_register_clocks(void)
 	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0) {
 		exynos5_clk_mout_mpll.sources = &exynos5_clkset_mout_mpll;
 		exynos5_clk_mout_bpll.sources = &exynos5_clkset_mout_bpll;
+		exynos5_clk_aclk_400.sources = &exynos5_clkset_aclk_g3d;
 	}
 
 	s3c24xx_register_clocks(exynos5_clks, ARRAY_SIZE(exynos5_clks));
