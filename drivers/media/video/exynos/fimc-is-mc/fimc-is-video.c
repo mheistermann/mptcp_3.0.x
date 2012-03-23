@@ -724,18 +724,20 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 	struct fimc_is_dev	*isp = video->dev;
 	int ret;
 
-       clear_bit(IS_ST_STREAM_OFF, &isp->state);
-        fimc_is_hw_set_stream(isp, 0);
-        ret = wait_event_timeout(isp->irq_queue,
-                test_bit(IS_ST_STREAM_OFF, &isp->state),
-                FIMC_IS_SHUTDOWN_TIMEOUT);
-        if (!ret) {
-                dev_err(&isp->pdev->dev,
-                        "wait timeout : %s\n", __func__);
-                if (!ret)
-                        err("s_power off failed!!\n");
-                return -EBUSY;
-        }
+	mutex_lock(&isp->lock);
+
+	clear_bit(IS_ST_STREAM_OFF, &isp->state);
+	fimc_is_hw_set_stream(isp, 0);
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_OFF, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+		if (!ret)
+			err("s_power off failed!!\n");
+		return -EBUSY;
+	}
 
 	IS_SCALERC_SET_PARAM_DMA_OUTPUT_CMD(isp,
 		DMA_OUTPUT_COMMAND_DISABLE);
@@ -812,6 +814,8 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 	clear_bit(IS_ST_STREAM_ON, &isp->state);
 	clear_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state);
 	clear_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state);
+
+	mutex_unlock(&isp->lock);
 
 	return 0;
 }
