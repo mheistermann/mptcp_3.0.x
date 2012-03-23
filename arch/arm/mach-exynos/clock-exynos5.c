@@ -880,6 +880,24 @@ static struct clksrc_clk exynos5_clk_aclk_66 = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 0, .size = 3 },
 };
 
+static struct clk *clk_src_aclk_200_disp1_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_aclk_200.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_aclk_200_disp1 = {
+	.sources	= clk_src_aclk_200_disp1_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_aclk_200_disp1_list),
+};
+
+static struct clksrc_clk exynos5_clk_aclk_200_disp1 = {
+	.clk	= {
+		.name		= "aclk_200_disp1",
+	},
+	.sources = &exynos5_clkset_aclk_200_disp1,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 4, .size = 1 },
+};
+
 static struct clk exynos5_init_clocks[] = {
 	{
 		.name		= "uart",
@@ -2103,6 +2121,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_aclk_200,
 	&exynos5_clk_aclk_166,
 	&exynos5_clk_dout_aclk_66_pre,
+	&exynos5_clk_aclk_200_disp1,
 	&exynos5_clk_mout_aclk_400_isp,
 	&exynos5_clk_dout_aclk_400_isp,
 	&exynos5_clk_aclk_400_isp,
