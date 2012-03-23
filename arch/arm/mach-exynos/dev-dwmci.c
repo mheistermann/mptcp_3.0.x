@@ -195,9 +195,8 @@ void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd, u32 slot_id)
 		} else {
 			pr_err("This channel %d Cannot support.\n", slot_id);
 		}
-	} else {
-		npd = 0;
-	}
+	} else
+		printk("dwmci platform data support only exynos4/5!\n");
 
 	if (!npd->init)
 		npd->init = exynos_dwmci_init;
