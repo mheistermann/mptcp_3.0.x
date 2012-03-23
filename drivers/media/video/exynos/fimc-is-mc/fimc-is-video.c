@@ -654,7 +654,6 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 		if (!ret) {
 			dev_err(&isp->pdev->dev,
 				"wait timeout : %s\n", __func__);
-			while(1);
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_STREAM_ON, &isp->state);
@@ -1821,7 +1820,6 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 		if (!ret) {
 			dev_err(&isp->pdev->dev,
 				"wait timeout : %s\n", __func__);
-			while(1);
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_STREAM_ON, &isp->state);
@@ -2625,7 +2623,6 @@ static int fimc_is_3dnr_start_streaming(struct vb2_queue *q)
 		if (!ret) {
 			dev_err(&isp->pdev->dev,
 				"wait timeout : %s\n", __func__);
-			while(1);
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_STREAM_ON, &isp->state);
@@ -3297,7 +3294,6 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		if (!ret) {
 			dev_err(&isp->pdev->dev,
 				"wait timeout : %s\n", __func__);
-			while(1);
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_STREAM_ON, &isp->state);
