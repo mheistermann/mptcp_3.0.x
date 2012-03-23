@@ -176,6 +176,9 @@ static int exynos_xhci_suspend(struct device *dev)
 			xhci->shared_hcd->state != HC_STATE_SUSPENDED)
 		return -EINVAL;
 
+	if (pm_runtime_suspended(dev))
+		return 0;
+
 	retval = xhci_suspend(xhci);
 
 	exynos_xhci_phy_unset(pdev);
@@ -200,6 +203,8 @@ static int exynos_xhci_resume(struct device *dev)
 	if (!hcd)
 		return -EINVAL;
 
+	pm_runtime_resume(dev);
+
 	clk_enable(exynos_xhci->clk);
 	exynos_xhci_phy_set(pdev);
 
@@ -218,17 +223,75 @@ static int exynos_xhci_resume(struct device *dev)
 #ifdef CONFIG_USB_SUSPEND
 static int exynos_xhci_runtime_suspend(struct device *dev)
 {
-	return 0;
+	struct platform_device	*pdev = to_platform_device(dev);
+	struct exynos_xhci_hcd	*exynos_xhci;
+	struct usb_hcd		*hcd;
+	struct xhci_hcd		*xhci;
+	int			retval = 0;
+
+	exynos_xhci = dev_get_drvdata(dev);
+	if (!exynos_xhci)
+		return -EINVAL;
+
+	hcd = exynos_xhci->hcd;
+	if (!hcd)
+		return -EINVAL;
+
+	xhci = hcd_to_xhci(hcd);
+
+	if (hcd->state != HC_STATE_SUSPENDED ||
+			xhci->shared_hcd->state != HC_STATE_SUSPENDED)
+		return -EINVAL;
+
+	retval = xhci_suspend(xhci);
+
+	exynos_xhci_phy_unset(pdev);
+	clk_disable(exynos_xhci->clk);
+
+	return retval;
 }
 
 static int exynos_xhci_runtime_resume(struct device *dev)
 {
-	return 0;
+	struct platform_device	*pdev = to_platform_device(dev);
+	struct exynos_xhci_hcd	*exynos_xhci;
+	struct usb_hcd		*hcd;
+	struct xhci_hcd		*xhci;
+	int			retval = 0;
+
+	exynos_xhci = dev_get_drvdata(dev);
+	if (!exynos_xhci)
+		return -EINVAL;
+
+	hcd = exynos_xhci->hcd;
+	if (!hcd)
+		return -EINVAL;
+
+	if (dev->power.is_suspended)
+		return 0;
+
+	clk_enable(exynos_xhci->clk);
+	exynos_xhci_phy_set(pdev);
+
+	exynos_xhci_change_mode(hcd);
+
+	xhci = hcd_to_xhci(hcd);
+	retval = xhci_resume(xhci, 0);
+
+	return retval;
 }
 #else
 #define exynos_xhci_runtime_suspend	NULL
 #define exynos_xhci_runtime_resume	NULL
 #endif
+
+int exynos_xhci_bus_resume(struct usb_hcd *hcd)
+{
+	/* When suspend is failed, re-enable clocks & PHY */
+	pm_runtime_resume(hcd->self.controller);
+
+	return xhci_bus_resume(hcd);
+}
 
 static void exynos_xhci_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
@@ -303,7 +366,7 @@ static const struct hc_driver exynos_xhci_hc_driver = {
 	.hub_control		= xhci_hub_control,
 	.hub_status_data	= xhci_hub_status_data,
 	.bus_suspend		= xhci_bus_suspend,
-	.bus_resume		= xhci_bus_resume,
+	.bus_resume		= exynos_xhci_bus_resume,
 };
 
 static int usb_hcd_exynos_probe(struct platform_device *pdev, const struct hc_driver *driver)
@@ -385,6 +448,9 @@ static int usb_hcd_exynos_probe(struct platform_device *pdev, const struct hc_dr
 		goto fail;
 	}
 
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
 	return err;
 
 fail:
@@ -410,6 +476,7 @@ void usb_hcd_exynos_remove(struct platform_device *pdev)
 	if (!hcd)
 		return;
 
+	pm_runtime_disable(&pdev->dev);
 	/* Fake an interrupt request in order to give the driver a chance
 	 * to test whether the controller hardware has been removed (e.g.,
 	 * cardbus physical eject).
