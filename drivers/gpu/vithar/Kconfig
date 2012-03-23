@@ -14,14 +14,14 @@ config VITHAR_HWVER_R0P0
 config VITHAR_RT_PM
 	bool "Enable Runtime power management"
 	depends on VITHAR
-	default y
+	default n
 	help
 	  Choose this option to enable runtime power management on vithar DDK.
 
 config VITHAR_DVFS
 	bool "Enable DVFS"
 	depends on VITHAR
-	default y
+	default n
 	help
 	  Choose this option to enable DVFS on vithar DDK.
 
