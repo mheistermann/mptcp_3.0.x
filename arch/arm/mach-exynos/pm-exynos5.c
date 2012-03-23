@@ -43,6 +43,17 @@
 #define REG_INFORM1            (EXYNOS5_INFORM1)
 #endif
 
+static struct sleep_save exynos5_set_clksrc[] = {
+	{ .reg = EXYNOS5_CLKSRC_MASK_TOP		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_GSCL		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_DISP1_0		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_MAUDIO		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_FSYS		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC0		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC1		, .val = 0xffffffff, },
+	{ .reg = EXYNOS5_CLKSRC_MASK_ISP		, .val = 0xffffffff, },
+};
+
 static struct sleep_save exynos5_core_save[] = {
 	/* GIC side */
 	SAVE_ITEM(S5P_VA_GIC_CPU + 0x000),
@@ -176,7 +187,8 @@ void exynos5_cpu_suspend(void)
 	/*
 	 * GPS LPI mask.
 	 */
-	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
+	if (samsung_rev() < EXYNOS5250_REV_1_0)
+		__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
@@ -190,10 +202,18 @@ static void exynos5_pm_prepare(void)
 {
 	unsigned int tmp;
 
-	/* Disable USE_RETENTION of JPEG_MEM_OPTION */
-	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
-	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
-	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		/* Disable USE_RETENTION of JPEG_MEM_OPTION */
+		tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
+		tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
+		__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+	}
+
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		tmp = __raw_readl(EXYNOS5_ARM_L2_OPTION);
+		tmp &= ~(1 << 4);
+		__raw_writel(tmp, EXYNOS5_ARM_L2_OPTION);
+	}
 
 	/* Set value of power down register for sleep mode */
 	exynos5_sys_powerdown_conf(SYS_SLEEP);
@@ -207,6 +227,8 @@ static void exynos5_pm_prepare(void)
 		tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
 		__raw_writel(tmp, EXYNOS5_INTRAM_MEM_OPTION);
 	}
+
+	s3c_pm_do_restore_core(exynos5_set_clksrc, ARRAY_SIZE(exynos5_set_clksrc));
 }
 
 static int exynos5_pm_add(struct sys_device *sysdev)
@@ -237,12 +259,15 @@ static int exynos5_pm_suspend(void)
 
 	s3c_pm_do_save(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
-	if (!(__raw_readl(EXYNOS5_ISP_STATUS) & S5P_INT_LOCAL_PWR_EN)) {
-		isp_pwr_off = true;
-		/*
-		 * Before enter suspend, ISP power domain should be on
-		 */
-		__raw_writel(S5P_INT_LOCAL_PWR_EN, EXYNOS5_ISP_CONFIGURATION);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		if (!(__raw_readl(EXYNOS5_ISP_STATUS) & S5P_INT_LOCAL_PWR_EN)) {
+			isp_pwr_off = true;
+			/*
+			 * Before enter suspend, ISP power domain should be on
+			 */
+			__raw_writel(S5P_INT_LOCAL_PWR_EN,
+					EXYNOS5_ISP_CONFIGURATION);
+		}
 	}
 
 	tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
@@ -278,7 +303,7 @@ static void exynos5_pm_resume(void)
 		goto early_wakeup;
 	}
 
-	if (isp_pwr_off) {
+	if ((samsung_rev() < EXYNOS5250_REV_1_0) && isp_pwr_off) {
 		srctmp = __raw_readl(EXYNOS5_CLKSRC_TOP3);
 		/*
 		 * To ISP power domain off,
