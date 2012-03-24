@@ -371,6 +371,7 @@ struct exynos_ss_udc_ep {
  * @dev: The parent device supplied to the probe function
  * @driver: USB gadget driver
  * @plat: The platform specific configuration data.
+ * @state: The device USB state.
  * @regs: The memory area mapped for accessing registers.
  * @irq: The IRQ number we are using.
  * @clk: The clock we are using.
@@ -393,6 +394,8 @@ struct exynos_ss_udc {
 	struct device			*dev;
 	struct usb_gadget_driver	*driver;
 	struct exynos_ss_udc_plat	*plat;
+
+	enum usb_device_state	state;
 
 	void __iomem		*regs;
 	int			irq;
