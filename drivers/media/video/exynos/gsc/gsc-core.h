@@ -792,7 +792,7 @@ void gsc_hw_set_global_alpha(struct gsc_ctx *ctx);
 void gsc_hw_set_sfr_update(struct gsc_ctx *ctx);
 void gsc_hw_set_local_dst(int id, bool on);
 void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx);
-void gsc_hw_set_sysreg_camif(bool on);
+void gsc_hw_set_pxlasync_camif_lo_mask(struct gsc_dev *dev, bool on);
 void gsc_hw_set_h_coef(struct gsc_ctx *ctx);
 void gsc_hw_set_v_coef(struct gsc_ctx *ctx);
 void gsc_hw_set_in_pingpong_update(struct gsc_dev *dev);

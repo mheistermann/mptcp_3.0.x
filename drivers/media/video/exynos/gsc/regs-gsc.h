@@ -21,11 +21,13 @@
 #define SYSREG_GSCBLK_CFG0		(S3C_VA_SYS + 0x0220)
 #define GSC_OUT_DST_SEL(x)		(1 << (8 + 2 *(x)))
 #define GSC_PXLASYNC_RST(x)		(1 << (x))
-#define GSC_PXLASYNC_CAMIF_TOP		(1 << 20)
+#define PXLASYNC_LO_MASK_CAMIF_TOP	(1 << 20)
 #define SYSREG_GSCBLK_CFG1		(S3C_VA_SYS + 0x0224)
 #define GSC_BLK_DISP1WB_DEST(x)		(x << 10)
 #define GSC_BLK_SW_RESET_WB_DEST(x)	(1 << (18 + x))
 #define GSC_BLK_GSCL_WB_IN_SRC_SEL(x)	(1 << (2 * x))
+#define SYSREG_GSCBLK_CFG2		(S3C_VA_SYS + 0x2000)
+#define PXLASYNC_LO_MASK_CAMIF_GSCL(x)	(1 << (x))
 
 /* G-Scaler enable */
 #define GSC_ENABLE			0x00
