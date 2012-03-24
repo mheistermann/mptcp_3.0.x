@@ -1313,9 +1313,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 			ret = exynos_ss_udc_process_set_sel(udc);
 			break;
 		case USB_REQ_SET_CONFIGURATION:
-			/* WORKAROUND: DRD Host PHY OFF */
-			__bic32(udc->regs + 0x420, (0x1 << 9));
-			__bic32(udc->regs + 0x430, (0x1 << 9));
 			ret = exynos_ss_udc_process_set_config(udc, ctrl);
 			break;
 		}
@@ -1730,10 +1727,6 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 		__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
 			EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
 
-	/* WORKAROUND: DRD Host PHY OFF */
-	__bic32(udc->regs + 0x420, (0x1 << 9));
-	__bic32(udc->regs + 0x430, (0x1 << 9));
-
 	switch (speed) {
 	/* High-speed */
 	case 0:
@@ -1901,10 +1894,6 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 			dev_dbg(udc->dev, " Disconnect %x %s speed", event_info,
 				event & EXYNOS_USB3_DEVT_EventParam_SS ?
 				"Super" : "High");
-
-			/* WORKAROUND: DRD Host PHY OFF */
-			__bic32(udc->regs + 0x420, (0x1 << 9));
-			__bic32(udc->regs + 0x430, (0x1 << 9));
 		}
 		break;
 
@@ -1929,10 +1918,6 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 #ifdef CONFIG_BATTERY_SAMSUNG
 		exynos_ss_udc_cable_disconnect(udc);
 #endif
-
-		/* WORKAROUND: DRD Host PHY OFF */
-		__bic32(udc->regs + 0x420, (0x1 << 9));
-		__bic32(udc->regs + 0x430, (0x1 << 9));
 		break;
 
 	default:
@@ -2472,10 +2457,6 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	       udc->regs + EXYNOS_USB3_DEVTEN);
 
 	exynos_ss_udc_ep0_activate(udc);
-
-	/* WORKAROUND : DRD Host PHY OFF */
-	__bic32(udc->regs + 0x420, (0x1 << 9));
-	__bic32(udc->regs + 0x430, (0x1 << 9));
 }
 
 static int exynos_ss_udc_enable(struct exynos_ss_udc *udc)
