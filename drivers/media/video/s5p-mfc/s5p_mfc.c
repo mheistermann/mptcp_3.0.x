@@ -22,6 +22,7 @@
 #include <linux/workqueue.h>
 #include <linux/videodev2.h>
 #include <mach/videonode.h>
+#include <plat/cpu.h>
 #include <media/videobuf2-core.h>
 
 #include "s5p_mfc_common.h"
@@ -1205,6 +1206,15 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 		mfc_err("Couldn't prepare allocator ctx.\n");
 		ret = PTR_ERR(dev->alloc_ctx);
 		goto alloc_ctx_fail;
+	}
+
+	if (soc_is_exynos5250()) {
+		if (samsung_rev() >= EXYNOS5250_REV_1_0)
+			dev->fw.ver = 0x65;
+		else
+			dev->fw.ver = 0x61;
+	} else {
+		dev->fw.ver = 0x50;
 	}
 
 	pr_debug("%s--\n", __func__);

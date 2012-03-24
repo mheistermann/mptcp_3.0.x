@@ -464,7 +464,10 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 	if (dvx_info != 'D' && dvx_info != 'E')
 		dvx_info = 'N';
 
-	mfc_info("MFC F/W version : (%c) %02xyy, %02xmm, %02xdd\n", dvx_info,
+	mfc_info("MFC v%x.%x, F/W : (%c) %02xyy, %02xmm, %02xdd\n",
+		 MFC_VER_MAJOR(dev->fw.ver),
+		 MFC_VER_MINOR(dev->fw.ver),
+		 dvx_info,
 		 MFC_GET_REG(SYS_FW_VER_YEAR),
 		 MFC_GET_REG(SYS_FW_VER_MONTH),
 		 MFC_GET_REG(SYS_FW_VER_DATE));
