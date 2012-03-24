@@ -974,6 +974,7 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep *udc_ep;
 	struct exynos_ss_udc_req *udc_req;
+	int ret;
 	bool restart;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
@@ -1021,7 +1022,9 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_ENDPOINT_HALT:
 			if (!udc_ep->wedged) {
-				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
+				ret = exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
+				if (ret < 0)
+					return ret;
 
 				/* If we have pending request, then start it */
 				restart = !list_empty(&udc_ep->queue);
@@ -1116,7 +1119,9 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_ENDPOINT_HALT:
-			exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+			ret = exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+			if (ret < 0)
+				return ret;
 			break;
 
 		default:
