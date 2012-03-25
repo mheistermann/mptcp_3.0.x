@@ -22,6 +22,7 @@
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
 #include <linux/atomic.h>
+#include <linux/rculist.h>
 
 #include <plat/iovmm.h>
 
@@ -33,49 +34,64 @@ struct s5p_vm_region {
 
 struct s5p_iovmm {
 	struct list_head node;		/* element of s5p_iovmm_list */
+	struct rcu_head rcu;
 	struct iommu_domain *domain;
 	struct device *dev;
 	struct gen_pool *vmm_pool;
 	struct list_head regions_list;	/* list of s5p_vm_region */
 	atomic_t activations;
+	int num_setup;
 	spinlock_t lock;
 };
 
-static DEFINE_RWLOCK(iovmm_list_lock);
 static LIST_HEAD(s5p_iovmm_list);
 
 static struct s5p_iovmm *find_iovmm(struct device *dev)
 {
-	struct list_head *pos;
-	struct s5p_iovmm *vmm = NULL;
+	struct s5p_iovmm *vmm;
 
-	read_lock(&iovmm_list_lock);
-	list_for_each(pos, &s5p_iovmm_list) {
-		vmm = list_entry(pos, struct s5p_iovmm, node);
-		if (vmm->dev == dev)
-			break;
-	}
-	read_unlock(&iovmm_list_lock);
-	return vmm;
+	list_for_each_entry(vmm, &s5p_iovmm_list, node)
+		if ((vmm->dev == dev) && (vmm->num_setup > 0))
+			return vmm;
+
+	return NULL;
 }
 
 static struct s5p_vm_region *find_region(struct s5p_iovmm *vmm, dma_addr_t iova)
 {
-	struct list_head *pos;
 	struct s5p_vm_region *region;
 
-	list_for_each(pos, &vmm->regions_list) {
-		region = list_entry(pos, struct s5p_vm_region, node);
+	list_for_each_entry(region, &vmm->regions_list, node)
 		if (region->start == iova)
 			return region;
-	}
+
 	return NULL;
 }
 
 int iovmm_setup(struct device *dev)
 {
-	struct s5p_iovmm *vmm;
+	struct s5p_iovmm *vmm = NULL;
+	struct list_head *pos;
 	int ret;
+
+	list_for_each(pos, &s5p_iovmm_list) {
+		vmm = list_entry(pos, struct s5p_iovmm, node);
+		if (vmm->dev == dev) {
+			struct s5p_iovmm *rcu_vmm;
+
+			rcu_vmm = kmalloc(sizeof(*rcu_vmm), GFP_KERNEL);
+			if (rcu_vmm == NULL)
+				return -ENOMEM;
+
+			memcpy(rcu_vmm, vmm, sizeof(*vmm));
+			rcu_vmm->num_setup++;
+			list_replace_rcu(&vmm->node, &rcu_vmm->node);
+
+			kfree(vmm);
+
+			return 0;
+		}
+	}
 
 	vmm = kzalloc(sizeof(*vmm), GFP_KERNEL);
 	if (!vmm) {
@@ -101,6 +117,7 @@ int iovmm_setup(struct device *dev)
 	}
 
 	vmm->dev = dev;
+	vmm->num_setup = 1;
 
 	spin_lock_init(&vmm->lock);
 
@@ -108,9 +125,7 @@ int iovmm_setup(struct device *dev)
 	INIT_LIST_HEAD(&vmm->regions_list);
 	atomic_set(&vmm->activations, 0);
 
-	write_lock(&iovmm_list_lock);
-	list_add(&vmm->node, &s5p_iovmm_list);
-	write_unlock(&iovmm_list_lock);
+	list_add_rcu(&vmm->node, &s5p_iovmm_list);
 
 	dev_dbg(dev, "IOVMM: Created 1GB IOVMM from 0x80000000.\n");
 
@@ -124,44 +139,65 @@ err_setup_alloc:
 	return ret;
 }
 
+static void iovmm_destroy(struct rcu_head *rcu)
+{
+	struct s5p_iovmm *vmm = container_of(rcu, struct s5p_iovmm, rcu);
+	struct list_head *pos, *tmp;
+
+	while (WARN_ON(atomic_dec_return(&vmm->activations) > 0))
+		iommu_detach_device(vmm->domain, vmm->dev);
+
+	iommu_domain_free(vmm->domain);
+
+	WARN_ON(!list_empty(&vmm->regions_list));
+
+	list_for_each_safe(pos, tmp, &vmm->regions_list) {
+		struct s5p_vm_region *region;
+
+		region = list_entry(pos, struct s5p_vm_region, node);
+
+		/* No need to unmap the region because
+		 * iommu_domain_free() frees the page table */
+		gen_pool_free(vmm->vmm_pool, region->start,
+							region->size);
+
+		kfree(list_entry(pos, struct s5p_vm_region, node));
+	}
+
+	gen_pool_destroy(vmm->vmm_pool);
+
+	dev_dbg(vmm->dev, "IOVMM: Removed IOVMM\n");
+
+	kfree(vmm);
+}
+
 void iovmm_cleanup(struct device *dev)
 {
-	struct s5p_iovmm *vmm;
+	struct s5p_iovmm *vmm, *n;
 
-	vmm = find_iovmm(dev);
+	list_for_each_entry_safe(vmm, n, &s5p_iovmm_list, node) {
+		if (vmm->dev == dev) {
+			struct s5p_iovmm *rcu_vmm = NULL;
 
-	WARN_ON(!vmm);
-	if (vmm) {
-		struct list_head *pos, *tmp;
+			while (rcu_vmm == NULL) /* should success */
+				rcu_vmm = kmalloc(sizeof(*rcu_vmm), GFP_ATOMIC);
 
-		while (atomic_dec_return(&vmm->activations) > 0)
-			iommu_detach_device(vmm->domain, dev);
+			memcpy(rcu_vmm, vmm, sizeof(*vmm));
+			rcu_vmm->num_setup--;
+			list_replace_rcu(&vmm->node, &rcu_vmm->node);
 
-		iommu_domain_free(vmm->domain);
+			kfree(vmm);
 
-		list_for_each_safe(pos, tmp, &vmm->regions_list) {
-			struct s5p_vm_region *region;
+			if (rcu_vmm->num_setup == 0) {
+				list_del_rcu(&rcu_vmm->node);
+				call_rcu(&rcu_vmm->rcu, iovmm_destroy);
+			}
 
-			region = list_entry(pos, struct s5p_vm_region, node);
-
-			/* No need to unmap the region because
-			 * iommu_domain_free() frees the page table */
-			gen_pool_free(vmm->vmm_pool, region->start,
-								region->size);
-
-			kfree(list_entry(pos, struct s5p_vm_region, node));
+			return;
 		}
-
-		gen_pool_destroy(vmm->vmm_pool);
-
-		write_lock(&iovmm_list_lock);
-		list_del(&vmm->node);
-		write_unlock(&iovmm_list_lock);
-
-		kfree(vmm);
-
-		dev_dbg(dev, "IOVMM: Removed IOVMM\n");
 	}
+
+	WARN(true, "%s: No IOVMM exist for %s\n", __func__, dev_name(dev));
 }
 
 int iovmm_activate(struct device *dev)
@@ -169,13 +205,19 @@ int iovmm_activate(struct device *dev)
 	struct s5p_iovmm *vmm;
 	int ret = 0;
 
+	rcu_read_lock();
+
 	vmm = find_iovmm(dev);
-	if (WARN_ON(!vmm))
+	if (WARN_ON(!vmm)) {
+		rcu_read_unlock();
 		return -EINVAL;
+	}
 
 	ret = iommu_attach_device(vmm->domain, vmm->dev);
 	if (!ret)
 		atomic_inc(&vmm->activations);
+
+	rcu_read_unlock();
 
 	return ret;
 }
@@ -184,13 +226,19 @@ void iovmm_deactivate(struct device *dev)
 {
 	struct s5p_iovmm *vmm;
 
+	rcu_read_lock();
+
 	vmm = find_iovmm(dev);
-	if (WARN_ON(!vmm))
+	if (WARN_ON(!vmm)) {
+		rcu_read_unlock();
 		return;
+	}
 
 	iommu_detach_device(vmm->domain, vmm->dev);
 
 	atomic_add_unless(&vmm->activations, -1, 0);
+
+	rcu_read_unlock();
 }
 
 dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
@@ -207,7 +255,7 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	size_t iova_size = 0;
 #endif
 
-	BUG_ON(!sg);
+	rcu_read_lock();
 
 	vmm = find_iovmm(dev);
 	if (WARN_ON(!vmm))
@@ -216,12 +264,19 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	for (; sg_dma_len(sg) < offset; sg = sg_next(sg))
 		offset -= sg_dma_len(sg);
 
-	spin_lock_irqsave(&vmm->lock, flags);
-
 	start_off = offset_in_page(sg_phys(sg) + offset);
 	size = PAGE_ALIGN(size + start_off);
 
 	order = __fls(min_t(size_t, size, SZ_1M));
+
+	region = kmalloc(sizeof(*region), GFP_KERNEL);
+	if (!region)
+		goto err_map_nomem;
+
+	INIT_LIST_HEAD(&region->node);
+
+	spin_lock_irqsave(&vmm->lock, flags);
+
 #ifdef CONFIG_EXYNOS_IOVMM_ALIGN64K
 	iova_size = ALIGN(size, SZ_64K);
 	start = (dma_addr_t)gen_pool_alloc_aligned(vmm->vmm_pool, iova_size,
@@ -283,13 +338,8 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	}
 #endif
 
-	region = kmalloc(sizeof(*region), GFP_KERNEL);
-	if (!region)
-		goto err_map_map;
-
 	region->start = start + start_off;
 	region->size = size;
-	INIT_LIST_HEAD(&region->node);
 
 	list_add(&region->node, &vmm->regions_list);
 
@@ -297,7 +347,11 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 
 	dev_dbg(dev, "IOVMM: Allocated VM region @ %#x/%#X bytes.\n",
 					region->start, region->size);
+
+	rcu_read_unlock();
+
 	return region->start;
+
 err_map_map:
 	iommu_unmap(vmm->domain, start, mapped_size);
 	gen_pool_free(vmm->vmm_pool, start, size);
@@ -306,6 +360,8 @@ err_map_nomem_lock:
 err_map_nomem:
 	dev_dbg(dev, "IOVMM: Failed to allocated VM region for %#x bytes.\n",
 									size);
+	rcu_read_unlock();
+
 	return (dma_addr_t)0;
 }
 
@@ -316,10 +372,14 @@ void iovmm_unmap(struct device *dev, dma_addr_t iova)
 	unsigned long flags;
 	size_t unmapped_size;
 
+	rcu_read_lock();
+
 	vmm = find_iovmm(dev);
 
-	if (WARN_ON(!vmm))
+	if (WARN_ON(!vmm)) {
+		rcu_read_unlock();
 		return;
+	}
 
 	spin_lock_irqsave(&vmm->lock, flags);
 
@@ -334,15 +394,13 @@ void iovmm_unmap(struct device *dev, dma_addr_t iova)
 
 	unmapped_size = iommu_unmap(vmm->domain, region->start, region->size);
 
-	if (unmapped_size != region->size) {
-		dev_err(dev, "IOVMM: Unmapped %#x bytes from %#x/%#x bytes.\n",
-				unmapped_size, region->start, region->size);
-	} else {
-		dev_dbg(dev, "IOVMM: Unmapped %#x bytes from %#x.\n",
-				region->start, region->size);
-	}
+	WARN_ON(unmapped_size != region->size);
+	dev_dbg(dev, "IOVMM: Unmapped %#x bytes from %#x.\n",
+					unmapped_size, region->start);
 
 	kfree(region);
 err_region_not_found:
 	spin_unlock_irqrestore(&vmm->lock, flags);
+
+	rcu_read_unlock();
 }
