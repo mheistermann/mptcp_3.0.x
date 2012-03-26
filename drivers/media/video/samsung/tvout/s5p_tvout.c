@@ -127,7 +127,7 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 		goto err;
 #elif defined(CONFIG_S5P_SYSMMU_TV) && defined(CONFIG_S5P_VMEM)
 	s5p_sysmmu_enable(&pdev->dev);
-	printk(KERN_WARN "sysmmu on\n");
+	printk(KERN_WARNING "sysmmu on\n");
 	s5p_sysmmu_set_tablebase_pgd(&pdev->dev, __pa(swapper_pg_dir));
 #endif
 	if (s5p_tvout_clk_get(pdev, &s5ptv_status) < 0)

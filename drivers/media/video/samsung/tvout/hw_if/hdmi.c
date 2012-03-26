@@ -865,7 +865,7 @@ static void s5p_hdmi_print_phy_config(void)
 		return;
 	}
 
-	printk(KERN_WARN "read buffer :\n");
+	printk(KERN_WARNING "read buffer :\n");
 
 	for (i = 1; i < size; i++) {
 		printk("0x%02x", read_buffer[i]);
@@ -875,7 +875,7 @@ static void s5p_hdmi_print_phy_config(void)
 		else
 			printk("\n");
 	}
-	printk(KERN_WARN "\n");
+	printk(KERN_WARNING "\n");
 }
 #else
 static inline void s5p_hdmi_print_phy_config(void) {}
