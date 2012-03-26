@@ -53,7 +53,9 @@
 static int kbase_platform_power_clock_init(struct device *dev)
 {
 	int timeout;
+#ifndef CONFIG_VITHAR_HWVER_R0P0
 	struct clk *mpll = NULL;
+#endif
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 	if (!kbdev)
