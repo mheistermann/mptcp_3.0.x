@@ -32,6 +32,24 @@
 
 #define VIDCON0					(0x00)
 #define VIDCON0_INTERLACE			(1 << 29)
+
+#ifdef CONFIG_FB_EXYNOS_FIMD_V8
+#define VIDCON0_VIDOUT_MASK                     (VIDOUT_CON_VIDOUT_MASK)     /* backward compatibility */
+#define VIDCON0_VIDOUT_SHIFT                    (VIDOUT_CON_VIDOUT_SHIFT)    /* backward compatibility */
+#define VIDCON0_VIDOUT_RGB                      (VIDOUT_CON_VIDOUT_RGB)      /* backward compatibility */
+#define VIDCON0_VIDOUT_TV                       (VIDOUT_CON_VIDOUT_TV)       /* backward compatibility */
+#define VIDCON0_VIDOUT_I80_LDI0                 (VIDOUT_CON_VIDOUT_I80_LDI0) /* backward compatibility */
+#define VIDCON0_VIDOUT_I80_LDI1                 (VIDOUT_CON_VIDOUT_I80_LDI1) /* backward compatibility */
+#define VIDCON0_VIDOUT_WB                       (VIDOUT_CON_VIDOUT_WB)       /* backward compatibility */
+#define VIDOUT_CON_VIDOUT_UP_ALWAYS             (0x0 << 16)
+#define VIDOUT_CON_VIDOUT_UP_START_FRAME        (0x1 << 16)
+#define VIDOUT_CON_VIDOUT_MASK                  (0x7 << 8)
+#define VIDOUT_CON_VIDOUT_SHIFT                 (8)
+#define VIDOUT_CON_VIDOUT_RGB                   (0x0 << 8)
+#define VIDOUT_CON_VIDOUT_I80_LDI0              (0x2 << 8)
+#define VIDOUT_CON_VIDOUT_I80_LDI1              (0x3 << 8)
+#define VIDOUT_CON_VIDOUT_WB                    (0x4 << 8)
+#else
 #define VIDCON0_VIDOUT_MASK			(0x7 << 26)
 #define VIDCON0_VIDOUT_SHIFT			(26)
 #define VIDCON0_VIDOUT_RGB			(0x0 << 26)
@@ -39,6 +57,7 @@
 #define VIDCON0_VIDOUT_I80_LDI0			(0x2 << 26)
 #define VIDCON0_VIDOUT_I80_LDI1			(0x3 << 26)
 #define VIDCON0_VIDOUT_WB			(0x4 << 26)
+#endif
 
 #define VIDCON0_L1_DATA_MASK			(0x7 << 23)
 #define VIDCON0_L1_DATA_SHIFT			(23)
@@ -83,9 +102,14 @@
 #define VIDCON0_ENVID_F				(1 << 0)
 
 #ifdef CONFIG_FB_EXYNOS_FIMD_V8
-#define VIDCON1					(0x20004)
+#define VIDOUT_CON                              (0x20000)
+#define VIDCON1                                 (0x20004)
+#define REG_TIME2INIT                           (0x01b4)
+#define REG_TIME2SNP                            (0x01b8)
+#define DP_MIE_CLKCON                           (0x027c)
+#define FREERUNCON                              (0x005c)
 #else
-#define VIDCON1					(0x04)
+#define VIDCON1                                 (0x04)
 #endif
 
 #define VIDCON1_LINECNT_MASK			(0x7ff << 16)
