@@ -20,6 +20,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 #include <linux/videodev2.h>
+#include <linux/videodev2_exynos_media.h>
 #include <media/videobuf2-core.h>
 
 #include "s5p_mfc_common.h"
@@ -158,8 +159,15 @@ static struct s5p_mfc_fmt formats[] = {
 		.num_planes = 1,
 	},
 	{
-		.name = "MPEG1/MPEG2 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_MPEG12,
+		.name = "MPEG1 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_MPEG1,
+		.codec_mode = S5P_FIMV_CODEC_MPEG2_DEC,
+		.type = MFC_FMT_DEC,
+		.num_planes = 1,
+	},
+	{
+		.name = "MPEG2 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_MPEG2,
 		.codec_mode = S5P_FIMV_CODEC_MPEG2_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
@@ -215,14 +223,14 @@ static struct s5p_mfc_fmt formats[] = {
 	},
 	{
 		.name = "VC1 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_VC1,
+		.fourcc = V4L2_PIX_FMT_VC1_ANNEX_G,
 		.codec_mode = S5P_FIMV_CODEC_VC1_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
 	{
 		.name = "VC1 RCV Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_VC1_RCV,
+		.fourcc = V4L2_PIX_FMT_VC1_ANNEX_L,
 		.codec_mode = S5P_FIMV_CODEC_VC1RCV_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
@@ -254,16 +262,16 @@ static struct s5p_mfc_fmt *find_format(struct v4l2_format *f, unsigned int t)
 
 static struct v4l2_queryctrl controls[] = {
 	{
-		.id = V4L2_CID_CODEC_DISPLAY_DELAY,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "",
+		.name = "H.264 Display Delay",
 		.minimum = -1,
-		.maximum = 16383,
+		.maximum = 32,
 		.step = 1,
 		.default_value = -1,
 	},
 	{
-		.id = V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE,
+		.id = V4L2_CID_MPEG_VIDEO_DECODER_MPEG4_DEBLOCK_FILTER,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "Mpeg4 Loop Filter Enable",
 		.minimum = 0,
@@ -272,7 +280,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_SLICE_INTERFACE,
+		.id = V4L2_CID_MPEG_VIDEO_DECODER_SLICE_INTERFACE,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "Slice Interface Enable",
 		.minimum = 0,
@@ -281,7 +289,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_PACKED_PB,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_PACKED_PB,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "Packed PB Enable",
 		.minimum = 0,
@@ -290,7 +298,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Frame Tag",
 		.minimum = 0,
@@ -300,7 +308,7 @@ static struct v4l2_queryctrl controls[] = {
 	},
 	{
 		.id = V4L2_CID_CACHEABLE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "Cacheable flag",
 		.minimum = 0,
 		.maximum = 3,
@@ -308,7 +316,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_CRC_ENABLE,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_ENABLE,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "CRC enable",
 		.minimum = 0,
@@ -317,7 +325,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_LUMA,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "CRC data",
 		.minimum = 0,
@@ -326,7 +334,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_CHROMA,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "CRC data",
 		.minimum = 0,
@@ -335,7 +343,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_DISPLAY_STATUS,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_DISPLAY_STATUS,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Display status",
 		.minimum = 0,
@@ -344,7 +352,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_FRAME_TYPE,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TYPE,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Frame type",
 		.minimum = 0,
@@ -363,7 +371,7 @@ static struct v4l2_queryctrl controls[] = {
 	},
 #endif
 	{
-		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE,
+		.id = V4L2_CID_MPEG_VIDEO_H264_SEI_FRAME_PACKING,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.name = "Frame pack sei parse flag",
 		.minimum = 0,
@@ -407,7 +415,7 @@ static int check_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	{
 		.type = MFC_CTRL_TYPE_SET,
-		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG,
 		.is_volatile = 1,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_SHARED_SET_FRAME_TAG,
@@ -419,7 +427,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_SHARED_GET_FRAME_TAG_TOP,
@@ -431,7 +439,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_DISPLAY_STATUS,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_DISPLAY_STATUS,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_SI_DISPLAY_STATUS,
@@ -444,7 +452,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	/* CRC related definitions are based on non-H.264 type */
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
-		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_LUMA,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_CRC_LUMA0,
@@ -456,7 +464,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
-		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_CHROMA,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_CRC_CHROMA0,
@@ -468,7 +476,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
-		.id = V4L2_CID_CODEC_CRC_DATA_LUMA_BOT,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_LUMA_BOT,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_CRC_LUMA1,
@@ -480,7 +488,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
-		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA_BOT,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_CHROMA_BOT,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_CRC_CHROMA1,
@@ -492,7 +500,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
-		.id = V4L2_CID_CODEC_CRC_GENERATED,
+		.id = V4L2_CID_MPEG_MFC51_VIDEO_CRC_GENERATED,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_SI_DECODED_STATUS,
@@ -504,7 +512,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_AVAIL,
+		.id = V4L2_CID_MPEG_VIDEO_H264_SEI_FP_AVAIL,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_FRAME_PACK_SEI_AVAIL,
@@ -516,7 +524,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_PACK_ARRGMENT_ID,
+		.id = V4L2_CID_MPEG_VIDEO_H264_SEI_FP_ARRGMENT_ID,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_FRAME_PACK_ARRGMENT_ID,
@@ -528,7 +536,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_INFO,
+		.id = V4L2_CID_MPEG_VIDEO_H264_SEI_FP_INFO,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_FRAME_PACK_SEI_INFO,
@@ -540,7 +548,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_PACK_GRID_POS,
+		.id = V4L2_CID_MPEG_VIDEO_H264_SEI_FP_GRID_POS,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_FRAME_PACK_GRID_POS,
@@ -552,7 +560,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 	},
 	{
 		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_MVC_VIEW_ID,
+		.id = V4L2_CID_MPEG_VIDEO_H264_MVC_VIEW_ID,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
 		.addr = S5P_FIMV_D_MVC_VIEW_ID,
@@ -608,14 +616,8 @@ static int dec_init_ctx_ctrls(struct s5p_mfc_ctx *ctx)
 {
 	int i;
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
-	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
 	INIT_LIST_HEAD(&ctx->ctrls);
-/* TODO: Temp */
-	for (i = 0; i < NUM_CTRLS; i++) {
-		if (controls[i].id ==  V4L2_CID_CODEC_DISPLAY_DELAY)
-			dec->display_delay = controls[i].default_value;
-	}
 
 	for (i = 0; i < NUM_CTRL_CFGS; i++) {
 		ctx_ctrl = kzalloc(sizeof(struct s5p_mfc_ctx_ctrl), GFP_KERNEL);
@@ -1220,20 +1222,20 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		mfc_debug(5, "ctx_ctrl is changed for H.264\n");
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			switch (ctx_ctrl->id) {
-			case V4L2_CID_CODEC_CRC_DATA_LUMA:
+			case V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_LUMA:
 				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
 				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_LUMA0;
 				break;
-			case V4L2_CID_CODEC_CRC_DATA_CHROMA:
+			case V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_CHROMA:
 				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
 				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_CHROMA0;
 				break;
-			case V4L2_CID_CODEC_CRC_GENERATED:
+			case V4L2_CID_MPEG_MFC51_VIDEO_CRC_GENERATED:
 				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
 				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_STATUS;
 				break;
-			case V4L2_CID_CODEC_CRC_DATA_LUMA_BOT:
-			case V4L2_CID_CODEC_CRC_DATA_CHROMA_BOT:
+			case V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_LUMA_BOT:
+			case V4L2_CID_MPEG_MFC51_VIDEO_CRC_DATA_CHROMA_BOT:
 				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
 				break;
 			default:
@@ -1540,16 +1542,16 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	mfc_debug_enter();
 
 	switch (ctrl->id) {
-	case V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE:
+	case V4L2_CID_MPEG_VIDEO_DECODER_MPEG4_DEBLOCK_FILTER:
 		ctrl->value = dec->loop_filter_mpeg4;
 		break;
-	case V4L2_CID_CODEC_DISPLAY_DELAY:
+	case V4L2_CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY:
 		ctrl->value = dec->display_delay;
 		break;
 	case V4L2_CID_CACHEABLE:
 		ctrl->value = ctx->cacheable;
 		break;
-	case V4L2_CID_CODEC_REQ_NUM_BUFS:
+	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
 		if (ctx->state >= MFCINST_HEAD_PARSED &&
 		    ctx->state < MFCINST_ABORT) {
 			ctrl->value = ctx->dpb_count;
@@ -1572,16 +1574,16 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 			return -EINVAL;
 		}
 		break;
-	case V4L2_CID_CODEC_SLICE_INTERFACE:
+	case V4L2_CID_MPEG_VIDEO_DECODER_SLICE_INTERFACE:
 		ctrl->value = dec->slice_enable;
 		break;
-	case V4L2_CID_CODEC_PACKED_PB:
+	case V4L2_CID_MPEG_MFC51_VIDEO_PACKED_PB:
 		ctrl->value = dec->is_packedpb;
 		break;
-	case V4L2_CID_CODEC_CRC_ENABLE:
+	case V4L2_CID_MPEG_MFC51_VIDEO_CRC_ENABLE:
 		ctrl->value = dec->crc_enable;
 		break;
-	case V4L2_CID_CODEC_CHECK_STATE:
+	case V4L2_CID_MPEG_MFC51_VIDEO_CHECK_STATE:
 		if (ctx->state == MFCINST_RES_CHANGE_FLUSH
 				|| ctx->state == MFCINST_RES_CHANGE_END
 				|| ctx->state == MFCINST_HEAD_PARSED)
@@ -1591,7 +1593,7 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		else
 			ctrl->value = MFCSTATE_PROCESSING;
 		break;
-	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
+	case V4L2_CID_MPEG_VIDEO_H264_SEI_FRAME_PACKING:
 		ctrl->value = dec->sei_parse;
 		break;
 	default:
@@ -1656,22 +1658,22 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		return ret;
 
 	switch (ctrl->id) {
-	case V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE:
+	case V4L2_CID_MPEG_VIDEO_DECODER_MPEG4_DEBLOCK_FILTER:
 		if (stream_on)
 			return -EBUSY;
 		dec->loop_filter_mpeg4 = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_DISPLAY_DELAY:
+	case V4L2_CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY:
 		if (stream_on)
 			return -EBUSY;
 		dec->display_delay = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_SLICE_INTERFACE:
+	case V4L2_CID_MPEG_VIDEO_DECODER_SLICE_INTERFACE:
 		if (stream_on)
 			return -EBUSY;
 		dec->slice_enable = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_PACKED_PB:
+	case V4L2_CID_MPEG_MFC51_VIDEO_PACKED_PB:
 		if (stream_on)
 			return -EBUSY;
 		if (ctx->codec_mode != S5P_FIMV_CODEC_MPEG4_DEC &&
@@ -1682,7 +1684,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			return -EINVAL;
 		dec->is_packedpb = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_CRC_ENABLE:
+	case V4L2_CID_MPEG_MFC51_VIDEO_CRC_ENABLE:
 		if (ctrl->value == 1 || ctrl->value == 0)
 			dec->crc_enable = ctrl->value;
 		else
@@ -1693,7 +1695,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			return -EBUSY; */
 		ctx->cacheable |= ctrl->value;
 		break;
-	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
+	case V4L2_CID_MPEG_VIDEO_H264_SEI_FRAME_PACKING:
 		/*if (stream_on)
 			return -EBUSY; */
 		if(ctrl->value == 0 || ctrl->value ==1)
@@ -1777,7 +1779,7 @@ static int vidioc_g_ext_ctrls(struct file *file, void *priv,
 	int i;
 	int ret = 0;
 
-	if (f->ctrl_class != V4L2_CTRL_CLASS_CODEC)
+	if (f->ctrl_class != V4L2_CTRL_CLASS_MPEG)
 		return -EINVAL;
 
 	for (i = 0; i < f->count; i++) {
@@ -2253,6 +2255,7 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	INIT_LIST_HEAD(&dec->dpb_queue);
 	dec->dpb_queue_cnt = 0;
 
+	dec->display_delay = -1;
 	dec->is_packedpb = 0;
 
 	/* Init videobuf2 queue for OUTPUT */

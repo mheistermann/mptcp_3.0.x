@@ -21,6 +21,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 #include <linux/videodev2.h>
+#include <linux/videodev2_exynos_media.h>
 #include <linux/proc_fs.h>
 #include <mach/videonode.h>
 #include <plat/cpu.h>

@@ -29,7 +29,7 @@
 
 #include <media/v4l2-subdev.h>
 #include <media/exynos_fimc_is.h>
-#include <linux/videodev2_samsung.h>
+#include <linux/videodev2_exynos_camera.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <plat/gpio-cfg.h>

@@ -22,6 +22,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/kernel.h>
+#include <linux/videodev2_exynos_media.h>
 
 #include <mach/videonode-exynos5.h>
 #include <media/exynos_mc.h>

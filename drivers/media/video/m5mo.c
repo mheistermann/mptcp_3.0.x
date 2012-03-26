@@ -22,9 +22,10 @@
 #include <linux/vmalloc.h>
 #include <linux/firmware.h>
 #include <linux/videodev2.h>
+#include <linux/videodev2_exynos_media.h>
 
 #ifdef CONFIG_VIDEO_SAMSUNG_V4L2
-#include <linux/videodev2_samsung.h>
+#include <linux/videodev2_exynos_camera.h>
 #endif
 
 #include <linux/regulator/machine.h>

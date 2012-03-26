@@ -15,7 +15,7 @@
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
 
-#include <linux/videodev2_samsung.h>
+#include <linux/videodev2_exynos_camera.h>
 
 #include "s5p_tvout_common_lib.h"
 #include "s5p_tvout_ctrl.h"

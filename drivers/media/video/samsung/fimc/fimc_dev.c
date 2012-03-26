@@ -28,7 +28,7 @@
 #include <linux/workqueue.h>
 #include <linux/pm_runtime.h>
 #include <media/v4l2-device.h>
-#include <linux/videodev2_samsung.h>
+#include <linux/videodev2_exynos_camera.h>
 #include <linux/delay.h>
 #include <linux/cma.h>
 #include <plat/fimc.h>

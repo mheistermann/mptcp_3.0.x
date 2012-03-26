@@ -16,7 +16,7 @@
 #include <linux/platform_device.h>
 #include <linux/mm.h>
 #include <linux/videodev2.h>
-#include <linux/videodev2_samsung.h>
+#include <linux/videodev2_exynos_camera.h>
 #include <media/videobuf-core.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
