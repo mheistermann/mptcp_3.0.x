@@ -47,7 +47,6 @@ static struct sleep_save exynos5_clock_save[] = {
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_G3D),
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GEN),
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_FSYS),
-	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GPS),
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_PERIC),
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_PERIS),
 	SAVE_ITEM(EXYNOS5_CLKGATE_BLOCK),
@@ -86,6 +85,11 @@ static struct sleep_save exynos5_clock_save[] = {
 	SAVE_ITEM(EXYNOS5_VPLL_CON1),
 	SAVE_ITEM(EXYNOS5_VPLL_CON2),
 };
+
+static struct sleep_save exynos5250_clock_save_rev0[] = {
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GPS),
+};
+
 #endif
 
 static struct clk exynos5_clk_sclk_hdmi24m = {
@@ -2344,11 +2348,19 @@ static int exynos5_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos5_clock_save, ARRAY_SIZE(exynos5_clock_save));
 
+	if (samsung_rev() < EXYNOS5250_REV_1_0)
+		s3c_pm_do_save(exynos5250_clock_save_rev0,
+				ARRAY_SIZE(exynos5250_clock_save_rev0));
+
 	return 0;
 }
 
 static void exynos5_clock_resume(void)
 {
+	if (samsung_rev() < EXYNOS5250_REV_1_0)
+		s3c_pm_do_restore_core(exynos5250_clock_save_rev0,
+					ARRAY_SIZE(exynos5250_clock_save_rev0));
+
 	s3c_pm_do_restore_core(exynos5_clock_save, ARRAY_SIZE(exynos5_clock_save));
 }
 #else
