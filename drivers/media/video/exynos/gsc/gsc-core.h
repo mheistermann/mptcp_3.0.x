@@ -491,7 +491,6 @@ struct gsc_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
-	void (*set_sharable)(void *alloc_ctx, bool sharable);
 };
 
 struct gsc_pipeline {
