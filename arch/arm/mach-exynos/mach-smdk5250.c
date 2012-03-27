@@ -202,6 +202,14 @@ struct platform_device exynos_device_md2 = {
 static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 				unsigned int power)
 {
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		if (!gpio_request(EXYNOS5_GPD1(5), "GPD1")) {
+			s3c_gpio_cfgpin(EXYNOS5_GPD1(5), S3C_GPIO_SFN(1));
+			gpio_direction_output(EXYNOS5_GPD1(5), 0);
+			gpio_direction_output(EXYNOS5_GPD1(5), 1);
+			gpio_free(EXYNOS5_GPD1(5));
+		}
+	}
 	/* reset */
 	gpio_request_one(EXYNOS5_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
 
