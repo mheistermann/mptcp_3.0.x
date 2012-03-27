@@ -49,6 +49,7 @@
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/hwmon.h>
 #include <plat/devs.h>
 #include <plat/sdhci.h>
 #include <plat/regs-srom.h>
@@ -2097,6 +2098,17 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 #endif
 };
 
+#ifdef CONFIG_S3C_DEV_HWMON
+static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
+	/* Reference voltage (1.2V) */
+	.in[0] = &(struct s3c_hwmon_chcfg) {
+		.name		= "smdk:reference-voltage",
+		.mult		= 3300,
+		.div		= 4096,
+	},
+};
+#endif
+
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdk5250_ehci_pdata;
 
@@ -2263,6 +2275,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&s5p_device_dp,
 	&smdk5250_dp_lcd,
 #endif
+#endif
+#ifdef CONFIG_S3C_DEV_HWMON
+	&s3c_device_hwmon,
 #endif
 	&s3c_device_wdt,
 	&s3c_device_i2c0,
@@ -2914,6 +2929,10 @@ static void __init smdk5250_machine_init(void)
 
 #ifdef CONFIG_FB_MIPI_DSIM
         s5p_dsim_set_platdata(&dsim_platform_data);
+#endif
+
+#ifdef CONFIG_S3C_DEV_HWMON
+	s3c_hwmon_set_platdata(&smdk5250_hwmon_pdata);
 #endif
 
 	if (samsung_rev() >= EXYNOS5250_REV_1_0)
