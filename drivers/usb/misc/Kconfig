@@ -246,7 +246,8 @@ config USB_YUREX
 
 config USB_EXYNOS_SWITCH
 	bool "EXYNOS USB SWITCH driver"
-	depends on (USB_EHCI_S5P || USB_OHCI_S5P) && USB_GADGET_S3C_OTGD
+	depends on USB_EHCI_S5P || USB_OHCI_S5P || USB_XHCI_EXYNOS
+	depends on USB_SUSPEND
 	depends on S5P_DEV_USB_SWITCH
 	help
 	  This driver is for switching host & device controller software.
