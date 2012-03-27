@@ -19,6 +19,7 @@
 #include <plat/devs.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
+#include <plat/usb-switch.h>
 
 #include <mach/regs-clock.h>
 

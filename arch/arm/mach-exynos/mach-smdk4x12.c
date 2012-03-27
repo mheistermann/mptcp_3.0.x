@@ -57,6 +57,7 @@
 #include <plat/mshci.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
+#include <plat/usb-switch.h>
 #include <plat/s3c64xx-spi.h>
 #if defined(CONFIG_VIDEO_FIMC)
 #include <plat/fimc.h>
