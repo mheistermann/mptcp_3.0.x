@@ -1852,6 +1852,11 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 		writel(reg, sfb->regs + VIDCON1);
 	}
 
+	/* disable auto-clock gate mode */
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		writel(REG_CLKGATE_MODE_NON_CLOCK_GATE,
+			sfb->regs + REG_CLKGATE_MODE);
+
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
 		s3c_fb_clear_win(sfb, win_no);
@@ -2896,6 +2901,11 @@ static int s3c_fb_resume(struct device *dev)
 		reg |= VIDCON1_VCLK_RUN;
 		writel(reg, sfb->regs + VIDCON1);
 	}
+
+	/* disable auto-clock gate mode */
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		writel(REG_CLKGATE_MODE_NON_CLOCK_GATE,
+			sfb->regs + REG_CLKGATE_MODE);
 
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
