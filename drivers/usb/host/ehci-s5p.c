@@ -340,9 +340,9 @@ static ssize_t store_ehci_power(struct device *dev,
 
 	device_lock(dev);
 
-	pm_runtime_get_sync(dev);
 	if (!power_on && s5p_ehci->power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns off\n", __func__);
+		pm_runtime_forbid(dev);
 		s5p_ehci->power_on = 0;
 		usb_remove_hcd(hcd);
 
@@ -351,10 +351,10 @@ static ssize_t store_ehci_power(struct device *dev,
 	} else if (power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns on\n", __func__);
 		if (s5p_ehci->power_on) {
+			pm_runtime_forbid(dev);
 			usb_remove_hcd(hcd);
-		}
-
-		s5p_ehci_phy_init(pdev);
+		} else
+			s5p_ehci_phy_init(pdev);
 
 		irq = platform_get_irq(pdev, 0);
 		retval = usb_add_hcd(hcd, irq,
@@ -365,9 +365,9 @@ static ssize_t store_ehci_power(struct device *dev,
 		}
 
 		s5p_ehci->power_on = 1;
+		pm_runtime_allow(dev);
 	}
 exit:
-	pm_runtime_put_sync(dev);
 	device_unlock(dev);
 	return count;
 }

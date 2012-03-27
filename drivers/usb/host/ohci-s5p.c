@@ -107,7 +107,7 @@ static int ohci_hcd_s5p_drv_resume(struct device *dev)
 	clk_enable(s5p_ohci->clk);
 	pm_runtime_resume(&pdev->dev);
 
-	if (pdata->phy_init)
+	if (pdata && pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 	/* Mark hardware accessible again as we are out of D3 state by now */
@@ -280,11 +280,12 @@ static ssize_t store_ohci_power(struct device *dev,
 	} else if (power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns on\n", __func__);
 		if (s5p_ohci->power_on) {
+			pm_runtime_forbid(dev);
 			usb_remove_hcd(hcd);
+		} else {
+			if (pdata && pdata->phy_init)
+				pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 		}
-
-		if (pdata->phy_init)
-			pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 		irq = platform_get_irq(pdev, 0);
 		retval = usb_add_hcd(hcd, irq,
