@@ -253,14 +253,14 @@ static int exynos_ss_udc_issue_epcmd(struct exynos_ss_udc *udc,
 }
 
 #ifdef CONFIG_BATTERY_SAMSUNG
-void exynos_ss_udc_cable_connect(struct exynos_ss_udc *udc)
+void exynos_ss_udc_cable_connect(struct exynos_ss_udc *udc, bool connect)
 {
-	samsung_cable_check_status(1);
-}
+	static int last_connect;
 
-void exynos_ss_udc_cable_disconnect(struct exynos_ss_udc *udc)
-{
-	samsung_cable_check_status(0);
+	if (last_connect != connect) {
+		samsung_cable_check_status(connect);
+		last_connect = connect;
+	}
 }
 #endif
 
@@ -1250,7 +1250,7 @@ static int exynos_ss_udc_process_set_address(struct exynos_ss_udc *udc,
 			EXYNOS_USB3_DCFG_DevAddr_MASK);
 		__orr32(udc->regs + EXYNOS_USB3_DCFG,
 			EXYNOS_USB3_DCFG_DevAddr(address));
-		dev_info(udc->dev, "new address %d\n", address);
+		dev_dbg(udc->dev, "new address %d\n", address);
 	}
 
 	return ret;
@@ -1891,7 +1891,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 			    event_info == EXYNOS_USB3_DEVT_EventParam(0x4)) {
 				call_gadget(udc, disconnect);
 #ifdef CONFIG_BATTERY_SAMSUNG
-				exynos_ss_udc_cable_disconnect(udc);
+				exynos_ss_udc_cable_connect(udc, false);
 #endif
 				dev_dbg(udc->dev, "Disconnect %x %s speed\n",
 					event_info,
@@ -1905,13 +1905,13 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
 		dev_dbg(udc->dev, "Connection Done");
 #ifdef CONFIG_BATTERY_SAMSUNG
-		exynos_ss_udc_cable_connect(udc);
+		exynos_ss_udc_cable_connect(udc, true);
 #endif
 		exynos_ss_udc_irq_connectdone(udc);
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_USBRst:
-		dev_info(udc->dev, "USB Reset");
+		dev_dbg(udc->dev, "USB Reset");
 		exynos_ss_udc_irq_usbrst(udc);
 		break;
 
@@ -1921,7 +1921,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 		udc->gadget.speed = USB_SPEED_UNKNOWN;
 		udc->state = USB_STATE_NOTATTACHED;
 #ifdef CONFIG_BATTERY_SAMSUNG
-		exynos_ss_udc_cable_disconnect(udc);
+		exynos_ss_udc_cable_connect(udc, false);
 #endif
 		break;
 
@@ -2503,7 +2503,9 @@ static int exynos_ss_udc_disable(struct exynos_ss_udc *udc)
 	clk_disable(udc->clk);
 
 	disable_irq(udc->irq);
-
+#ifdef CONFIG_BATTERY_SAMSUNG
+	exynos_ss_udc_cable_connect(udc, false);
+#endif
 	return 0;
 }
 
@@ -2606,8 +2608,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	}
 	/* we must now enable ep0 ready for host detection and then
 	 * set configuration. */
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 	exynos_ss_udc_enable(udc);
-
+#endif
 	/* report to the user, and return */
 	dev_info(udc->dev, "bound driver %s\n", driver->driver.name);
 	return 0;
@@ -2629,7 +2632,9 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	if (!driver || driver != udc->driver || !driver->unbind)
 		return -EINVAL;
 
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 	exynos_ss_udc_disable(udc);
+#endif
 
 	udc->driver = NULL;
 	driver->unbind(&udc->gadget);
@@ -2727,14 +2732,19 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 
 	udc->irq = ret;
-
-	ret = request_irq(ret, exynos_ss_udc_irq, 0, dev_name(dev), udc);
+	ret = request_irq(udc->irq,
+			exynos_ss_udc_irq,
+			IRQF_SHARED,
+			dev_name(dev),
+			udc);
 	if (ret < 0) {
 		dev_err(dev, "cannot claim IRQ\n");
 		goto err_irq;
 	}
 
+#ifndef CONFIG_USB_XHCI_EXYNOS
 	disable_irq(udc->irq);
+#endif
 	dev_info(dev, "regs %p, irq %d\n", udc->regs, udc->irq);
 
 	udc->clk = clk_get(&pdev->dev, "usbdrd30");
@@ -2844,8 +2854,9 @@ static int exynos_ss_udc_suspend(struct platform_device *pdev,
 
 	if (udc->driver) {
 		call_gadget(udc, suspend);
-
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 		exynos_ss_udc_disable(udc);
+#endif
 	}
 
 	return 0;
@@ -2856,8 +2867,9 @@ static int exynos_ss_udc_resume(struct platform_device *pdev)
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
 
 	if (udc->driver) {
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 		exynos_ss_udc_enable(udc);
-
+#endif
 		call_gadget(udc, resume);
 	}
 

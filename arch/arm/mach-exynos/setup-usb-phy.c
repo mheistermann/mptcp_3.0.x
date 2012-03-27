@@ -860,6 +860,10 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 	} else {
 		writel(0x08000000, EXYNOS_USB3_LINKSYSTEM);
 		writel(0x00000004, EXYNOS_USB3_PHYBATCHG);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+		writel(readl(EXYNOS_USB3_LINKPORT) |
+			(0xf<<2), EXYNOS_USB3_LINKPORT);
+#endif
 		/* REVISIT :use externel clock 100MHz */
 		if (use_ext_clk)
 			writel(readl(EXYNOS_USB3_PHYPARAM0) | (0x1<<31),

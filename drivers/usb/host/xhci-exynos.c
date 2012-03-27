@@ -56,7 +56,7 @@ static inline void __bic32(void __iomem *ptr, u32 val)
 	writel(readl(ptr) & ~val, ptr);
 }
 
-static u32 exynos_xhci_change_mode(struct usb_hcd *hcd)
+static u32 exynos_xhci_change_mode(struct usb_hcd *hcd, bool host)
 {
 	u32 gctl;
 
@@ -65,14 +65,18 @@ static u32 exynos_xhci_change_mode(struct usb_hcd *hcd)
 		EXYNOS_USB3_GCTL_FRMSCLDWN_MASK |
 		EXYNOS_USB3_GCTL_RAMClkSel_MASK);
 	gctl |= (EXYNOS_USB3_GCTL_FRMSCLDWN(0x1e85) | /* Power Down Scale */
-		EXYNOS_USB3_GCTL_PrtCapDir(0x1) | /* 0x1 : Host 0x2 : Device */
-		EXYNOS_USB3_GCTL_PrtCapDir(0x1) | /* 0x1 : Host 0x2 : Device */
 		EXYNOS_USB3_GCTL_RAMClkSel(0x2) | /* Ram Clock Select */
 		EXYNOS_USB3_GCTL_DisScramble);
 
+	if (host)
+		gctl |= EXYNOS_USB3_GCTL_PrtCapDir(0x1);/* 0x1 : Host */
+	else
+		gctl |= EXYNOS_USB3_GCTL_PrtCapDir(0x2);/* 0x2 : Device */
+
 	writel(gctl, hcd->regs + EXYNOS_USB3_GCTL);
 
-	printk(KERN_INFO "Change xHCI host mode %x\n", gctl);
+	printk(KERN_INFO "Change xHCI %s mode %x\n",
+		host ? "host" : "device", gctl);
 
 	return gctl;
 }
@@ -181,6 +185,7 @@ static int exynos_xhci_suspend(struct device *dev)
 
 	retval = xhci_suspend(xhci);
 
+	exynos_xhci_change_mode(hcd, false);
 	exynos_xhci_phy_unset(pdev);
 	clk_disable(exynos_xhci->clk);
 
@@ -206,9 +211,9 @@ static int exynos_xhci_resume(struct device *dev)
 	pm_runtime_resume(dev);
 
 	clk_enable(exynos_xhci->clk);
-	exynos_xhci_phy_set(pdev);
 
-	exynos_xhci_change_mode(hcd);
+	exynos_xhci_change_mode(hcd, true);
+	exynos_xhci_phy_set(pdev);
 
 	xhci = hcd_to_xhci(hcd);
 	retval = xhci_resume(xhci, 0);
@@ -245,9 +250,12 @@ static int exynos_xhci_runtime_suspend(struct device *dev)
 
 	retval = xhci_suspend(xhci);
 
+	exynos_xhci_change_mode(hcd, false);
 	exynos_xhci_phy_unset(pdev);
 	clk_disable(exynos_xhci->clk);
-
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	disable_irq(exynos_xhci->irq);
+#endif
 	return retval;
 }
 
@@ -267,13 +275,16 @@ static int exynos_xhci_runtime_resume(struct device *dev)
 	if (!hcd)
 		return -EINVAL;
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	enable_irq(exynos_xhci->irq);
+#endif
 	if (dev->power.is_suspended)
 		return 0;
 
 	clk_enable(exynos_xhci->clk);
-	exynos_xhci_phy_set(pdev);
 
-	exynos_xhci_change_mode(hcd);
+	exynos_xhci_change_mode(hcd, true);
+	exynos_xhci_phy_set(pdev);
 
 	xhci = hcd_to_xhci(hcd);
 	retval = xhci_resume(xhci, 0);
@@ -439,8 +450,8 @@ static int usb_hcd_exynos_probe(struct platform_device *pdev, const struct hc_dr
 	exynos_xhci->hcd = hcd;
 	platform_set_drvdata(pdev, exynos_xhci);
 
+	exynos_xhci_change_mode(hcd, true);
 	exynos_xhci_phy_set(pdev);
-	exynos_xhci_change_mode(hcd);
 
 	err = usb_add_hcd(hcd, exynos_xhci->irq, IRQF_DISABLED | IRQF_SHARED);
 	if (err) {
@@ -487,6 +498,7 @@ void usb_hcd_exynos_remove(struct platform_device *pdev)
 
 	usb_remove_hcd(hcd);
 
+	exynos_xhci_change_mode(hcd, false);
 	exynos_xhci_phy_unset(pdev);
 
 	if (hcd->driver->flags & HCD_MEMORY) {
