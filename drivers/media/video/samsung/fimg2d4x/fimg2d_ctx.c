@@ -19,26 +19,26 @@
 #include "fimg2d_cache.h"
 #include "fimg2d_helper.h"
 
-static int fimg2d_check_params(struct fimg2d_blit __user *u)
+static int fimg2d_check_params(struct fimg2d_bltcmd *cmd)
 {
 	int w, h, i;
-	struct fimg2d_param *p = &u->param;
-	struct fimg2d_image *img, *buf[MAX_IMAGES] = image_table(u);
+	struct fimg2d_param *p = &cmd->param;
+	struct fimg2d_image *img;
 	struct fimg2d_scale *scl;
 	struct fimg2d_clip *clp;
 	struct fimg2d_rect *r;
 
 	/* dst is mandatory */
-	if (!u->dst)
+	if (!cmd->image[IDST].addr.type)
 		return -1;
 
 	/* DST op makes no effect */
-	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END)
+	if (cmd->op < 0 || cmd->op == BLIT_OP_DST || cmd->op >= BLIT_OP_END)
 		return -1;
 
 	for (i = 0; i < MAX_IMAGES; i++) {
-		img = buf[i];
-		if (!img)
+		img = &cmd->image[i];
+		if (!img->addr.type)
 			continue;
 
 		w = img->width;
@@ -57,7 +57,7 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 
 	clp = &p->clipping;
 	if (clp->enable) {
-		img = buf[IDST];
+		img = &cmd->image[IDST];
 
 		w = img->width;
 		h = img->height;
@@ -270,58 +270,57 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 }
 
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
-			struct fimg2d_blit __user *u)
+			struct fimg2d_blit *blit)
 {
-	int i;
+	int i, ret;
+	struct fimg2d_image *buf[MAX_IMAGES] = image_table(blit);
 	struct fimg2d_bltcmd *cmd;
-	struct fimg2d_image *buf[MAX_IMAGES] = image_table(u);
-
-#ifdef CONFIG_VIDEO_FIMG2D_DEBUG
-	fimg2d_print_params(u);
-#endif
-
-	if (info->err) {
-		printk(KERN_ERR "[%s] device error, do sw fallback\n", __func__);
-		return -EFAULT;
-	}
-
-	if (fimg2d_check_params(u)) {
-		printk(KERN_ERR "[%s] invalid params\n", __func__);
-		fimg2d_print_params(u);
-		return -EINVAL;
-	}
 
 	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
 
 	cmd->ctx = ctx;
-	cmd->op = u->op;
-	cmd->seq_no = u->seq_no;
-	cmd->sync = u->sync;
-
-	if (copy_from_user(&cmd->param, &u->param, sizeof(cmd->param)))
-		goto err_user;
+	cmd->op = blit->op;
+	cmd->sync = blit->sync;
+	cmd->seq_no = blit->seq_no;
+	memcpy(&cmd->param, &blit->param, sizeof(cmd->param));
 
 	for (i = 0; i < MAX_IMAGES; i++) {
 		if (!buf[i])
 			continue;
 
 		if (copy_from_user(&cmd->image[i], buf[i],
-					sizeof(cmd->image[i])))
+					sizeof(struct fimg2d_image))) {
+			ret = -EFAULT;
 			goto err_user;
+		}
+	}
+
+#ifdef CONFIG_VIDEO_FIMG2D_DEBUG
+	fimg2d_dump_command(cmd);
+#endif
+
+	if (fimg2d_check_params(cmd)) {
+		printk(KERN_ERR "[%s] invalid params\n", __func__);
+		fimg2d_dump_command(cmd);
+		ret = -EINVAL;
+		goto err_user;
 	}
 
 	fimg2d_fixup_params(cmd);
 
-	if (fimg2d_check_dma_sync(cmd))
+	if (fimg2d_check_dma_sync(cmd)) {
+		ret = -EFAULT;
 		goto err_user;
+	}
 
 	/* add command node and increase ncmd */
 	spin_lock(&info->bltlock);
 	if (atomic_read(&info->suspended)) {
 		fimg2d_debug("fimg2d suspended, do sw fallback\n");
 		spin_unlock(&info->bltlock);
+		ret = -EFAULT;
 		goto err_user;
 	}
 	atomic_inc(&ctx->ncmd);
@@ -335,7 +334,7 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 
 err_user:
 	kfree(cmd);
-	return -EFAULT;
+	return ret;
 }
 
 void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_context *ctx)

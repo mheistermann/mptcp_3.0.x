@@ -124,26 +124,36 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 	printk(KERN_INFO " solid color: 0x%lx\n", p->solid_color);
 	printk(KERN_INFO " g_alpha: 0x%x\n", p->g_alpha);
 	printk(KERN_INFO " premultiplied: %d\n", p->premult);
-	printk(KERN_INFO " dither: %d\n", p->dither);
-	printk(KERN_INFO " rotate: %d\n", p->rotate);
-	printk(KERN_INFO " repeat mode: %d, pad color: 0x%lx\n",
-			p->repeat.mode, p->repeat.pad_color);
-	printk(KERN_INFO " bluescreen mode: %d, bs_color: 0x%lx "
-			"bg_color: 0x%lx\n",
-			p->bluscr.mode, p->bluscr.bs_color,
-			p->bluscr.bg_color);
-	printk(KERN_INFO " scaling mode: %d, s:%d,%d d:%d,%d\n",
-			p->scaling.mode,
-			p->scaling.src_w, p->scaling.src_h,
-			p->scaling.dst_w, p->scaling.dst_h);
-	printk(KERN_INFO " clipping mode: %d, LT(%d,%d) RB(%d,%d)\n",
-			p->clipping.enable,
-			p->clipping.x1, p->clipping.y1,
-			p->clipping.x2, p->clipping.y2);
+	if (p->dither)
+		printk(KERN_INFO " dither: %d\n", p->dither);
+	if (p->rotate)
+		printk(KERN_INFO " rotate: %d\n", p->rotate);
+	if (p->repeat.mode) {
+		printk(KERN_INFO " repeat mode: %d, pad color: 0x%lx\n",
+				p->repeat.mode, p->repeat.pad_color);
+	}
+	if (p->bluscr.mode) {
+		printk(KERN_INFO " bluescreen mode: %d, bs_color: 0x%lx "
+				"bg_color: 0x%lx\n",
+				p->bluscr.mode, p->bluscr.bs_color,
+				p->bluscr.bg_color);
+	}
+	if (p->scaling.mode) {
+		printk(KERN_INFO " scaling mode: %d, s:%d,%d d:%d,%d\n",
+				p->scaling.mode,
+				p->scaling.src_w, p->scaling.src_h,
+				p->scaling.dst_w, p->scaling.dst_h);
+	}
+	if (p->clipping.enable) {
+		printk(KERN_INFO " clipping mode: %d, LT(%d,%d) RB(%d,%d)\n",
+				p->clipping.enable,
+				p->clipping.x1, p->clipping.y1,
+				p->clipping.x2, p->clipping.y2);
+	}
 
 	for (i = 0; i < MAX_IMAGES; i++) {
 		img = &cmd->image[i];
-		if (img->addr.type == ADDR_NONE)
+		if (!img->addr.type)
 			continue;
 
 		c = &cmd->dma[i];
@@ -164,7 +174,9 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 				imagename(i), c->addr, c->size, c->cached);
 	}
 
-	printk(KERN_INFO " dma size all: 0x%x bytes\n", cmd->dma_all);
-	printk(KERN_INFO " ctx: %p seq_no(%u) sync(%d)\n",
-			cmd->ctx, cmd->seq_no, cmd->sync);
+	if (cmd->dma_all) {
+		printk(KERN_INFO " dma size all: 0x%x bytes\n", cmd->dma_all);
+		printk(KERN_INFO " ctx: %p seq_no(%u) sync(%d)\n",
+				cmd->ctx, cmd->seq_no, cmd->sync);
+	}
 }
