@@ -63,6 +63,7 @@
 #include <plat/backlight.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
+#include <plat/usb-switch.h>
 #include <plat/s5p-mfc.h>
 #include <plat/fimg2d.h>
 #include <plat/tv-core.h>
@@ -2177,6 +2178,91 @@ static void __init smdk5250_xhci_init(void)
 }
 #endif
 
+static struct s5p_usbswitch_platdata smdk5250_usbswitch_pdata;
+
+static void __init smdk5250_usbswitch_init(void)
+{
+	struct s5p_usbswitch_platdata *pdata = &smdk5250_usbswitch_pdata;
+	int err;
+
+	/* USB 2.0 detect GPIO */
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		pdata->gpio_device_detect = 0;
+		pdata->gpio_host_vbus = 0;
+	} else {
+		pdata->gpio_host_detect = EXYNOS5_GPX1(6);
+		err = gpio_request_one(pdata->gpio_host_detect, GPIOF_IN,
+			"HOST_DETECT");
+		if (err) {
+			printk(KERN_ERR "failed to request host gpio\n");
+			return;
+		}
+
+		s3c_gpio_cfgpin(pdata->gpio_host_detect, S3C_GPIO_SFN(0xF));
+		s3c_gpio_setpull(pdata->gpio_host_detect, S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_host_detect);
+
+		pdata->gpio_device_detect = EXYNOS5_GPX3(4);
+		err = gpio_request_one(pdata->gpio_device_detect, GPIOF_IN,
+			"DEVICE_DETECT");
+		if (err) {
+			printk(KERN_ERR "failed to request device gpio\n");
+			return;
+		}
+
+		s3c_gpio_cfgpin(pdata->gpio_device_detect, S3C_GPIO_SFN(0xF));
+		s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_device_detect);
+
+		pdata->gpio_host_vbus = EXYNOS5_GPX2(6);
+		err = gpio_request_one(pdata->gpio_host_vbus,
+			GPIOF_OUT_INIT_LOW,
+			"HOST_VBUS_CONTROL");
+		if (err) {
+			printk(KERN_ERR "failed to request host_vbus gpio\n");
+			return;
+		}
+
+		s3c_gpio_setpull(pdata->gpio_host_vbus, S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_host_vbus);
+	}
+
+	/* USB 3.0 DRD detect GPIO */
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		pdata->gpio_drd_host_detect = 0;
+		pdata->gpio_drd_device_detect = 0;
+	} else {
+		pdata->gpio_drd_host_detect = EXYNOS5_GPX1(7);
+		err = gpio_request_one(pdata->gpio_drd_host_detect, GPIOF_IN,
+			"DRD_HOST_DETECT");
+		if (err) {
+			printk(KERN_ERR "failed to request drd_host gpio\n");
+			return;
+		}
+
+		s3c_gpio_cfgpin(pdata->gpio_drd_host_detect, S3C_GPIO_SFN(0xF));
+		s3c_gpio_setpull(pdata->gpio_drd_host_detect,
+			S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_drd_host_detect);
+
+		pdata->gpio_drd_device_detect = EXYNOS5_GPX0(6);
+		err = gpio_request_one(pdata->gpio_drd_device_detect, GPIOF_IN,
+			"DRD_DEVICE_DETECT");
+		if (err) {
+			printk(KERN_ERR "failed to request drd_device\n");
+			return;
+		}
+
+		s3c_gpio_cfgpin(pdata->gpio_drd_device_detect,
+			S3C_GPIO_SFN(0xF));
+		s3c_gpio_setpull(pdata->gpio_drd_device_detect,
+			S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_drd_device_detect);
+	}
+
+	s5p_usbswitch_set_platdata(pdata);
+}
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -2930,6 +3016,7 @@ static void __init smdk5250_machine_init(void)
 #ifdef CONFIG_USB_XHCI_EXYNOS
 	smdk5250_xhci_init();
 #endif
+	smdk5250_usbswitch_init();
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #if defined(CONFIG_EXYNOS_DEV_PD)
 	s5p_device_mfc.dev.parent = &exynos5_device_pd[PD_MFC].dev;
