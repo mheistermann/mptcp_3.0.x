@@ -174,7 +174,7 @@ static struct sleep_save exynos5_core_save[] = {
 	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x060),
 	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x070),
 
-	SAVE_ITEM(S3C_VA_SYS + 0x134),
+	SAVE_ITEM(S3C_VA_SYS + 0x234),
 };
 
 void exynos5_cpu_suspend(void)
