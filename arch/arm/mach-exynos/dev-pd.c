@@ -92,6 +92,12 @@ int exynos_pd_disable(struct device *dev)
 		(pdata->base == EXYNOS5_ISP_CONFIGURATION))
 		return 0;
 #endif
+	/* Do not disable MFC power domain for EXYNOS5250 EVT0 */
+	if (soc_is_exynos5250() &&
+		(samsung_rev() < EXYNOS5250_REV_1_0) &&
+		(pdata->base == EXYNOS5_MFC_CONFIGURATION))
+		return 0;
+
 	/*
 	 * To ISP power domain off,
 	 * first, ISP_ARM power domain be off.
