@@ -2939,12 +2939,13 @@ static void __init smdk5250_machine_init(void)
         s5p_dsim_set_platdata(&dsim_platform_data);
 #endif
 
-#ifdef CONFIG_S3C_DEV_HWMON
-	s3c_hwmon_set_platdata(&smdk5250_hwmon_pdata);
-#endif
-
 	if (samsung_rev() >= EXYNOS5250_REV_1_0)
 		platform_device_register(&s3c_device_adc);
+
+#ifdef CONFIG_S3C_DEV_HWMON
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		s3c_hwmon_set_platdata(&smdk5250_hwmon_pdata);
+#endif
 
 #ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
 	samsung_bl_set(&smdk5250_bl_gpio_info, &smdk5250_bl_data);
