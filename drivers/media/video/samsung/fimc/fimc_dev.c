@@ -40,6 +40,7 @@
 char buf[32];
 struct fimc_global *fimc_dev;
 
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 void s3c_fimc_irq_work(struct work_struct *work)
 {
 	struct fimc_control *ctrl = container_of(work, struct fimc_control,
@@ -54,6 +55,7 @@ void s3c_fimc_irq_work(struct work_struct *work)
 		} while (ret != 1);
 	}
 }
+#endif
 
 int fimc_dma_alloc(struct fimc_control *ctrl, struct fimc_buf_set *bs,
 							int i, int align)
