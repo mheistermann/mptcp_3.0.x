@@ -85,23 +85,13 @@ extern struct ion_device *ion_exynos;
 #endif
 
 #ifdef CONFIG_FB_EXYNOS_FIMD_MC
-#define SYSREG_MIXER0_VALID	(1 << 7)
-#define SYSREG_MIXER1_VALID	(1 << 4)
 #define FIMD_PAD_SINK_FROM_GSCALER_SRC		0
 #define FIMD_PADS_NUM				1
-
-/* SYSREG for local path between Gscaler and Mixer */
-#define SYSREG_DISP1BLK_CFG	(S3C_VA_SYS + 0x0214)
 #endif
 
 #ifdef CONFIG_FB_EXYNOS_FIMD_MC_WB
-#define SYSREG_DISP1WB_DEST(_x)			((_x) << 10)
-#define SYSREG_DISP1WB_DEST_MASK		(0x3 << 10)
 #define FIMD_WB_PAD_SRC_TO_GSCALER_SINK		0
 #define FIMD_WB_PADS_NUM			1
-
-/* SYSREG for local path between Gscaler and Mixer */
-#define SYSREG_GSCLBLK_CFG	(S3C_VA_SYS + 0x0224)
 #endif
 
 #define VALID_BPP(x) (1 << ((x) - 1))
@@ -2059,26 +2049,6 @@ static const struct v4l2_subdev_ops s3c_fb_sd_ops = {
 	.video = &s3c_fb_sd_video_ops,
 };
 
-static void s3c_fb_mc_local_path_setup(struct s3c_fb_win *win)
-{
-	u32 data = 0;
-	struct s3c_fb *sfb = win->parent;
-
-	if (win->local) {
-		/* Enable  the channel 1 to a local path for the window1
-		   in fimd1 */
-
-		/* MIXER0_VALID[7] & MIXER1_VALID[4] : should be 0
-		   (FIMD1 Data Valid) */
-		data = __raw_readl(SYSREG_DISP1BLK_CFG);
-		data &= ~(SYSREG_MIXER0_VALID | SYSREG_MIXER1_VALID);
-		writel(data, SYSREG_DISP1BLK_CFG);
-	}
-
-	dev_dbg(sfb->dev, "Local path set up in Winow[%d] : %d\n", win->index,
-		win->local);
-}
-
 static int s3c_fb_me_link_setup(struct media_entity *entity,
 			      const struct media_pad *local,
 			      const struct media_pad *remote, u32 flags)
@@ -2101,8 +2071,6 @@ static int s3c_fb_me_link_setup(struct media_entity *entity,
 			if (entity->links[i].flags & MEDIA_LNK_FL_ENABLED)
 				win->use = 1;
 	}
-
-	s3c_fb_mc_local_path_setup(win);
 
 	dev_dbg(sfb->dev, "MC link set up between Window[%d] and Gscaler: \
 			flag - %d\n", win->index, flags);
