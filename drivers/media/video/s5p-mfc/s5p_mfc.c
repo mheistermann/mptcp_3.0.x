@@ -1370,7 +1370,7 @@ struct s5p_mfc_buf_size_v5 mfc_buf_size_v5 = {
 };
 
 struct s5p_mfc_buf_size_v6 mfc_buf_size_v6 = {
-	.dev_ctx = 0x400,
+	.dev_ctx = 0x6400,
 	.h264_dec_ctx = 0x200000,	/* FIXME: 1.6MB */
 	.other_dec_ctx = 0x5000,	/*  20KB */
 	.h264_enc_ctx = 0x19000,	/* 100KB */
