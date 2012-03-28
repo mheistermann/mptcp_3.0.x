@@ -598,10 +598,8 @@ irqreturn_t mxr_irq_handler(int irq, void *dev_data)
 
 	/* clear interrupts.
 	   vsync is updated after write MXR_CFG_LAYER_UPDATE bit */
-	if (val & MXR_INT_CLEAR_VSYNC) {
+	if (val & MXR_INT_CLEAR_VSYNC)
 		mxr_write_mask(mdev, MXR_INT_STATUS, ~0, MXR_INT_CLEAR_VSYNC);
-		mxr_write_mask(mdev, MXR_CFG, ~0, MXR_CFG_LAYER_UPDATE);
-	}
 
 	val = mxr_irq_underrun_handle(mdev, val);
 	mxr_write(mdev, MXR_INT_STATUS, val);
@@ -617,6 +615,12 @@ irqreturn_t mxr_irq_handler(int irq, void *dev_data)
 #endif
 		mxr_irq_layer_handle(mdev->sub_mxr[i].layer[MXR_LAYER_GRP0]);
 		mxr_irq_layer_handle(mdev->sub_mxr[i].layer[MXR_LAYER_GRP1]);
+	}
+
+	if (test_bit(MXR_EVENT_VSYNC, &mdev->event_flags)) {
+		spin_lock(&mdev->reg_slock);
+		mxr_write_mask(mdev, MXR_CFG, ~0, MXR_CFG_LAYER_UPDATE);
+		spin_unlock(&mdev->reg_slock);
 	}
 
 	return IRQ_HANDLED;
@@ -636,9 +640,6 @@ void mxr_reg_streamon(struct mxr_device *mdev)
 
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	/* single write -> no need to block vsync update */
-
-	/* vsync is updated after write MXR_CFG_LAYER_UPDATE bit */
-	mxr_write_mask(mdev, MXR_CFG, ~0, MXR_CFG_LAYER_UPDATE);
 
 	/* start MIXER */
 	mxr_write_mask(mdev, MXR_STATUS, ~0, MXR_STATUS_REG_RUN);
