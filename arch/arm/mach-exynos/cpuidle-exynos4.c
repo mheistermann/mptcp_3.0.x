@@ -495,9 +495,6 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 
 	vfp_enable(NULL);
 
-	s3c_pm_do_restore_core(exynos4_lpa_save,
-			       ARRAY_SIZE(exynos4_lpa_save));
-
 	/* For release retention */
 	__raw_writel((1 << 28), S5P_PAD_RET_GPIO_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_UART_OPTION);
@@ -507,6 +504,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
+	s3c_pm_do_restore_core(exynos4_lpa_save,
+			       ARRAY_SIZE(exynos4_lpa_save));
+
 #ifdef CONFIG_EXYNOS4_CPUFREQ
 	if ((exynos_result_of_asv > 1) && !soc_is_exynos4210())
 		exynos4x12_set_abb_member(ABB_ARM, abb_val);
