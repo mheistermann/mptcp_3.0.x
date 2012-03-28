@@ -1503,10 +1503,10 @@ REGULATOR_SUPPLY("vdd_int", NULL);
 static struct regulator_consumer_supply max77686_buck4 =
 REGULATOR_SUPPLY("vdd_g3d", NULL);
 
-static struct regulator_consumer_supply __initdata max77686_ldo11_consumer =
+static struct regulator_consumer_supply max77686_ldo11_consumer =
 REGULATOR_SUPPLY("vdd_ldo11", NULL);
 
-static struct regulator_consumer_supply __initdata max77686_ldo14_consumer =
+static struct regulator_consumer_supply max77686_ldo14_consumer =
 REGULATOR_SUPPLY("vdd_ldo14", NULL);
 
 static struct regulator_init_data max77686_buck1_data = {
@@ -1565,7 +1565,7 @@ static struct regulator_init_data max77686_buck4_data = {
 	.consumer_supplies = &max77686_buck4,
 };
 
-static struct regulator_init_data __initdata max77686_ldo11_data = {
+static struct regulator_init_data max77686_ldo11_data = {
 	.constraints	= {
 		.name		= "vdd_ldo11 range",
 		.min_uV		= 1900000,
@@ -1580,7 +1580,7 @@ static struct regulator_init_data __initdata max77686_ldo11_data = {
 	.consumer_supplies	= &max77686_ldo11_consumer,
 };
 
-static struct regulator_init_data __initdata max77686_ldo14_data = {
+static struct regulator_init_data max77686_ldo14_data = {
 	.constraints	= {
 		.name		= "vdd_ldo14 range",
 		.min_uV		= 1900000,
