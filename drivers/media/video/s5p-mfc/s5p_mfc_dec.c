@@ -1230,15 +1230,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	mfc_debug_enter();
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
 
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	if (ctx->fd_ion < 0) {
-		mfc_err("ION file descriptor is not set.\n");
-		return -EINVAL;
-	}
-	mfc_debug(2, "ION fd from Driver : %d\n", ctx->fd_ion);
-	vb2_ion_set_sharable(ctx->dev->alloc_ctx[0],(bool)ctx->fd_ion);
-	vb2_ion_set_sharable(ctx->dev->alloc_ctx[1],(bool)ctx->fd_ion);
-#endif
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		cacheable = (ctx->cacheable & MFCMASK_SRC_CACHE) ? 1 : 0;
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], cacheable);
@@ -1527,11 +1518,6 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		else
 			ctrl->value = MFCSTATE_PROCESSING;
 		break;
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHAREABLE:
-		ctrl->value = ctx->fd_ion;
-		break;
-#endif
 	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
 		ctrl->value = dec->sei_parse;
 		break;
@@ -1634,12 +1620,6 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			return -EBUSY; */
 		ctx->cacheable |= ctrl->value;
 		break;
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHAREABLE:
-		ctx->fd_ion = ctrl->value;
-		mfc_debug(2, "fd_ion : %d\n", ctx->fd_ion);
-		break;
-#endif
 	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
 		/*if (stream_on)
 			return -EBUSY; */

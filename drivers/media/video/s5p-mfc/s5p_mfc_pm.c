@@ -76,11 +76,9 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 	atomic_set(&pm->power, 0);
 	atomic_set(&clk_ref, 0);
 
-#ifdef CONFIG_PM_RUNTIME
 	pm->device = &dev->plat_dev->dev;
 
 	pm_runtime_enable(pm->device);
-#endif
 
 	return 0;
 

@@ -206,7 +206,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 
 	/* Allocate only if memory from bank 1 is necessary */
 	if (ctx->port_a_size > 0) {
-		ctx->port_a_buf = s5p_mfc_mem_alloc(
+		ctx->port_a_buf = s5p_mfc_mem_allocate(
 		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->port_a_size);
 		if (IS_ERR(ctx->port_a_buf)) {
 			ctx->port_a_buf = 0;
@@ -214,8 +214,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 			       "Buf alloc for decoding failed (port A).\n");
 			return -ENOMEM;
 		}
-		ctx->port_a_phys = s5p_mfc_mem_cookie(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->port_a_buf);
+		ctx->port_a_phys = s5p_mfc_mem_dma_addr(ctx->port_a_buf);
 	}
 
 	mfc_debug_leave();
@@ -227,8 +226,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
 	if (ctx->port_a_buf) {
-		s5p_mfc_mem_put(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->port_a_buf);
+		s5p_mfc_mem_free(ctx->port_a_buf);
 		ctx->port_a_buf = 0;
 		ctx->port_a_phys = 0;
 		ctx->port_a_size = 0;
@@ -273,21 +271,18 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 		break;
 	}
 
-	ctx->ctx.alloc = s5p_mfc_mem_alloc(
+	ctx->ctx.alloc = s5p_mfc_mem_allocate(
 		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx_buf_size);
 	if (IS_ERR(ctx->ctx.alloc)) {
 		mfc_err("Allocating context buffer failed.\n");
 		return PTR_ERR(ctx->ctx.alloc);
 	}
 
-	ctx->ctx.ofs = s5p_mfc_mem_cookie(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx.alloc);
+	ctx->ctx.ofs = s5p_mfc_mem_dma_addr(ctx->ctx.alloc);
 
-	ctx->ctx.virt = s5p_mfc_mem_vaddr(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx.alloc);
+	ctx->ctx.virt = s5p_mfc_mem_vaddr(ctx->ctx.alloc);
 	if (!ctx->ctx.virt) {
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->ctx.alloc);
+		s5p_mfc_mem_free(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -297,7 +292,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	}
 
 	memset(ctx->ctx.virt, 0, ctx->ctx_buf_size);
-	s5p_mfc_cache_clean(ctx->ctx.alloc);
+	s5p_mfc_cache_clean_fw(ctx->ctx.alloc);
 	/*
 	ctx->ctx.dma = dma_map_single(ctx->dev->v4l2_dev.dev,
 					  ctx->ctx.virt, ctx->ctx_buf_size,
@@ -312,8 +307,6 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 /* Release instance buffer */
 void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 {
-	struct s5p_mfc_dev *dev = ctx->dev;
-
 	mfc_debug_enter();
 
 	if (ctx->ctx.alloc) {
@@ -322,8 +315,7 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 				ctx->ctx.dma, ctx->ctx_buf_size,
 				DMA_TO_DEVICE);
 		*/
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->ctx.alloc);
+		s5p_mfc_mem_free(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -339,21 +331,18 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 
 	mfc_debug_enter();
 
-	dev->ctx_buf.alloc = s5p_mfc_mem_alloc(
+	dev->ctx_buf.alloc = s5p_mfc_mem_allocate(
 			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], buf_size->dev_ctx);
 	if (IS_ERR(dev->ctx_buf.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
 		return PTR_ERR(dev->ctx_buf.alloc);
 	}
 
-	dev->ctx_buf.ofs = s5p_mfc_mem_cookie(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+	dev->ctx_buf.ofs = s5p_mfc_mem_dma_addr(dev->ctx_buf.alloc);
 
-	dev->ctx_buf.virt = s5p_mfc_mem_vaddr(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+	dev->ctx_buf.virt = s5p_mfc_mem_vaddr(dev->ctx_buf.alloc);
 	if (!dev->ctx_buf.virt) {
-		s5p_mfc_mem_put(
-				dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+		s5p_mfc_mem_free(dev->ctx_buf.alloc);
 		dev->ctx_buf.alloc = NULL;
 		dev->ctx_buf.ofs = 0;
 
@@ -362,7 +351,7 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 	}
 
 	memset(dev->ctx_buf.virt, 0, buf_size->dev_ctx);
-	s5p_mfc_cache_clean(dev->ctx_buf.alloc);
+	s5p_mfc_cache_clean_fw(dev->ctx_buf.alloc);
 
 	mfc_debug_leave();
 
@@ -373,8 +362,7 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
 {
 	if (dev->ctx_buf.alloc) {
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				dev->ctx_buf.alloc);
+		s5p_mfc_mem_free(dev->ctx_buf.alloc);
 		dev->ctx_buf.alloc = NULL;
 		dev->ctx_buf.ofs = 0;
 		dev->ctx_buf.virt = NULL;
@@ -509,11 +497,11 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		if (i == 0) {
 			dpb_vir = vb2_plane_vaddr(&buf->vb, 0);
 			memset(dpb_vir, 0x0, ctx->luma_size);
-			s5p_mfc_cache_inv(buf->vb.planes[0].mem_priv);
+			s5p_mfc_cache_inv(&buf->vb, 0);
 
 			dpb_vir = vb2_plane_vaddr(&buf->vb, 1);
 			memset(dpb_vir, 0x80, ctx->chroma_size);
-			s5p_mfc_cache_inv(buf->vb.planes[1].mem_priv);
+			s5p_mfc_cache_inv(&buf->vb, 1);
 		}
 		i++;
 	}

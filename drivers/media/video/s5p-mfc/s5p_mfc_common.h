@@ -151,9 +151,7 @@ struct s5p_mfc_buf {
 struct s5p_mfc_pm {
 	struct clk	*clock;
 	atomic_t	power;
-#ifdef CONFIG_PM_RUNTIME
 	struct device	*device;
-#endif
 };
 
 struct s5p_mfc_fw {
@@ -602,9 +600,6 @@ struct s5p_mfc_ctx {
 
 	/* For 6.x */
 	size_t scratch_buf_size;
-
-	/* ION file descriptor */
-	int fd_ion;
 };
 
 #define fh_to_mfc_ctx(x)	\

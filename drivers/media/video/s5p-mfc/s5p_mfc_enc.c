@@ -2035,15 +2035,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		(reqbufs->memory != V4L2_MEMORY_USERPTR))
 		return -EINVAL;
 
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	if (ctx->fd_ion < 0) {
-		mfc_err("ION file descriptor is not set.\n");
-		return -EINVAL;
-	}
-	mfc_debug(2, "ION fd from Driver : %d\n", ctx->fd_ion);
-	vb2_ion_set_sharable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], (bool)ctx->fd_ion);
-#endif
-
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		/* RMVME: s5p_mfc_buf_negotiate() ctx state checked */
 		/*
@@ -2313,11 +2304,6 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 			return -EINVAL;
 		}
 		break;
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHAREABLE:
-		ctrl->value = ctx->fd_ion;
-		break;
-#endif
 	default:
 		v4l2_err(&dev->v4l2_dev, "Invalid control\n");
 		ret = -EINVAL;
@@ -2655,12 +2641,6 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 			return -EINVAL;
 		}
 		break;
-#if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHAREABLE:
-		ctx->fd_ion = ctrl->value;
-		mfc_debug(2, "fd_ion : %d\n", ctx->fd_ion);
-		break;
-#endif
 	default:
 		ret = set_enc_param(ctx, ctrl);
 		break;
