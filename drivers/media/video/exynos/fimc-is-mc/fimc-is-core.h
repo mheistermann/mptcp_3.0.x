@@ -303,8 +303,6 @@ struct fimc_is_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
-	void (*set_sharable)(void *alloc_ctx, bool sharable);
-	unsigned long (*get_kvaddr)(struct vb2_buffer *vb, unsigned int plane_no);
 };
 
 struct fimc_is_sensor_dev {
@@ -379,7 +377,7 @@ struct is_meminfo {
 	unsigned char	*kvaddr_3dnr;
 	unsigned char	*dvaddr_isp;
 	unsigned char	*kvaddr_isp;
-	struct vb2_buffer	vb2_buf;
+	void		*fw_cookie;
 
 };
 
