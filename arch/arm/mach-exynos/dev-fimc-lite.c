@@ -56,6 +56,7 @@ struct platform_device exynos_device_flite1 = {
 	.resource	= exynos_flite1_resource,
 };
 
+#ifdef CONFIG_ARCH_EXYNOS5
 static struct resource exynos_flite2_resource[] = {
 	[0] = {
 		.start	= EXYNOS_PA_FIMC_LITE2,
@@ -75,7 +76,10 @@ struct platform_device exynos_device_flite2 = {
 	.num_resources	= ARRAY_SIZE(exynos_flite2_resource),
 	.resource	= exynos_flite2_resource,
 };
+#endif
 
 struct exynos_platform_flite exynos_flite0_default_data __initdata;
 struct exynos_platform_flite exynos_flite1_default_data __initdata;
+#ifdef CONFIG_ARCH_EXYNOS5
 struct exynos_platform_flite exynos_flite2_default_data __initdata;
+#endif
