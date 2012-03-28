@@ -26,6 +26,9 @@
 
 #include <plat/iovmm.h>
 
+#define IOVA_START 0xC0000000
+#define IOVM_SIZE (SZ_1G - SZ_4K) /* last 4K is for error values */
+
 struct s5p_vm_region {
 	struct list_head node;
 	dma_addr_t start;
@@ -105,8 +108,8 @@ int iovmm_setup(struct device *dev)
 		goto err_setup_genalloc;
 	}
 
-	/* 1GB addr space from 0x80000000 */
-	ret = gen_pool_add(vmm->vmm_pool, 0x80000000, 0x40000000, -1);
+	/* (1GB - 4KB) addr space from 0xC0000000 */
+	ret = gen_pool_add(vmm->vmm_pool, IOVA_START, IOVM_SIZE, -1);
 	if (ret)
 		goto err_setup_domain;
 
@@ -127,7 +130,8 @@ int iovmm_setup(struct device *dev)
 
 	list_add_rcu(&vmm->node, &s5p_iovmm_list);
 
-	dev_dbg(dev, "IOVMM: Created 1GB IOVMM from 0x80000000.\n");
+	dev_dbg(dev, "IOVMM: Created %#x B IOVMM from %#x.\n",
+						IOVM_SIZE, IOVA_START);
 
 	return 0;
 err_setup_domain:
@@ -390,6 +394,105 @@ void iovmm_unmap(struct device *dev, dma_addr_t iova)
 	region->start = round_down(region->start, PAGE_SIZE);
 
 	gen_pool_free(vmm->vmm_pool, region->start, region->size);
+	list_del(&region->node);
+
+	unmapped_size = iommu_unmap(vmm->domain, region->start, region->size);
+
+	WARN_ON(unmapped_size != region->size);
+	dev_dbg(dev, "IOVMM: Unmapped %#x bytes from %#x.\n",
+					unmapped_size, region->start);
+
+	kfree(region);
+err_region_not_found:
+	spin_unlock_irqrestore(&vmm->lock, flags);
+
+	rcu_read_unlock();
+}
+
+int iovmm_map_oto(struct device *dev, phys_addr_t phys, size_t size)
+{
+	struct s5p_vm_region *region;
+	struct s5p_iovmm *vmm;
+	unsigned long flags;
+	int ret;
+
+	rcu_read_lock();
+
+	vmm = find_iovmm(dev);
+	if (WARN_ON(!vmm)) {
+		ret = -EINVAL;
+		goto err_map_nomem;
+	}
+
+	region = kmalloc(sizeof(*region), GFP_KERNEL);
+	if (!region) {
+		ret = -ENOMEM;
+		goto err_map_nomem;
+	}
+
+	if (WARN_ON((phys + size) >= IOVA_START)) {
+		dev_err(dev,
+			"Unable to create one to one mapping for %#x @ %#x\n",
+			size, phys);
+		ret = -EINVAL;
+		goto err_out_of_memory;
+	}
+
+	if (WARN_ON(phys & ~PAGE_MASK))
+		phys = round_down(phys, PAGE_SIZE);
+
+	spin_lock_irqsave(&vmm->lock, flags);
+
+	ret = iommu_map(vmm->domain, (dma_addr_t)phys, phys, size, 0);
+	if (ret < 0)
+		goto err_map_failed;
+
+	region->start = (dma_addr_t)phys;
+	region->size = size;
+	INIT_LIST_HEAD(&region->node);
+
+	list_add(&region->node, &vmm->regions_list);
+
+	spin_unlock_irqrestore(&vmm->lock, flags);
+
+	rcu_read_unlock();
+
+	return 0;
+
+err_map_failed:
+	spin_unlock_irqrestore(&vmm->lock, flags);
+err_out_of_memory:
+	kfree(region);
+err_map_nomem:
+	rcu_read_unlock();
+
+	return ret;
+}
+
+void iovmm_unmap_oto(struct device *dev, phys_addr_t phys)
+{
+	struct s5p_vm_region *region;
+	struct s5p_iovmm *vmm;
+	unsigned long flags;
+	size_t unmapped_size;
+
+	rcu_read_lock();
+
+	vmm = find_iovmm(dev);
+	if (WARN_ON(!vmm)) {
+		rcu_read_unlock();
+		return;
+	}
+
+	if (WARN_ON(phys & ~PAGE_MASK))
+		phys = round_down(phys, PAGE_SIZE);
+
+	spin_lock_irqsave(&vmm->lock, flags);
+
+	region = find_region(vmm, (dma_addr_t)phys);
+	if (WARN_ON(!region))
+		goto err_region_not_found;
+
 	list_del(&region->node);
 
 	unmapped_size = iommu_unmap(vmm->domain, region->start, region->size);
