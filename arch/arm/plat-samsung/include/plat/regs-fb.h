@@ -34,13 +34,6 @@
 #define VIDCON0_INTERLACE			(1 << 29)
 
 #ifdef CONFIG_FB_EXYNOS_FIMD_V8
-#define VIDCON0_VIDOUT_MASK                     (VIDOUT_CON_VIDOUT_MASK)     /* backward compatibility */
-#define VIDCON0_VIDOUT_SHIFT                    (VIDOUT_CON_VIDOUT_SHIFT)    /* backward compatibility */
-#define VIDCON0_VIDOUT_RGB                      (VIDOUT_CON_VIDOUT_RGB)      /* backward compatibility */
-#define VIDCON0_VIDOUT_TV                       (VIDOUT_CON_VIDOUT_TV)       /* backward compatibility */
-#define VIDCON0_VIDOUT_I80_LDI0                 (VIDOUT_CON_VIDOUT_I80_LDI0) /* backward compatibility */
-#define VIDCON0_VIDOUT_I80_LDI1                 (VIDOUT_CON_VIDOUT_I80_LDI1) /* backward compatibility */
-#define VIDCON0_VIDOUT_WB                       (VIDOUT_CON_VIDOUT_WB)       /* backward compatibility */
 #define VIDOUT_CON_VIDOUT_UP_ALWAYS             (0x0 << 16)
 #define VIDOUT_CON_VIDOUT_UP_START_FRAME        (0x1 << 16)
 #define VIDOUT_CON_VIDOUT_MASK                  (0x7 << 8)
@@ -49,7 +42,8 @@
 #define VIDOUT_CON_VIDOUT_I80_LDI0              (0x2 << 8)
 #define VIDOUT_CON_VIDOUT_I80_LDI1              (0x3 << 8)
 #define VIDOUT_CON_VIDOUT_WB                    (0x4 << 8)
-#else
+#endif
+
 #define VIDCON0_VIDOUT_MASK			(0x7 << 26)
 #define VIDCON0_VIDOUT_SHIFT			(26)
 #define VIDCON0_VIDOUT_RGB			(0x0 << 26)
@@ -57,7 +51,6 @@
 #define VIDCON0_VIDOUT_I80_LDI0			(0x2 << 26)
 #define VIDCON0_VIDOUT_I80_LDI1			(0x3 << 26)
 #define VIDCON0_VIDOUT_WB			(0x4 << 26)
-#endif
 
 #define VIDCON0_L1_DATA_MASK			(0x7 << 23)
 #define VIDCON0_L1_DATA_SHIFT			(23)

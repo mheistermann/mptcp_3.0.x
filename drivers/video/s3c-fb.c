@@ -2260,29 +2260,55 @@ static int s3c_fb_sd_wb_s_stream(struct v4l2_subdev *sd_wb, int enable)
 {
 	struct s3c_fb *sfb = v4l2_subdev_to_s3c_fb(sd_wb);
 	u32 ret;
-	u32 vidcon0 = readl(sfb->regs + VIDCON0);
-	u32 vidcon2 = readl(sfb->regs + VIDCON2);
+	u32 vidout_con = 0;
+	u32 vidcon0 = 0;
+	u32 vidcon2 = 0;
 
-	vidcon0 &= ~VIDCON0_VIDOUT_MASK;
-	vidcon2 &= ~(VIDCON2_WB_MASK | VIDCON2_TVFORMATSEL_HW_SW_MASK | \
-					VIDCON2_TVFORMATSEL_MASK);
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		vidout_con = readl(sfb->regs + VIDOUT_CON);
+	else
+		vidcon0 = readl(sfb->regs + VIDCON0);
+
+	vidcon2 = readl(sfb->regs + VIDCON2);
+
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		vidout_con &= ~VIDOUT_CON_VIDOUT_MASK;
+	else
+		vidcon0 &= ~VIDCON0_VIDOUT_MASK;
+
+	vidcon2 &= ~(VIDCON2_WB_MASK | VIDCON2_TVFORMATSEL_HW_SW_MASK |
+		     VIDCON2_TVFORMATSEL_MASK);
 
 	if (enable) {
-		vidcon0 |= VIDCON0_VIDOUT_WB;
-		vidcon2 |= (VIDCON2_WB_ENABLE | VIDCON2_TVFORMATSEL_SW | \
-					VIDCON2_TVFORMATSEL_YUV444);
+		if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+			vidout_con |= VIDOUT_CON_VIDOUT_WB;
+		else
+			vidcon0 |= VIDCON0_VIDOUT_WB;
+
+		vidcon2 |= (VIDCON2_WB_ENABLE | VIDCON2_TVFORMATSEL_SW |
+			    VIDCON2_TVFORMATSEL_YUV444);
 	} else {
-		vidcon0 |= VIDCON0_VIDOUT_RGB;
+		if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+			vidout_con |= VIDOUT_CON_VIDOUT_RGB;
+		else
+			vidcon0 |= VIDCON0_VIDOUT_RGB;
+
 		vidcon2 |= VIDCON2_WB_DISABLE;
 	}
 
-	ret = s3c_fb_wait_for_vsync(sfb, 0);
-	if (ret) {
-		dev_err(sfb->dev, "wait timeout(writeback) : %s\n", __func__);
-		return ret;
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		ret = s3c_fb_wait_for_vsync(sfb, 0);
+		if (ret) {
+			dev_err(sfb->dev, "wait timeout(writeback) : %s\n",
+				__func__);
+			return ret;
+		}
 	}
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
+		writel(vidout_con, sfb->regs + VIDOUT_CON);
+	else
+		writel(vidcon0, sfb->regs + VIDCON0);
 
-	writel(vidcon0, sfb->regs + VIDCON0);
 	writel(vidcon2, sfb->regs + VIDCON2);
 
 	dev_dbg(sfb->dev, "Get the writeback started/stopped : %d\n", enable);
