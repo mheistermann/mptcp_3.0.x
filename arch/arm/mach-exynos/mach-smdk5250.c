@@ -2284,9 +2284,6 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&smdk5250_dp_lcd,
 #endif
 #endif
-#ifdef CONFIG_S3C_DEV_HWMON
-	&s3c_device_hwmon,
-#endif
 	&s3c_device_wdt,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
@@ -2939,8 +2936,13 @@ static void __init smdk5250_machine_init(void)
         s5p_dsim_set_platdata(&dsim_platform_data);
 #endif
 
-	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
 		platform_device_register(&s3c_device_adc);
+#ifdef CONFIG_S3C_DEV_HWMON
+		platform_device_register(&s3c_device_hwmon);
+#endif
+	}
+
 
 #ifdef CONFIG_S3C_DEV_HWMON
 	if (samsung_rev() >= EXYNOS5250_REV_1_0)
