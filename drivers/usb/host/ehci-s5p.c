@@ -80,9 +80,9 @@ static int s5p_ehci_configurate(struct usb_hcd *hcd)
 		dev_info(hcd->self.controller, "phy delay count = %d\n",
 			delay_count);
 
-	/* DMA burst Enable */
-	writel(readl(INSNREG00(hcd->regs)) | ENA_DMA_INCR,
-			INSNREG00(hcd->regs));
+	/* DMA burst Enable, set utmi suspend_on_n */
+	writel(readl(INSNREG00(hcd->regs)) | ENA_DMA_INCR | OHCI_SUSP_LGCY,
+		INSNREG00(hcd->regs));
 	return 0;
 }
 
