@@ -2245,7 +2245,8 @@ static int s3c_fb_sd_wb_s_stream(struct v4l2_subdev *sd_wb, int enable)
 	vidcon2 = readl(sfb->regs + VIDCON2);
 
 	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
-		vidout_con &= ~VIDOUT_CON_VIDOUT_MASK;
+		vidout_con &= ~(VIDOUT_CON_VIDOUT_UP_MASK |
+				VIDOUT_CON_VIDOUT_F_MASK);
 	else
 		vidcon0 &= ~VIDCON0_VIDOUT_MASK;
 
@@ -2254,7 +2255,8 @@ static int s3c_fb_sd_wb_s_stream(struct v4l2_subdev *sd_wb, int enable)
 
 	if (enable) {
 		if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
-			vidout_con |= VIDOUT_CON_VIDOUT_WB;
+			vidout_con |= (VIDOUT_CON_VIDOUT_UP_START_FRAME |
+				       VIDOUT_CON_VIDOUT_F_WB);
 		else
 			vidcon0 |= VIDCON0_VIDOUT_WB;
 
@@ -2262,7 +2264,7 @@ static int s3c_fb_sd_wb_s_stream(struct v4l2_subdev *sd_wb, int enable)
 			    VIDCON2_TVFORMATSEL_YUV444);
 	} else {
 		if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0)
-			vidout_con |= VIDOUT_CON_VIDOUT_RGB;
+			vidout_con |= VIDOUT_CON_VIDOUT_F_RGB;
 		else
 			vidcon0 |= VIDCON0_VIDOUT_RGB;
 
