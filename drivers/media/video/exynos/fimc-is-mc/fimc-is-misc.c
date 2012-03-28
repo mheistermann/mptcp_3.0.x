@@ -49,6 +49,7 @@
 #define FIMCLITE1_REG_BASE		(S5P_VA_FIMCLITE1)  /* phy : 0x13c1_0000 */
 #define MIPICSI0_REG_BASE		(S5P_VA_MIPICSI0)   /* phy : 0x13c2_0000 */
 #define MIPICSI1_REG_BASE		(S5P_VA_MIPICSI1)   /* phy : 0x13c3_0000 */
+#define FIMCLITE2_REG_BASE		(S5P_VA_FIMCLITE2)  /* phy : 0x13c9_0000 */
 
 #define FLITE_MAX_RESET_READY_TIME	(20) /* 100ms */
 #define FLITE_MAX_WIDTH_SIZE		(8192)
@@ -238,16 +239,19 @@ static void flite_hw_set_cam_source_size(unsigned long flite_reg_base,
 
 static void flite_hw_set_cam_channel(unsigned long flite_reg_base)
 {
-	u32 cfg = readl(flite_reg_base + FLITE_REG_CIGENERAL);
+	u32 cfg = 0;
 
-
-	if (flite_reg_base == (unsigned long)FIMCLITE0_REG_BASE)
-		cfg &= FLITE_REG_CIGENERAL_CAM_A;
-	else
-		cfg &= FLITE_REG_CIGENERAL_CAM_B;
-
-	writel(cfg, FIMCLITE0_REG_BASE + FLITE_REG_CIGENERAL);
-
+	if (flite_reg_base == (unsigned long)FIMCLITE0_REG_BASE) {
+		cfg = FLITE_REG_CIGENERAL_CAM_A;
+		writel(cfg, FIMCLITE0_REG_BASE + FLITE_REG_CIGENERAL);
+		writel(cfg, FIMCLITE1_REG_BASE + FLITE_REG_CIGENERAL);
+		writel(cfg, FIMCLITE2_REG_BASE + FLITE_REG_CIGENERAL);
+	} else {
+		cfg = FLITE_REG_CIGENERAL_CAM_B;
+		writel(cfg, FIMCLITE0_REG_BASE + FLITE_REG_CIGENERAL);
+		writel(cfg, FIMCLITE1_REG_BASE + FLITE_REG_CIGENERAL);
+		writel(cfg, FIMCLITE2_REG_BASE + FLITE_REG_CIGENERAL);
+	}
 }
 
 static void flite_hw_set_capture_start(unsigned long flite_reg_base)
