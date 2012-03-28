@@ -387,6 +387,7 @@ static inline void s5p_mfc_clear_cmds(struct s5p_mfc_dev *dev)
 int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 {
 	char dvx_info;
+	int mfc_info;
 	int ret = 0;
 
 	mfc_debug_enter();
@@ -466,6 +467,16 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 		 MFC_GET_REG(SYS_FW_VER_DATE));
 
 	dev->fw.date = MFC_GET_REG(SYS_FW_VER_ALL);
+	/* Check MFC version and F/W version */
+	if (dev->fw.date >= 0x120328) {
+		mfc_info = MFC_GET_REG(SYS_MFC_VER);
+		if (mfc_info != dev->fw.ver) {
+			mfc_err("Invalid F/W version(0x%x) for MFC H/W(0x%x)\n",
+					mfc_info, dev->fw.ver);
+			ret = -EIO;
+			goto err_init_hw;
+		}
+	}
 
 err_init_hw:
 	s5p_mfc_clock_off();

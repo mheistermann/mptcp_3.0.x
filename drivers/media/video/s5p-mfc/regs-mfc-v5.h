@@ -360,6 +360,7 @@
 #define S5P_FIMV_MFC_BUS_RESET_CTRL		-1
 #define S5P_FIMV_D_MIN_NUM_MV			-1
 #define S5P_FIMV_D_NUM_MV			-1
+#define S5P_FIMV_MFC_VERSION			0
 
 /* Error handling defines */
 #define S5P_FIMV_ERR_WARNINGS_START		145
