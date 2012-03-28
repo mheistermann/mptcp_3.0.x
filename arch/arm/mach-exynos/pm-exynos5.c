@@ -192,6 +192,9 @@ void exynos5_cpu_suspend(void)
 	if (samsung_rev() < EXYNOS5250_REV_1_0)
 		__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		exynos4_reset_assert_ctrl(0);
+
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
 #else
@@ -290,6 +293,9 @@ static void exynos5_pm_resume(void)
 {
 	unsigned long tmp, srctmp;
 	u32 timeout;
+
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		exynos4_reset_assert_ctrl(1);
 
 	/* If PMU failed while entering sleep mode, WFI will be
 	 * ignored by PMU and then exiting cpu_do_idle().

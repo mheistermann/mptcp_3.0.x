@@ -575,6 +575,9 @@ static int __init exynos5_init_cpuidle(void)
 	struct platform_device *pdev;
 	struct resource *res;
 
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		exynos4_reset_assert_ctrl(1);
+
 	exynos5_core_down_clk();
 
 	cpuidle_register_driver(&exynos5_idle_driver);
