@@ -47,8 +47,8 @@ extern unsigned long sys_pwr_conf_addr;
 static int exynos5_enter_idle(struct cpuidle_device *dev,
 			      struct cpuidle_state *state);
 
-static int exynos5_enter_lowpower(struct cpuidle_device *dev,
-				  struct cpuidle_state *state);
+static int __maybe_unused exynos5_enter_lowpower(struct cpuidle_device *dev,
+						 struct cpuidle_state *state);
 
 struct check_reg_lpa {
 	void __iomem	*check_reg;
@@ -474,8 +474,8 @@ static int __maybe_unused exynos5_check_enter_mode(void)
 	return S5P_CHECK_LPA;
 }
 
-static int exynos5_enter_lowpower(struct cpuidle_device *dev,
-				  struct cpuidle_state *state)
+static int __maybe_unused exynos5_enter_lowpower(struct cpuidle_device *dev,
+						 struct cpuidle_state *state)
 {
 	struct cpuidle_state *new_state = state;
 	unsigned int tmp;
