@@ -176,6 +176,13 @@ enum mxr_layer_type {
 	MXR_LAYER_TYPE_GRP = 1,
 };
 
+struct mxr_layer_en {
+	int graph0;
+	int graph1;
+	int graph2;
+	int graph3;
+};
+
 /** layer instance, a single window and content displayed on output */
 struct mxr_layer {
 	/** parent mixer device */
@@ -365,6 +372,11 @@ struct mxr_device {
 
 	/** count of sub-mixers */
 	struct sub_mxr_device sub_mxr[MXR_MAX_SUB_MIXERS];
+
+	/** enabled layer number **/
+	struct mxr_layer_en layer_en;
+	/** frame packing flag **/
+	int frame_packing;
 };
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)

@@ -649,20 +649,43 @@ static int mxr_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 static int mxr_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct mxr_layer *layer = video_drvdata(file);
-
 	return vb2_qbuf(&layer->vb_queue, p);
 }
 
 static int mxr_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct mxr_layer *layer = video_drvdata(file);
-
 	return vb2_dqbuf(&layer->vb_queue, p, file->f_flags & O_NONBLOCK);
 }
 
 static int mxr_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
 	struct mxr_layer *layer = video_drvdata(file);
+	struct mxr_device *mdev = layer->mdev;
+
+	switch (layer->idx) {
+	case 0:
+		mdev->layer_en.graph0 = 1;
+		break;
+	case 1:
+		mdev->layer_en.graph1 = 1;
+		break;
+	case 2:
+		mdev->layer_en.graph2 = 1;
+		break;
+	case 3:
+		mdev->layer_en.graph3 = 1;
+		break;
+	default:
+		mxr_err(mdev, "invalid layer number\n");
+		return -EINVAL;
+	}
+
+	if ((mdev->layer_en.graph0 && mdev->layer_en.graph2) ||
+	    (mdev->layer_en.graph1 && mdev->layer_en.graph3)) {
+		mdev->frame_packing = 1;
+		mxr_dbg(mdev, "frame packing mode\n");
+	}
 
 	mxr_dbg(layer->mdev, "%s:%d\n", __func__, __LINE__);
 	return vb2_streamon(&layer->vb_queue, i);
@@ -671,8 +694,34 @@ static int mxr_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 static int mxr_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 {
 	struct mxr_layer *layer = video_drvdata(file);
+	struct mxr_device *mdev = layer->mdev;
 
-	mxr_dbg(layer->mdev, "%s:%d\n", __func__, __LINE__);
+	switch (layer->idx) {
+	case 0:
+		mdev->layer_en.graph0 = 0;
+		break;
+	case 1:
+		mdev->layer_en.graph1 = 0;
+		break;
+	case 2:
+		mdev->layer_en.graph2 = 0;
+		break;
+	case 3:
+		mdev->layer_en.graph3 = 0;
+		break;
+	default:
+		mxr_err(mdev, "invalid layer number\n");
+		return -EINVAL;
+	}
+
+	mdev->frame_packing = 0;
+	if ((mdev->layer_en.graph0 && mdev->layer_en.graph2) ||
+	    (mdev->layer_en.graph1 && mdev->layer_en.graph3)) {
+		mdev->frame_packing = 1;
+		mxr_dbg(mdev, "frame packing mode\n");
+	}
+
+	mxr_dbg(mdev, "%s:%d\n", __func__, __LINE__);
 	return vb2_streamoff(&layer->vb_queue, i);
 }
 

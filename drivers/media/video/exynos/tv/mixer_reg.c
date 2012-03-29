@@ -15,6 +15,7 @@
 #include "regs-mixer.h"
 #include "regs-vp.h"
 
+#include <plat/cpu.h>
 #include <linux/delay.h>
 
 /* Register access subroutines */
@@ -771,7 +772,24 @@ void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,
 
 void mxr_reg_graph_layer_stream(struct mxr_device *mdev, int idx, int en)
 {
-	/* no extra actions need to be done */
+	u32 val = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
+
+	if (mdev->frame_packing) {
+		val  = MXR_TVOUT_CFG_TWO_PATH;
+		val |= MXR_TVOUT_CFG_STEREO_SCOPIC;
+	} else {
+		val  = MXR_TVOUT_CFG_ONE_PATH;
+		val |= MXR_TVOUT_CFG_PATH_MIXER0;
+	}
+
+	mxr_write(mdev, MXR_TVOUT_CFG, val);
+
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 void mxr_reg_vp_layer_stream(struct mxr_device *mdev, int en)
@@ -871,6 +889,27 @@ do { \
 	DUMPREG(MXR_GRAPHIC1_WH);
 	DUMPREG(MXR_GRAPHIC1_SXY);
 	DUMPREG(MXR_GRAPHIC1_DXY);
+
+	if (soc_is_exynos5250()) {
+		DUMPREG(MXR1_LAYER_CFG);
+		DUMPREG(MXR1_VIDEO_CFG);
+
+		DUMPREG(MXR1_GRAPHIC0_CFG);
+		DUMPREG(MXR1_GRAPHIC0_BASE);
+		DUMPREG(MXR1_GRAPHIC0_SPAN);
+		DUMPREG(MXR1_GRAPHIC0_WH);
+		DUMPREG(MXR1_GRAPHIC0_SXY);
+		DUMPREG(MXR1_GRAPHIC0_DXY);
+
+		DUMPREG(MXR1_GRAPHIC1_CFG);
+		DUMPREG(MXR1_GRAPHIC1_BASE);
+		DUMPREG(MXR1_GRAPHIC1_SPAN);
+		DUMPREG(MXR1_GRAPHIC1_WH);
+		DUMPREG(MXR1_GRAPHIC1_SXY);
+		DUMPREG(MXR1_GRAPHIC1_DXY);
+
+		DUMPREG(MXR_TVOUT_CFG);
+	}
 #undef DUMPREG
 }
 
