@@ -2303,6 +2303,78 @@ static struct clk_ops exynos5_vpll_ops = {
 	.set_rate = exynos5_vpll_set_rate,
 };
 
+static u32 exynos5_gpll_div[][6] = {
+	/*rate, P, M, S, AFC_DNB, AFC*/
+	{1400000000, 3, 175, 0, 0, 0}, /* for 466MHz */
+	{800000000, 3, 100, 0, 0, 0},  /* for 400MHz, 200MHz */
+	{667000000, 7, 389, 1, 0, 0},  /* for 333MHz, 222MHz, 166MHz */
+	{600000000, 4, 200, 1, 0, 0},  /* for 300MHz, 200MHz, 150MHz */
+	{533000000, 12, 533, 1, 0, 0}, /* for 533MHz, 266MHz, 133MHz */
+	{400000000, 3, 100, 1, 0, 0},
+	{333000000, 4, 222, 2, 0, 0},
+	{200000000, 3, 100, 2, 0, 0},
+};
+
+static unsigned long exynos5_gpll_get_rate(struct clk *clk)
+{
+	return clk->rate;
+}
+
+static int exynos5_gpll_set_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned int gpll_con0;
+	unsigned int locktime;
+	unsigned int tmp;
+	unsigned int i;
+
+	/* Return if nothing changed */
+	if (clk->rate == rate)
+		return 0;
+
+	gpll_con0 = __raw_readl(EXYNOS5_GPLL_CON0);
+	gpll_con0 &= ~(PLL35XX_MDIV_MASK << PLL35XX_MDIV_SHIFT |       \
+		       PLL35XX_PDIV_MASK << PLL35XX_PDIV_SHIFT |       \
+		       PLL35XX_SDIV_MASK << PLL35XX_SDIV_SHIFT);
+
+	for (i = 0; i < ARRAY_SIZE(exynos5_gpll_div); i++) {
+		if (exynos5_gpll_div[i][0] == rate) {
+			gpll_con0 |= exynos5_gpll_div[i][1] << PLL35XX_PDIV_SHIFT;
+			gpll_con0 |= exynos5_gpll_div[i][2] << PLL35XX_MDIV_SHIFT;
+			gpll_con0 |= exynos5_gpll_div[i][3] << PLL35XX_SDIV_SHIFT;
+			break;
+		}
+	}
+
+	if (i == ARRAY_SIZE(exynos5_gpll_div)) {
+		printk(KERN_ERR "%s: Invalid Clock GPLL Frequency\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	/* 250 max_cycls : specification data */
+	/* 270@p=1, 1cycle=1/24=41.6ns */
+	/* calc >> p=5, 270 * 5 = 1350cycle * 41.6ns = 56.16us */
+
+	locktime = 270 * exynos5_gpll_div[i][1] + 1;
+
+	__raw_writel(locktime, EXYNOS5_GPLL_LOCK);
+
+	__raw_writel(gpll_con0, EXYNOS5_GPLL_CON0);
+
+	do {
+		tmp = __raw_readl(EXYNOS5_GPLL_CON0);
+	} while (!(tmp & (0x1 << EXYNOS5_GPLLCON0_LOCKED_SHIFT)));
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+static struct clk_ops exynos5_gpll_ops = {
+	.get_rate = exynos5_gpll_get_rate,
+	.set_rate = exynos5_gpll_set_rate,
+};
+
 #ifdef CONFIG_PM
 static int exynos5_clock_suspend(void)
 {
@@ -2425,6 +2497,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 
 	clk_fout_epll.ops = &exynos5_epll_ops;
 	clk_fout_vpll.ops = &exynos5_vpll_ops;
+	clk_fout_gpll.ops = &exynos5_gpll_ops;
 
 	if (clk_set_parent(&exynos5_clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
