@@ -1854,12 +1854,6 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 
 		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_DST, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
-
-		if (dec->dst_memtype == V4L2_MEMORY_USERPTR &&
-				dec->dpb_queue_cnt == dec->total_dpb_count) {
-			ctx->capture_state = QUEUE_BUFS_MMAPED;
-		}
-
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (mfc_plane_cookie(vb, 0)  == 0) {
 			mfc_err("Plane memory not allocated.\n");
@@ -2083,6 +2077,9 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		list_add_tail(&buf->list, &ctx->dst_queue);
 		ctx->dst_queue_cnt++;
 		spin_unlock_irqrestore(&dev->irqlock, flags);
+		if (dec->dst_memtype == V4L2_MEMORY_USERPTR &&
+				ctx->dst_queue_cnt == dec->total_dpb_count)
+			ctx->capture_state = QUEUE_BUFS_MMAPED;
 	} else {
 		mfc_err("Unsupported buffer type (%d)\n", vq->type);
 	}
