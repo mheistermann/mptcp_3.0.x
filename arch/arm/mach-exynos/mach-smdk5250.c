@@ -2770,7 +2770,7 @@ static struct samsung_bl_gpio_info smdk5250_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data smdk5250_bl_data = {
 	.pwm_id = 0,
-	.pwm_period_ns = 1000,
+	.pwm_period_ns = 30000,
 };
 #endif
 
