@@ -12,6 +12,7 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <plat/regs_jpeg_v2_x.h>
+#include <plat/cpu.h>
 
 #include "jpeg_regs.h"
 #include "jpeg_conf.h"
@@ -21,6 +22,11 @@ void jpeg_sw_reset(void __iomem *base)
 {
 	unsigned int reg;
 
+#ifdef CONFIG_JPEG_V2_2
+	reg = readl(base + S5P_JPEG_CNTL_REG);
+	writel((reg & S5P_JPEG_ENC_DEC_MODE_MASK),
+			base + S5P_JPEG_CNTL_REG);
+#endif
 	reg = readl(base + S5P_JPEG_CNTL_REG);
 	writel(reg & ~S5P_JPEG_SOFT_RESET_HI,
 			base + S5P_JPEG_CNTL_REG);
@@ -60,11 +66,6 @@ void jpeg_set_dec_out_fmt(void __iomem *base,
 				S5P_JPEG_GRAY_IMG_IP;
 		break;
 
-	case RGB_888:
-		reg = S5P_JPEG_DEC_RGB_IMG |
-				S5P_JPEG_RGB_IP_RGB_32BIT_IMG;
-		break;
-
 	case RGB_565:
 		reg = S5P_JPEG_DEC_RGB_IMG |
 				S5P_JPEG_RGB_IP_RGB_16BIT_IMG;
@@ -86,18 +87,56 @@ void jpeg_set_dec_out_fmt(void __iomem *base,
 		reg = S5P_JPEG_DEC_YUV_444_IMG |
 			S5P_JPEG_YUV_444_IP_YUV_444_3P_IMG;
 		break;
-
-	case YCRYCB_422_1P:
-		reg = S5P_JPEG_DEC_YUV_422_IMG |
-				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
-				S5P_JPEG_SWAP_CHROMA_CrCb;
+#if defined (CONFIG_JPEG_V2_2)
+	case RGB_888:
+		reg = S5P_JPEG_DEC_RGB_IMG |
+			S5P_JPEG_RGB_IP_RGB_32BIT_IMG
+				|S5P_JPEG_ENC_FMT_RGB;
 		break;
+	case BGR_888:
+		reg = S5P_JPEG_DEC_RGB_IMG |
+			S5P_JPEG_RGB_IP_RGB_32BIT_IMG
+				|S5P_JPEG_ENC_FMT_BGR;
+			break;
 
+	case CRYCBY_422_1P:
+		reg = S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+				S5P_JPEG_ENC_FMT_VYUY;
+			break;
+
+	case CBYCRY_422_1P:
+		reg = S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+				S5P_JPEG_ENC_FMT_UYVY;
+			break;
+	case YCRYCB_422_1P:
+			reg = S5P_JPEG_DEC_YUV_422_IMG |
+				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+				S5P_JPEG_ENC_FMT_YVYU;
+		break;
 	case YCBYCR_422_1P:
 		reg = S5P_JPEG_DEC_YUV_422_IMG |
-				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
-				S5P_JPEG_SWAP_CHROMA_CbCr;
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_ENC_FMT_YUYV;
 		break;
+
+#elif defined (CONFIG_JPEG_V2_1)
+	case RGB_888:
+		reg = S5P_JPEG_DEC_RGB_IMG |
+			S5P_JPEG_RGB_IP_RGB_32BIT_IMG;
+		break;
+	case YCRYCB_422_1P:
+		reg = S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_SWAP_CHROMA_CrCb;
+		break;
+	case YCBYCR_422_1P:
+		reg = S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_SWAP_CHROMA_CbCr;
+		break;
+#endif
 
 	case YCRCB_422_2P:
 		reg = S5P_JPEG_DEC_YUV_422_IMG |
@@ -154,11 +193,6 @@ void jpeg_set_enc_in_fmt(void __iomem *base,
 		reg = reg | S5P_JPEG_ENC_GRAY_IMG | S5P_JPEG_GRAY_IMG_IP;
 		break;
 
-	case RGB_888:
-		reg = reg | S5P_JPEG_ENC_RGB_IMG |
-				S5P_JPEG_RGB_IP_RGB_32BIT_IMG;
-		break;
-
 	case RGB_565:
 		reg = reg | S5P_JPEG_ENC_RGB_IMG |
 				S5P_JPEG_RGB_IP_RGB_16BIT_IMG;
@@ -181,17 +215,55 @@ void jpeg_set_enc_in_fmt(void __iomem *base,
 				S5P_JPEG_YUV_444_IP_YUV_444_3P_IMG;
 		break;
 
-	case YCRYCB_422_1P:
+#if defined (CONFIG_JPEG_V2_2)
+	case RGB_888:
+		reg = reg | S5P_JPEG_DEC_RGB_IMG |
+				S5P_JPEG_RGB_IP_RGB_32BIT_IMG
+				|S5P_JPEG_ENC_FMT_RGB;
+		break;
+	case BGR_888:
+		reg = reg | S5P_JPEG_DEC_RGB_IMG |
+				S5P_JPEG_RGB_IP_RGB_32BIT_IMG
+				|S5P_JPEG_ENC_FMT_BGR;
+		break;
+	case CRYCBY_422_1P:
 		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
 				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
-				S5P_JPEG_SWAP_CHROMA_CrCb;
+				S5P_JPEG_ENC_FMT_VYUY;
+		break;
+	case CBYCRY_422_1P:
+		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
+				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+				S5P_JPEG_ENC_FMT_UYVY;
 		break;
 
+	case YCRYCB_422_1P:
+		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_ENC_FMT_YVYU;
+		break;
 	case YCBYCR_422_1P:
 		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
-				S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
-				S5P_JPEG_SWAP_CHROMA_CbCr;
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_ENC_FMT_YUYV;
 		break;
+
+#elif defined (CONFIG_JPEG_V2_1)
+	case RGB_888:
+		reg = reg | S5P_JPEG_ENC_RGB_IMG |
+				S5P_JPEG_RGB_IP_RGB_32BIT_IMG;
+		break;
+	case YCRYCB_422_1P:
+		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_SWAP_CHROMA_CrCb;
+		break;
+	case YCBYCR_422_1P:
+		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
+			S5P_JPEG_YUV_422_IP_YUV_422_1P_IMG |
+			S5P_JPEG_SWAP_CHROMA_CbCr;
+		break;
+#endif
 
 	case YCRCB_422_2P:
 		reg = reg | S5P_JPEG_DEC_YUV_422_IMG |
@@ -338,7 +410,6 @@ void jpeg_set_enc_tbl(void __iomem *base)
 void jpeg_set_interrupt(void __iomem *base)
 {
 	unsigned int reg;
-
 	reg = readl(base + S5P_JPEG_INT_EN_REG) & ~S5P_JPEG_INT_EN_MASK;
 	writel(S5P_JPEG_INT_EN_ALL, base + S5P_JPEG_INT_EN_REG);
 }
@@ -515,6 +586,11 @@ unsigned int jpeg_get_stream_size(void __iomem *base)
 void jpeg_set_dec_bitstream_size(void __iomem *base, unsigned int size)
 {
 	writel(size, base + S5P_JPEG_BITSTREAM_SIZE_REG);
+}
+
+void jpeg_set_timer_count(void __iomem *base, unsigned int size)
+{
+	writel(size, base + S5P_JPEG_INT_TIMER_COUNT_REG);
 }
 
 void jpeg_get_frame_size(void __iomem *base,

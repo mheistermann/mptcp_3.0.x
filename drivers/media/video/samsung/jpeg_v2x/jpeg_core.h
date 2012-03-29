@@ -58,6 +58,7 @@ enum jpeg_result {
 	ERR_DEC_INVALID_FORMAT,
 	ERR_MULTI_SCAN,
 	ERR_FRAME,
+	ERR_TIME_OUT,
 	ERR_UNKNOWN,
 };
 
@@ -88,6 +89,7 @@ enum jpeg_frame_format {
 	YCRCB_420_2P_M,
 	RGB_565,
 	RGB_888,
+	BGR_888,
 	GRAY,
 };
 
