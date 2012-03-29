@@ -879,6 +879,11 @@ static int mxr_try_crop(struct v4l2_subdev *sd,
 	r->width = clamp_val(r->width, 1, fmt->width - r->left);
 	r->height = clamp_val(r->height, 1, fmt->height - r->top);
 
+	/* need to align size with G-Scaler */
+	if (pad == MXR_PAD_SINK_GSCALER || pad == MXR_PAD_SOURCE_GSCALER)
+		if (r->width % 2)
+			r->width -= 1;
+
 	return 0;
 }
 
