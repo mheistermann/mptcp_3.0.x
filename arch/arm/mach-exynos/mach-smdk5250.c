@@ -1656,8 +1656,8 @@ static struct max77686_platform_data exynos4_max77686_info = {
 static int s5m_cfg_irq(void)
 {
 	/* AP_PMIC_IRQ: EINT26 */
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(2), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS4_GPX3(2), S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(EXYNOS5_GPX3(2), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS5_GPX3(2), S3C_GPIO_PULL_UP);
 	return 0;
 }
 
@@ -1677,7 +1677,7 @@ static struct regulator_init_data s5m8767_buck1_data = {
 	.constraints	= {
 		.name		= "vdd_mif range",
 		.min_uV		= 950000,
-		.max_uV		= 1200000,
+		.max_uV		= 1300000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
 		.always_on = 1,
@@ -1694,7 +1694,7 @@ static struct regulator_init_data s5m8767_buck2_data = {
 	.constraints	= {
 		.name		= "vdd_arm range",
 		.min_uV		=  800000,
-		.max_uV		= 1500000,
+		.max_uV		= 1350000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
 		.always_on = 1,
@@ -1710,18 +1710,12 @@ static struct regulator_init_data s5m8767_buck2_data = {
 static struct regulator_init_data s5m8767_buck3_data = {
 	.constraints	= {
 		.name		= "vdd_int range",
-		.min_uV		=  950000,
-		.max_uV		= 1150000,
+		.min_uV		=  900000,
+		.max_uV		= 1200000,
 		.apply_uV	= 1,
-		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
-				REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
 		.boot_on = 1,
-		.state_mem	= {
-			.uV		= 1100000,
-			.mode		= REGULATOR_MODE_NORMAL,
-			.disabled	= 1,
-		},
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &s5m8767_buck3_consumer,
@@ -1731,10 +1725,9 @@ static struct regulator_init_data s5m8767_buck4_data = {
 	.constraints	= {
 		.name		= "vdd_g3d range",
 		.min_uV		=  850000,
-		.max_uV		= 1200000,
+		.max_uV		= 1300000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
-		.always_on = 1,
 		.boot_on = 1,
 		.state_mem	= {
 			.disabled	= 1,
@@ -1745,10 +1738,10 @@ static struct regulator_init_data s5m8767_buck4_data = {
 };
 
 static struct s5m_regulator_data gaia_regulators[] = {
-	{ S5M8767_BUCK1, &s5m8767_buck1_data },
-	{ S5M8767_BUCK2, &s5m8767_buck2_data },
-	{ S5M8767_BUCK3, &s5m8767_buck3_data },
-	{ S5M8767_BUCK4, &s5m8767_buck4_data },
+	{S5M8767_BUCK1, &s5m8767_buck1_data},
+	{S5M8767_BUCK2, &s5m8767_buck2_data},
+	{S5M8767_BUCK3, &s5m8767_buck3_data},
+	{S5M8767_BUCK4, &s5m8767_buck4_data},
 };
 
 struct s5m_opmode_data s5m8767_opmode_data[S5M8767_REG_MAX] = {
@@ -1795,7 +1788,7 @@ static struct s5m_platform_data exynos5_s5m8767_pdata = {
 	.buck4_voltage[6]	= 1100000,
 	.buck4_voltage[7]	= 1100000,
 
-	.buck_ramp_delay        = 10,
+	.buck_ramp_delay        = 25,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
