@@ -750,18 +750,20 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 	exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
 
 	/* Reset USB 3.0 PHY */
-	writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
 	writel(0x00000000, EXYNOS_USB3_PHYREG0);
 	writel(0x24d4e6e4, EXYNOS_USB3_PHYPARAM0);
 	writel(0x03fff820, EXYNOS_USB3_PHYPARAM1);
-	writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
 
 	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
+		writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 		/* Over-current pin is inactive on SMDK5250 rev 0.0 */
 		writel((readl(EXYNOS_USB3_LINKPORT) & ~(0x3<<4)) |
 			(0x3<<2), EXYNOS_USB3_LINKPORT);
 	} else {
+		writel(0x08000000, EXYNOS_USB3_LINKSYSTEM);
+		writel(0x00000004, EXYNOS_USB3_PHYBATCHG);
 		/* REVISIT :use externel clock 100MHz */
 		if (use_ext_clk)
 			writel(readl(EXYNOS_USB3_PHYPARAM0) | (0x1<<31),
@@ -789,6 +791,9 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 		EXYNOS_USB3_PHYCLKRST_REF_SSP_EN |
 		/* Enable spread spectrum */
 		EXYNOS_USB3_PHYCLKRST_SSC_EN;
+
+	if (!(soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0))
+		reg |= EXYNOS_USB3_PHYCLKRST_COMMONONN;
 
 	writel(reg, EXYNOS_USB3_PHYCLKRST);
 
