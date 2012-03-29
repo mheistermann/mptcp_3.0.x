@@ -2419,13 +2419,13 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 
 	printk(KERN_DEBUG "%s: xtal is %ld\n", __func__, xtal);
 
+	/* Set and check PLLs */
 	apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_APLL_CON0));
 	bpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_BPLL_CON0));
 	cpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_CPLL_CON0));
 	mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_MPLL_CON0));
 	epll = s5p_get_pll36xx(xtal, __raw_readl(EXYNOS5_EPLL_CON0),
 			__raw_readl(EXYNOS5_EPLL_CON1));
-	gpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_GPLL_CON0));
 	vpllsrc = clk_get_rate(&exynos5_clk_mout_vpllsrc.clk);
 	vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(EXYNOS5_VPLL_CON0),
 			__raw_readl(EXYNOS5_VPLL_CON1));
@@ -2438,12 +2438,21 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	clk_fout_mpll_div2.rate = mpll / 2;
 	clk_fout_epll.rate = epll;
 	clk_fout_vpll.rate = vpll;
-	clk_fout_gpll.rate = gpll;
 
-	printk(KERN_INFO "EXYNOS5: PLL settings, A=%ld, B=%ld, C=%ld\n"
+	if (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0) {
+		gpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_GPLL_CON0));
+		clk_fout_gpll.rate = gpll;
+
+		printk(KERN_INFO "EXYNOS5: PLL settings, A=%ld, B=%ld, C=%ld\n"
 			"M=%ld, E=%ld, V=%ld, G=%ld\n",
 			apll, bpll, cpll, mpll, epll, vpll, gpll);
+	} else {
+		printk(KERN_INFO "EXYNOS5: PLL settings, A=%ld, B=%ld, C=%ld\n"
+			"M=%ld, E=%ld, V=%ld\n",
+			apll, bpll, cpll, mpll, epll, vpll);
+	}
 
+	/* Set parent for bus clocks */
 	if ((soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0))
 		clk_set_parent(&exynos5_clk_mout_mpll.clk,
 				&exynos5_clk_mout_mpll_fout.clk);
