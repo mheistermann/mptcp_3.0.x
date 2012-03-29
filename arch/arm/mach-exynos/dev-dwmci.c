@@ -44,8 +44,8 @@ static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 		host->pdata->ddr_timing = 0x00010002;
 	} else if (soc_is_exynos5250()) {
 		if (samsung_rev() >= EXYNOS5250_REV_1_0) {
-			host->pdata->sdr_timing = 0x03030002;
-			host->pdata->ddr_timing = 0x03020001;
+			host->pdata->sdr_timing = 0x03020001;
+			host->pdata->ddr_timing = 0x03030002;
 		} else {
 			host->pdata->sdr_timing = 0x00010000;
 			host->pdata->ddr_timing = 0x00010000;
