@@ -686,8 +686,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	udc_ep->trb->buff_ptr_low = (u32) ureq->dma;
 	udc_ep->trb->buff_ptr_high = 0;
 	udc_ep->trb->param1 = EXYNOS_USB3_TRB_BUFSIZ(xfer_length);
-	udc_ep->trb->param2 = EXYNOS_USB3_TRB_IOC |
-			      EXYNOS_USB3_TRB_LST |
+	udc_ep->trb->param2 = EXYNOS_USB3_TRB_LST |
 			      EXYNOS_USB3_TRB_HWO |
 			      EXYNOS_USB3_TRB_TRBCTL(trb_type);
 
