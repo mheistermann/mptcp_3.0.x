@@ -2565,7 +2565,7 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.buck_gpios[1]		= EXYNOS4_GPX2(4),
 	.buck_gpios[2]		= EXYNOS4_GPX2(5),
 
-	.buck_ramp_delay        = 10,
+	.buck_ramp_delay        = 25,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
