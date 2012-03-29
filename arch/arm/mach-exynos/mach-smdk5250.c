@@ -1013,7 +1013,7 @@ static void exynos_dwmci2_cfg_gpio(int width)
 {
 	unsigned int gpio;
 
-	for (gpio = EXYNOS5_GPC3(0); gpio < EXYNOS5_GPC3(2); gpio++) {
+	for (gpio = EXYNOS5_GPC3(0); gpio <= EXYNOS5_GPC3(2); gpio++) {
 		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
 		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
@@ -1039,7 +1039,7 @@ static void exynos_dwmci2_cfg_gpio(int width)
 
 static struct dw_mci_board exynos5_dwmci2_pdata __initdata = {
 	.num_slots		= 1,
-	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.quirks			= DW_MCI_QUIRK_HIGHSPEED,
 	.bus_hz			= 22 * 1000 * 1000,
 	.caps			= MMC_CAP_CMD23,
 	.fifo_depth             = 0x80,
