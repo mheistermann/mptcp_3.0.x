@@ -454,11 +454,11 @@ static void dp_lcd_set_power(struct plat_lcd_data *pd,
 
 	/* LCD_EN: GPD0_5 */
 	gpio_direction_output(EXYNOS5_GPD0(5), power);
-	mdelay(20);
+	msleep(20);
 
 	/* LCD_APS_EN_2.8V: GPD0_6 */
 	gpio_direction_output(EXYNOS5_GPD0(6), power);
-	mdelay(20);
+	msleep(20);
 #ifndef CONFIG_BACKLIGHT_PWM
 	/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
 	gpio_direction_output(EXYNOS5_GPB2(0), power);
@@ -846,7 +846,7 @@ static void s5p_dp_backlight_on(void)
 	gpio_request(EXYNOS5_GPX1(5), "GPX1");
 
 	gpio_direction_output(EXYNOS5_GPX1(5), 1);
-	mdelay(20);
+	msleep(20);
 
 	gpio_free(EXYNOS5_GPX1(5));
 }
@@ -857,7 +857,7 @@ static void s5p_dp_backlight_off(void)
 	gpio_request(EXYNOS5_GPX1(5), "GPX1");
 
 	gpio_direction_output(EXYNOS5_GPX1(5), 0);
-	mdelay(20);
+	msleep(20);
 
 	gpio_free(EXYNOS5_GPX1(5));
 }
