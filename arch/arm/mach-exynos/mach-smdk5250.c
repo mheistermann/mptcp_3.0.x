@@ -2195,6 +2195,12 @@ static struct gpio_event_direct_entry smdk5250_keypad_key_map[] = {
 	{
 		.gpio   = EXYNOS5_GPX0(0),
 		.code   = KEY_POWER,
+	},{
+		.gpio	= EXYNOS5_GPX1(4),
+		.code	= KEY_VOLUMEDOWN,
+	},{
+		.gpio	= EXYNOS5_GPX1(6),
+		.code	= KEY_VOLUMEUP,
 	}
 };
 
@@ -2228,10 +2234,11 @@ static struct platform_device smdk5250_input_device = {
 	},
 };
 
-static void __init smdk5250_gpio_power_init(void)
+static void __init smdk5250_gpio_key_init(void)
 {
 	int err = 0;
 
+	/* GPIO Power */
 	err = gpio_request_one(EXYNOS5_GPX0(0), 0, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
@@ -2239,8 +2246,39 @@ static void __init smdk5250_gpio_power_init(void)
 		return;
 	}
 	s3c_gpio_setpull(EXYNOS5_GPX0(0), S3C_GPIO_PULL_NONE);
-
 	gpio_free(EXYNOS5_GPX0(0));
+
+	/* external keypad */
+	/* GPIO Row0 */
+	err = gpio_request(EXYNOS5_GPX2(0), "GPX2");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX2 for "
+				"GPIO Key control\n");
+		return;
+	}
+	s3c_gpio_cfgpin(EXYNOS5_GPX2(0), S3C_GPIO_OUTPUT);
+	gpio_direction_output(EXYNOS5_GPX2(0), 0);
+	gpio_free(EXYNOS5_GPX2(0));
+
+	/* GPIO Col4 */
+	err = gpio_request(EXYNOS5_GPX1(4), "GPX1");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX1 for "
+				"volume down control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS5_GPX1(4), S3C_GPIO_PULL_UP);
+	gpio_free(EXYNOS5_GPX1(4));
+
+	/* GPIO Col6 */
+	err = gpio_request(EXYNOS5_GPX1(6), "GPX1");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX1 for "
+				"valume up control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS5_GPX1(6), S3C_GPIO_PULL_UP);
+	gpio_free(EXYNOS5_GPX1(6));
 }
 
 #ifdef CONFIG_WAKEUP_ASSIST
@@ -3008,7 +3046,7 @@ static void __init smdk5250_machine_init(void)
 #endif
 	exynos_sysmmu_init();
 
-	smdk5250_gpio_power_init();
+	smdk5250_gpio_key_init();
 
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 
