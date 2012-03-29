@@ -1808,7 +1808,7 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 	}
 
 	/* wait for next frame */
-	mdelay(20);
+	msleep(20);
 
 	if (!sfb->variant.has_clksel)
 		clk_disable(sfb->lcd_clk);
@@ -2860,7 +2860,7 @@ static int s3c_fb_suspend(struct device *dev)
 	}
 
 	/* wait for next frame */
-	mdelay(20);
+	msleep(20);
 
 	if (!sfb->variant.has_clksel)
 		clk_disable(sfb->lcd_clk);
