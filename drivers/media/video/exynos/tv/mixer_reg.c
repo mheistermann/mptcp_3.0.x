@@ -721,6 +721,16 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
+void mxr_reg_local_path_clear(struct mxr_device *mdev)
+{
+	u32 val;
+
+	val = readl(SYSREG_DISP1BLK_CFG);
+	val &= ~(DISP1BLK_CFG_MIXER0_VALID | DISP1BLK_CFG_MIXER1_VALID);
+	writel(val, SYSREG_DISP1BLK_CFG);
+	mxr_dbg(mdev, "SYSREG_DISP1BLK_CFG = 0x%x\n", readl(SYSREG_DISP1BLK_CFG));
+}
+
 void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,
 		u32 flags)
 {

@@ -298,6 +298,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				layer->pipe.state = MXR_PIPELINE_IDLE;
 			}
 		}
+		mxr_reg_local_path_clear(mdev);
 		mxr_output_put(mdev);
 
 		/* disable mixer clock */
