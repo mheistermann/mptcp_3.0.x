@@ -67,6 +67,8 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 
 	gsc_hw_set_frm_done_irq_mask(gsc, false);
 	gsc_hw_set_gsc_irq_enable(gsc, true);
+	gsc_hw_set_one_frm_mode(gsc, false);
+	gsc_hw_set_freerun_clock_mode(gsc, true);
 
 	gsc_hw_set_input_path(ctx);
 	gsc_hw_set_in_size(ctx);
@@ -725,8 +727,6 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 			gsc_disp_fifo_sw_reset(gsc);
 			gsc_pixelasync_sw_reset(gsc);
 		}
-		gsc_hw_set_one_frm_mode(gsc, false);
-		gsc_hw_set_clock_mode(gsc, 1);
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
 		if (ret < 0) {

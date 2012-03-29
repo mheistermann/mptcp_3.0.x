@@ -295,13 +295,13 @@ void gsc_hw_set_output_addr(struct gsc_dev *dev,
 	writel(addr->cr, dev->regs + GSC_OUT_BASE_ADDR_CR(index));
 }
 
-void gsc_hw_set_clock_mode(struct gsc_dev *dev, int mode)
+void gsc_hw_set_freerun_clock_mode(struct gsc_dev *dev, bool mask)
 {
 	u32 cfg = readl(dev->regs + GSC_ENABLE);
 
 	cfg &= ~(GSC_ENABLE_CLK_GATE_MODE_MASK);
-	if (mode)
-		cfg |= GSC_ENABLE_CLK_GATE_MODE_NORM;
+	if (mask)
+		cfg |= GSC_ENABLE_CLK_GATE_MODE_FREE;
 	writel(cfg, dev->regs + GSC_ENABLE);
 }
 
