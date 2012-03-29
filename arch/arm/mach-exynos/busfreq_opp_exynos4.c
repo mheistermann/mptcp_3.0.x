@@ -329,7 +329,7 @@ out:
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
-	unsigned int val;
+	unsigned int val = 0;
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + 0x4, &val);
