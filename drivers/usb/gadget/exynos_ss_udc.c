@@ -1884,17 +1884,23 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
 		dev_dbg(udc->dev, "USB-Link State Change");
 
-		event_info = event & EXYNOS_USB3_DEVT_EventParam_MASK;
-		if (event_info == EXYNOS_USB3_DEVT_EventParam(0x3) ||
-			event_info == EXYNOS_USB3_DEVT_EventParam(0x4)) {
-			call_gadget(udc, disconnect);
+		/* Disconnect event detection for SMDK5250 EVT0 */
+#if defined(CONFIG_MACH_SMDK5250)
+		if (udc->release == 0x185a) {
+			event_info = event & EXYNOS_USB3_DEVT_EventParam_MASK;
+			if (event_info == EXYNOS_USB3_DEVT_EventParam(0x3) ||
+			    event_info == EXYNOS_USB3_DEVT_EventParam(0x4)) {
+				call_gadget(udc, disconnect);
 #ifdef CONFIG_BATTERY_SAMSUNG
-			exynos_ss_udc_cable_disconnect(udc);
+				exynos_ss_udc_cable_disconnect(udc);
 #endif
-			dev_dbg(udc->dev, " Disconnect %x %s speed", event_info,
-				event & EXYNOS_USB3_DEVT_EventParam_SS ?
-				"Super" : "High");
+				dev_dbg(udc->dev, "Disconnect %x %s speed\n",
+					event_info,
+					event & EXYNOS_USB3_DEVT_EventParam_SS ?
+					"Super" : "High");
+			}
 		}
+#endif
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
