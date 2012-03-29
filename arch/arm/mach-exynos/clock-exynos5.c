@@ -229,6 +229,11 @@ static int exynos5_clksrc_mask_gscl_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_GSCL, clk, enable);
 }
 
+static int exynos5_clksrc_mask_gen_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_GEN, clk, enable);
+}
+
 static int exynos5_clk_gate_block(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_BLOCK, clk, enable);
@@ -2002,12 +2007,6 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.reg_src = { .reg = EXYNOS5_CLKSRC_GSCL, .shift = 20, .size = 4 },
 		.reg_div = { .reg = EXYNOS5_CLKDIV_GSCL, .shift = 20, .size = 4 },
 	}, {
-		.clk	= {
-			.name		= "sclk_jpeg",
-			.parent		= &exynos5_clk_mout_cpll.clk,
-		},
-		.reg_div = { .reg = EXYNOS5_CLKDIV_GEN, .shift = 4, .size = 3 },
-	}, {
 		.clk		= {
 			.name		= "aclk_266_isp_div0",
 			.parent     = &exynos5_clk_aclk_266_isp.clk,
@@ -2072,6 +2071,17 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC2, .shift = 8, .size = 8 },
 	},
+};
+
+static struct clksrc_clk exynos5_clk_sclk_jpeg = {
+	.clk	= {
+		.name		= "sclk_jpeg",
+		.enable		= exynos5_clksrc_mask_gen_ctrl,
+		.ctrlbit	= (1 << 0),
+	},
+	.sources = &exynos5_clkset_group,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_GEN, .shift = 0, .size = 4 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_GEN, .shift = 4, .size = 4 },
 };
 
 static struct clk *exynos5_clkset_c2c_list[] = {
@@ -2167,6 +2177,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_sclk_spi0,
 	&exynos5_clk_sclk_spi1,
 	&exynos5_clk_sclk_spi2,
+	&exynos5_clk_sclk_jpeg,
 };
 
 static unsigned long exynos5_epll_get_rate(struct clk *clk)
@@ -2510,6 +2521,12 @@ void __init exynos5_register_clocks(void)
 		exynos5_clk_mout_mpll.sources = &exynos5_clkset_mout_mpll;
 		exynos5_clk_mout_bpll.sources = &exynos5_clkset_mout_bpll;
 		exynos5_clk_aclk_400.sources = &exynos5_clkset_aclk_g3d;
+	} else if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		exynos5_clk_sclk_jpeg.sources = NULL;
+		exynos5_clk_sclk_jpeg.reg_src.reg = 0;
+		exynos5_clk_sclk_jpeg.clk.parent = &exynos5_clk_mout_cpll.clk;
+		exynos5_clk_sclk_jpeg.clk.enable = NULL;
+		exynos5_clk_sclk_jpeg.clk.ctrlbit = 0;
 	}
 
 	s3c24xx_register_clocks(exynos5_clks, ARRAY_SIZE(exynos5_clks));
