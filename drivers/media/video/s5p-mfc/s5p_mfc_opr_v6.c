@@ -427,14 +427,10 @@ int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 	mfc_debug(2, "inst_no: %d, buf_addr: 0x%08x, buf_size: 0x"
 		"%08x (%d)\n",  ctx->inst_no, buf_addr, strm_size, strm_size);
 
-	s5p_mfc_clock_on();
-
 	WRITEL(strm_size, S5P_FIMV_D_STREAM_DATA_SIZE);
 	WRITEL(buf_addr, S5P_FIMV_D_CPB_BUFFER_ADDR);
 	WRITEL(buf_size->cpb_buf, S5P_FIMV_D_CPB_BUFFER_SIZE);
 	WRITEL(start_num_byte, S5P_FIMV_D_CPB_BUFFER_OFFSET);
-
-	s5p_mfc_clock_off();
 
 	mfc_debug_leave();
 	return 0;
@@ -460,8 +456,6 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);
 	mfc_debug(2, "Total DPB COUNT: %d\n", dec->total_dpb_count);
 	mfc_debug(2, "Setting display delay to %d\n", dec->display_delay);
-
-	s5p_mfc_clock_on();
 
 	WRITEL(dec->total_dpb_count, S5P_FIMV_D_NUM_DPB);
 	WRITEL(ctx->luma_size, S5P_FIMV_D_LUMA_DPB_SIZE);
@@ -541,8 +535,6 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
 
-	s5p_mfc_clock_off();
-
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_INIT_BUFS, NULL);
 
 	mfc_debug(2, "After setting buffers.\n");
@@ -555,12 +547,8 @@ int s5p_mfc_set_enc_stream_buffer(struct s5p_mfc_ctx *ctx,
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
-	s5p_mfc_clock_on();
-
 	WRITEL(addr, S5P_FIMV_E_STREAM_BUFFER_ADDR); /* 16B align */
 	WRITEL(size, S5P_FIMV_E_STREAM_BUFFER_SIZE);
-
-	s5p_mfc_clock_off();
 
 	mfc_debug(2, "stream buf addr: 0x%08lx, size: 0x%d",
 		addr, size);
@@ -573,12 +561,8 @@ void s5p_mfc_set_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
-	s5p_mfc_clock_on();
-
 	WRITEL(y_addr, S5P_FIMV_E_SOURCE_LUMA_ADDR); /* 256B align */
 	WRITEL(c_addr, S5P_FIMV_E_SOURCE_CHROMA_ADDR);
-
-	s5p_mfc_clock_off();
 
 	mfc_debug(2, "enc src y buf addr: 0x%08lx", y_addr);
 	mfc_debug(2, "enc src c buf addr: 0x%08lx", c_addr);
@@ -615,8 +599,6 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);
 
-	s5p_mfc_clock_on();
-
 	for (i = 0; i < ctx->dpb_count; i++) {
 		WRITEL(buf_addr1, S5P_FIMV_E_LUMA_DPB + (4 * i));
 		buf_addr1 += enc->luma_dpb_size;
@@ -647,8 +629,6 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 	}
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
-
-	s5p_mfc_clock_off();
 
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_INIT_BUFS, NULL);
 
@@ -688,8 +668,6 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	unsigned int reg = 0;
 
 	mfc_debug_enter();
-	s5p_mfc_clock_on();
-
 	/* width */
 	WRITEL(ctx->img_width, S5P_FIMV_E_FRAME_WIDTH); /* 16 align */
 	/* height */
@@ -867,7 +845,6 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_ADDR); /* NAL_start Only */
 	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_SIZE); /* NAL_start Only */
 
-	s5p_mfc_clock_off();
 	mfc_debug_leave();
 
 	return 0;
@@ -884,8 +861,6 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	s5p_mfc_set_enc_params(ctx);
-
-	s5p_mfc_clock_on();
 
 	/* pictype : number of B */
 	reg = READL(S5P_FIMV_E_GOP_CONFIG);
@@ -1150,7 +1125,6 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 		WRITEL(p_264->fmo_slice_num_grp - 1, S5P_FIMV_E_H264_FMO_NUM_SLICE_GRP_MINUS1);
 	}
 
-	s5p_mfc_clock_off();
 	mfc_debug_leave();
 
 	return 0;
@@ -1167,8 +1141,6 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	s5p_mfc_set_enc_params(ctx);
-
-	s5p_mfc_clock_on();
 
 	/* pictype : number of B */
 	reg = READL(S5P_FIMV_E_GOP_CONFIG);
@@ -1241,7 +1213,6 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	WRITEL(0x0, S5P_FIMV_E_MPEG4_OPTIONS); /* SEQ_start only */
 	WRITEL(0x0, S5P_FIMV_E_MPEG4_HEC_PERIOD); /* SEQ_start only */
 
-	s5p_mfc_clock_off();
 	mfc_debug_leave();
 
 	return 0;
@@ -1258,8 +1229,6 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	s5p_mfc_set_enc_params(ctx);
-
-	s5p_mfc_clock_on();
 
 	/* profile & level */
 	reg = 0;
@@ -1314,7 +1283,6 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	reg |= p_mpeg4->rc_min_qp;
 	WRITEL(reg, S5P_FIMV_E_RC_QP_BOUND);
 
-	s5p_mfc_clock_off();
 	mfc_debug_leave();
 
 	return 0;
@@ -1329,7 +1297,6 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	int fmo_aso_ctrl = 0;
 
 	mfc_debug_enter();
-	s5p_mfc_clock_on();
 
 	mfc_debug(2, "InstNo: %d/%d\n", ctx->inst_no, S5P_FIMV_CH_SEQ_HEADER);
 	mfc_debug(2, "BUFs: %08x %08x %08x\n",
@@ -1377,8 +1344,6 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
 
-	s5p_mfc_clock_off();
-
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_SEQ_HEADER, NULL);
 
 	mfc_debug_leave();
@@ -1402,8 +1367,6 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
-	s5p_mfc_clock_on();
-
 	mfc_debug(2, "Setting flags to %08lx (free:%d WTF:%d)\n",
 				dec->dpb_status, ctx->dst_queue_cnt,
 						dec->dpb_queue_cnt);
@@ -1417,8 +1380,6 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 #endif
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
-
-	s5p_mfc_clock_off();
 
 	/* Issue different commands to instance basing on whether it
 	 * is the last frame or not. */
@@ -1453,9 +1414,7 @@ int s5p_mfc_init_encode(struct s5p_mfc_ctx *ctx)
 		return -EINVAL;
 	}
 
-	s5p_mfc_clock_on();
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
-	s5p_mfc_clock_off();
 
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_SEQ_HEADER, NULL);
 
@@ -1472,15 +1431,11 @@ int s5p_mfc_h264_set_aso_slice_order(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_h264_enc_params *p_264 = &p->codec.h264;
 	int i;
 
-	s5p_mfc_clock_on();
-
 	if (p_264->aso_enable) {
 		for (i = 0; i < 8; i++)
 			WRITEL(p_264->aso_slice_order[i],
 				S5P_FIMV_E_H264_ASO_SLICE_ORDER_0 + i * 4);
 	}
-
-	s5p_mfc_clock_off();
 
 	return 0;
 }
@@ -1502,11 +1457,9 @@ int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *ctx)
 	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
 		s5p_mfc_h264_set_aso_slice_order(ctx);
 
-	s5p_mfc_clock_on();
 	s5p_mfc_set_slice_mode(ctx);
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
-	s5p_mfc_clock_off();
 
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_FRAME_START, NULL);
 
@@ -1827,6 +1780,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 	/* Last frame has already been sent to MFC
 	 * Now obtaining frames from MFC buffer */
 
+	s5p_mfc_clock_on();
 	if (ctx->type == MFCINST_DECODER) {
 		switch (ctx->state) {
 		case MFCINST_FINISHING:
@@ -1894,6 +1848,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0) {
 			mfc_err("Failed to unlock hardware.\n");
 		}
+		s5p_mfc_clock_off();
 	}
 }
 
@@ -1913,14 +1868,24 @@ void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq)
 	}
 }
 
+/*
+ * Clock on/off is not called if dev->hw_lock is not 0.
+ * dev->hw_lock is used as flag in read/write_info.
+ * [0] : 1 means it is in h/w processing.
+ * [1] : 1 means it is in spin_lock_irqsave.
+ */
 void s5p_mfc_write_info(struct s5p_mfc_ctx *ctx, unsigned int data, unsigned int ofs)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	/* MFC 6.x uses SFR for information */
-	s5p_mfc_clock_on();
-	WRITEL(data, ofs);
-	s5p_mfc_clock_off();
+	if (dev->hw_lock) {
+		WRITEL(data, ofs);
+	} else {
+		s5p_mfc_clock_on();
+		WRITEL(data, ofs);
+		s5p_mfc_clock_off();
+	}
 }
 
 unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs)
@@ -1929,9 +1894,13 @@ unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs)
 	int ret;
 
 	/* MFC 6.x uses SFR for information */
-	s5p_mfc_clock_on();
-	ret = READL(ofs);
-	s5p_mfc_clock_off();
+	if (dev->hw_lock) {
+		ret = READL(ofs);
+	} else {
+		s5p_mfc_clock_on();
+		ret = READL(ofs);
+		s5p_mfc_clock_off();
+	}
 
 	return ret;
 }

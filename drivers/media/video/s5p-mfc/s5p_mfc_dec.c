@@ -738,12 +738,8 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 
 static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
-	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
-
-	if (IS_MFCV6(dev))
-		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if (!buf_ctrl->has_new)
@@ -786,20 +782,13 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 			  buf_ctrl->val);
 	}
 
-	if (IS_MFCV6(dev))
-		s5p_mfc_clock_off();
-
 	return 0;
 }
 
 static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
-	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	unsigned int value = 0;
-
-	if (IS_MFCV6(dev))
-		s5p_mfc_clock_on();
 
 	list_for_each_entry(buf_ctrl, head, list) {
 		if ((buf_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
@@ -818,9 +807,6 @@ static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		mfc_debug(5, "id: 0x%08x val: %d\n", buf_ctrl->id,
 			  buf_ctrl->val);
 	}
-
-	if (IS_MFCV6(dev))
-		s5p_mfc_clock_off();
 
 	return 0;
 }
@@ -2009,7 +1995,7 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 
 	if ((ctx->state == MFCINST_FINISHING ||
 		ctx->state ==  MFCINST_RUNNING) &&
-		dev->curr_ctx == ctx->num && dev->hw_lock) {
+		(dev->curr_ctx == ctx->num) && test_bit(0, &dev->hw_lock)) {
 		ctx->state = MFCINST_ABORT;
 		s5p_mfc_wait_for_done_ctx(ctx, S5P_FIMV_R2H_CMD_FRAME_DONE_RET,
 					  0);
