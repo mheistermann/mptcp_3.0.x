@@ -847,16 +847,11 @@ static int s5p_mfc_open(struct file *file)
 
 		mfc_debug(2, "power on\n");
 		ret = s5p_mfc_power_on();
-		if (ret) {
+		if (ret < 0) {
 			mfc_err("power on failed\n");
 			goto err_pwr_enable;
 		}
 
-#ifndef CONFIG_PM_RUNTIME
-		ret = s5p_mfc_mem_resume(dev->alloc_ctx[0]);
-		if (ret < 0)
-			goto err_mem_resume;
-#endif
 		dev->curr_ctx = ctx->num;
 
 		/* Init the FW */
@@ -869,12 +864,7 @@ static int s5p_mfc_open(struct file *file)
 
 	/* Deinit when failure occured */
 err_hw_init:
-#ifndef CONFIG_PM_RUNTIME
-	s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
-err_mem_resume:
-#endif
-	if (s5p_mfc_power_off() < 0)
-		mfc_err("power off failed\n");
+	s5p_mfc_power_off();
 
 err_pwr_enable:
 err_fw_load:
@@ -963,16 +953,12 @@ static int s5p_mfc_release(struct file *file)
 		/* FIXME: is it need ? */
 		s5p_mfc_deinit_hw(dev);
 
-#ifndef CONFIG_PM_RUNTIME
-		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
-#endif
 		/* reset <-> F/W release */
 		s5p_mfc_release_firmware(dev);
 		del_timer_sync(&dev->watchdog_timer);
 
 		mfc_debug(2, "power off\n");
-		if (s5p_mfc_power_off() < 0)
-			mfc_err("power off failed\n");
+		s5p_mfc_power_off();
 	}
 
 	if (ctx->type == MFCINST_DECODER)

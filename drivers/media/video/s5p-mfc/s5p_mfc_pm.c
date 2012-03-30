@@ -161,9 +161,7 @@ bool s5p_mfc_power_chk(void)
 }
 #elif defined(CONFIG_ARCH_EXYNOS5)
 #include <linux/platform_device.h>
-#ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
-#endif
 
 #define MFC_PARENT_CLK_NAME	"dout_aclk_333"
 #define MFC_CLKNAME		"sclk_mfc"
@@ -203,10 +201,8 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 	atomic_set(&pm->power, 0);
 	atomic_set(&clk_ref, 0);
 
-#ifdef CONFIG_PM_RUNTIME
 	pm->device = &dev->plat_dev->dev;
 	pm_runtime_enable(pm->device);
-#endif
 
 	clk_put(parent_clk);
 
@@ -222,9 +218,7 @@ void s5p_mfc_final_pm(struct s5p_mfc_dev *dev)
 {
 	clk_put(pm->clock);
 
-#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(pm->device);
-#endif
 }
 
 int s5p_mfc_clock_on(void)
@@ -289,24 +283,12 @@ void s5p_mfc_clock_off(void)
 
 int s5p_mfc_power_on(void)
 {
-#ifdef CONFIG_PM_RUNTIME
 	return pm_runtime_get_sync(pm->device);
-#else
-	atomic_set(&pm->power, 1);
-
-	return 0;
-#endif
 }
 
 int s5p_mfc_power_off(void)
 {
-#ifdef CONFIG_PM_RUNTIME
 	return pm_runtime_put_sync(pm->device);
-#else
-	atomic_set(&pm->power, 0);
-
-	return 0;
-#endif
 }
 #else /* CONFIG_ARCH_NOT_SUPPORT */
 int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)
