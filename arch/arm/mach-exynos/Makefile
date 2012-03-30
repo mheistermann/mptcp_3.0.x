@@ -58,6 +58,7 @@ obj-$(CONFIG_MACH_NURI)			+= mach-nuri.o
 obj-$(CONFIG_MACH_SMDK4X12)		+= mach-smdk4x12.o
 obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-display.o
+obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-power.o
 
 # device support
 
