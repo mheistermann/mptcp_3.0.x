@@ -873,6 +873,8 @@ static int queue_setup(struct vb2_queue *vq, unsigned int *nbuffers,
 	if (*nbuffers == 0)
 		*nbuffers = 1;
 
+	vb2_queue_init(vq);
+
 	return 0;
 }
 
