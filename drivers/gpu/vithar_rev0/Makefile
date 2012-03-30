@@ -21,7 +21,7 @@ MALI_FAKE_PLATFORM_DEVICE=1
 MALI_MOCK_TEST=0
 
 ifeq ($(CONFIG_VITHAR_HWVER_R0P0),y)
-MALI_HW_VERSION=r0p0
+$(error "CONFIG_VITHAR_HWVER_R0P0 shoud be disabled, This version is for rev0")
 else
 MALI_HW_VERSION=r0p0_beta_eco1
 endif
@@ -42,7 +42,7 @@ endif
 
 # define path
 #ROOT=.
-VITHAR_ROOT=drivers/gpu/vithar
+VITHAR_ROOT=drivers/gpu/vithar_rev0
 #CONFIG_VITHAR = y
 
 ##############################################################################################
