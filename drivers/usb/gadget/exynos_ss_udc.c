@@ -919,6 +919,40 @@ static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 }
 
 /**
+ * exynos_ss_udc_process_set_isoch_delay - process request SET_ISOCH_DELAY
+ * @udc: The device state.
+ * @ctrl: The USB control request.
+ */
+static int exynos_ss_udc_process_set_isoch_delay(struct exynos_ss_udc *udc,
+						 struct usb_ctrlrequest *ctrl)
+{
+	u16 isoch_delay;
+	int ret = 1;
+
+	if (ctrl->wIndex || ctrl->wLength) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	switch (udc->state) {
+	case USB_STATE_DEFAULT:
+	/* FALLTHROUGH */
+	case USB_STATE_ADDRESS:
+	/* FALLTHROUGH */
+	case USB_STATE_CONFIGURED:
+		isoch_delay = le16_to_cpu(ctrl->wValue);
+		/* REVISIT don't know what to do with this value */
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+err:
+	return ret;
+}
+
+/**
  * exynos_ss_udc_set_test_mode - set TEST_MODE feature
  * @udc: The device state.
  * @wIndex: The request wIndex field.
@@ -1314,6 +1348,9 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 		case USB_REQ_SET_SEL:
 			ret = exynos_ss_udc_process_set_sel(udc);
+			break;
+		case USB_REQ_SET_ISOCH_DELAY:
+			ret = exynos_ss_udc_process_set_isoch_delay(udc, ctrl);
 			break;
 		case USB_REQ_SET_CONFIGURATION:
 			ret = exynos_ss_udc_process_set_config(udc, ctrl);
