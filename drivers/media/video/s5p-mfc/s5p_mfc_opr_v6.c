@@ -1533,6 +1533,10 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 		return -EAGAIN;
 	}
+	if (ctx->dst_queue_cnt < ctx->dpb_count) {
+		spin_unlock_irqrestore(&dev->irqlock, flags);
+		return -EAGAIN;
+	}
 	/* Get the next source buffer */
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	temp_vb->used = 1;
