@@ -317,7 +317,7 @@ static irqreturn_t exynos_sysmmu_irq(int irq, void *dev_id)
 	WARN_ON(!is_sysmmu_active(data));
 
 	pdev = to_platform_device(data->sysmmu);
-	for (i = 0; i < pdev->num_resources; i++) {
+	for (i = 0; i < (pdev->num_resources / 2); i++) {
 		irqres = platform_get_resource(pdev, IORESOURCE_IRQ, i);
 		if (irqres && ((int)irqres->start == irq))
 			break;
@@ -326,8 +326,6 @@ static irqreturn_t exynos_sysmmu_irq(int irq, void *dev_id)
 	if (i == pdev->num_resources) {
 		itype = SYSMMU_FAULT_UNKNOWN;
 	} else {
-		i /= 2;
-
 		itype = (enum exynos_sysmmu_inttype)
 			__ffs(__raw_readl(data->sfrbases[i] + REG_INT_STATUS));
 		if (WARN_ON(!((itype >= 0) && (itype < SYSMMU_FAULT_UNKNOWN))))
