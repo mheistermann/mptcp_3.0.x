@@ -2325,9 +2325,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
-#endif
 	&exynos_device_dwmci0,
 	&exynos_device_dwmci2,
+#endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
@@ -2843,6 +2843,7 @@ static void __init smdk5250_machine_init(void)
 	s3c_i2c5_set_platdata(NULL);
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
 		exynos_dwmci_set_platdata(&exynos5_dwmci0_pdata, 0);
 		dev_set_name(&exynos_device_dwmci0.dev, "s3c-sdhci.0");
@@ -2857,7 +2858,9 @@ static void __init smdk5250_machine_init(void)
 			&exynos_device_dwmci2.dev);
 		clk_add_alias("sclk_dwmci", "dw_mmc.2", "sclk_mmc",
 			&exynos_device_dwmci2.dev);
-	} else {
+	} else
+#endif
+	{
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	exynos_dwmci_set_platdata(&exynos_dwmci_pdata, 0);
 #endif
