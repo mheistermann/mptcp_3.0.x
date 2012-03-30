@@ -424,7 +424,7 @@ void gsc_hw_set_in_image_format(struct gsc_ctx *ctx)
 	cfg &= ~(GSC_IN_RGB_TYPE_MASK | GSC_IN_YUV422_1P_ORDER_MASK |
 		 GSC_IN_CHROMA_ORDER_MASK | GSC_IN_FORMAT_MASK |
 		 GSC_IN_TILE_TYPE_MASK | GSC_IN_TILE_MODE |
-		 GSC_IN_CHROM_STRIDE_MASK);
+		 GSC_IN_CHROM_STRIDE_SEL_MASK);
 	writel(cfg, dev->regs + GSC_IN_CON);
 
 	if (is_rgb(frame->fmt->pixelformat)) {
@@ -555,7 +555,7 @@ void gsc_hw_set_out_image_format(struct gsc_ctx *ctx)
 	cfg &= ~(GSC_OUT_RGB_TYPE_MASK | GSC_OUT_YUV422_1P_ORDER_MASK |
 		 GSC_OUT_CHROMA_ORDER_MASK | GSC_OUT_FORMAT_MASK |
 		 GSC_OUT_TILE_TYPE_MASK | GSC_OUT_TILE_MODE |
-		 GSC_OUT_CHROM_STRIDE_MASK);
+		 GSC_OUT_CHROM_STRIDE_SEL_MASK);
 	writel(cfg, dev->regs + GSC_OUT_CON);
 
 	if (is_rgb(frame->fmt->pixelformat)) {
