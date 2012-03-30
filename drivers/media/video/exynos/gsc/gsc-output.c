@@ -253,6 +253,8 @@ static int gsc_subdev_set_crop(struct v4l2_subdev *sd,
 		f->crop.top = crop->rect.top;
 		f->crop.width = crop->rect.width;
 		f->crop.height = crop->rect.height;
+		if (f->crop.width % 2)
+			f->crop.width -= 1;
 	}
 
 	gsc_dbg("pad%d: (%d,%d)/%dx%d", crop->pad, crop->rect.left, crop->rect.top,
