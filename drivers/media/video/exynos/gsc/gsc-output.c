@@ -35,15 +35,16 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 {
 	int ret;
 
-	mdelay(1);
-	gsc_hw_set_sw_reset(gsc);
-	ret = gsc_wait_reset(gsc);
-	if (ret < 0) {
-		gsc_err("gscaler s/w reset timeout");
-		return ret;
+	if (!soc_is_exynos5250_rev1) {
+		gsc_hw_set_sw_reset(gsc);
+		ret = gsc_wait_reset(gsc);
+		if (ret < 0) {
+			gsc_err("gscaler s/w reset timeout");
+			return ret;
+		}
+		gsc_disp_fifo_sw_reset(gsc);
+		gsc_pixelasync_sw_reset(gsc);
 	}
-	gsc_pixelasync_sw_reset(gsc);
-	gsc_disp_fifo_sw_reset(gsc);
 	gsc_hw_enable_control(gsc, false);
 	ret = gsc_wait_stop(gsc);
 	if (ret < 0) {
@@ -63,6 +64,15 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 	if (ret) {
 		gsc_err("Scaler setup error");
 		return ret;
+	}
+
+	if (soc_is_exynos5250_rev1) {
+		gsc_hw_set_sw_reset(gsc);
+		ret = gsc_wait_reset(gsc);
+		if (ret < 0) {
+			gsc_err("gscaler s/w reset timeout");
+			return ret;
+		}
 	}
 
 	if (gsc_hw_get_mxr_path_status())
@@ -732,10 +742,6 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 	}
 
 	if (!test_and_set_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
-		if (ctx->out_path == GSC_FIMD) {
-			gsc_disp_fifo_sw_reset(gsc);
-			gsc_pixelasync_sw_reset(gsc);
-		}
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
 		if (ret < 0) {

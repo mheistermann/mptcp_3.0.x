@@ -276,12 +276,12 @@ void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame
 		halign = *hratio << poly_sc_halign;
 	} else if (is_yuv422(s_frame->fmt->pixelformat)) {
 		walign = *wratio << poly_sc_walign;
-		if (is_evt1() && (rot == 90 || rot == 270))
+		if (soc_is_exynos5250_rev1 && (rot == 90 || rot == 270))
 			halign = *hratio << poly_sc_halign;
 		else
 			halign = *hratio << (poly_sc_halign - 1);
 	} else {
-		if (is_evt1() && (rot == 90 || rot == 270)) {
+		if (soc_is_exynos5250_rev1 && (rot == 90 || rot == 270)) {
 			walign = *wratio << poly_sc_walign;
 			halign = *hratio << poly_sc_halign;
 		} else {

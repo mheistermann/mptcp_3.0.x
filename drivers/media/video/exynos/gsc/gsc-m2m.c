@@ -158,10 +158,16 @@ static void gsc_m2m_device_run(void *priv)
 	if (gsc->vb2->use_sysmmu)
 #endif
 		gsc_set_prefbuf(gsc, ctx->s_frame);
-	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
-	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
 
 	if (ctx->state & GSC_PARAMS) {
+		if (soc_is_exynos5250_rev1) {
+			gsc_hw_set_sw_reset(gsc);
+			ret = gsc_wait_reset(gsc);
+			if (ret < 0) {
+				gsc_err("gscaler s/w reset timeout");
+				goto put_device;
+			}
+		}
 		gsc_hw_set_input_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
 		gsc_hw_set_output_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
 		gsc_hw_set_frm_done_irq_mask(gsc, false);
@@ -192,6 +198,8 @@ static void gsc_m2m_device_run(void *priv)
 	/* When you update SFRs in the middle of operating
 	gsc_hw_set_sfr_update(ctx);
 	*/
+	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
+	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
 
 	ctx->state &= ~GSC_PARAMS;
 
@@ -205,7 +213,8 @@ static void gsc_m2m_device_run(void *priv)
 			gsc_err("gscaler wait operating timeout");
 			goto put_device;
 		}
-		gsc_hw_enable_control(gsc, false);
+		if (!soc_is_exynos5250_rev1)
+			gsc_hw_enable_control(gsc, false);
 	}
 
 	ctx->op_timer.expires = (jiffies + 2 * HZ);

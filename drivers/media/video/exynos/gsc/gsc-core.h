@@ -175,9 +175,6 @@ enum gsc_yuv_fmt {
 
 #define fh_to_ctx(__fh) container_of(__fh, struct gsc_ctx, fh)
 
-#define is_evt1() (soc_is_exynos5250() && samsung_rev() >= EXYNOS5250_REV_1_0) ? \
-		   1 : 0
-
 #define is_rgb(img) ((img == V4L2_PIX_FMT_RGB565X) | (img == V4L2_PIX_FMT_RGB32))
 #define is_yuv422(img) ((img == V4L2_PIX_FMT_YUYV) | (img == V4L2_PIX_FMT_UYVY) | \
 		     (img == V4L2_PIX_FMT_VYUY) | (img == V4L2_PIX_FMT_YVYU) | \
