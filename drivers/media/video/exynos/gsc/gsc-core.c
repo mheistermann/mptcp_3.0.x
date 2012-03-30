@@ -853,6 +853,23 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 		user_to_drv(ctx->gsc_ctrls.csc_range, ctrl->val);
 		break;
 
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	case V4L2_CID_USE_SYSMMU:
+		user_to_drv(ctx->gsc_ctrls.use_sysmmu, ctrl->val);
+		break;
+	case V4L2_CID_USE_PHYS:
+		user_to_drv(ctx->gsc_ctrls.use_phys, ctrl->val);
+		break;
+	case V4L2_CID_PHYS_Y:
+		user_to_drv(ctx->gsc_ctrls.phys_y, ctrl->val);
+		break;
+	case V4L2_CID_PHYS_CB:
+		user_to_drv(ctx->gsc_ctrls.phys_cb, ctrl->val);
+		break;
+	case V4L2_CID_PHYS_CR:
+		user_to_drv(ctx->gsc_ctrls.phys_cr, ctrl->val);
+		break;
+#endif
 	default:
 		ret = gsc_s_ctrl_to_mxr(ctrl);
 		if (ret) {
@@ -960,6 +977,54 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.flags = V4L2_CTRL_FLAG_SLIDER,
 		.max = DEFAULT_CSC_RANGE,
 		.def = DEFAULT_CSC_RANGE,
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_USE_SYSMMU,
+		.name = "set the use of sysmmu",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = DEFAULT_USE_SYSMMU,
+		.def = DEFAULT_USE_SYSMMU,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_USE_PHYS,
+		.name = "set the use physical address",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = 1,
+		.def = DEFAULT_USE_PHYS,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_PHYS_Y,
+		.name = "set y physical address",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = INT_MIN,
+		.max = INT_MAX,
+		.def = 0x0,
+		.step = 0x4,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_PHYS_CB,
+		.name = "set cb physical address",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = INT_MIN,
+		.max = INT_MAX,
+		.def = 0x0,
+		.step = 0x4,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_PHYS_CR,
+		.name = "set cr physical address",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = INT_MIN,
+		.max = INT_MAX,
+		.def = 0x0,
+		.step = 0x4,
+#endif
 	},
 };
 
@@ -1003,6 +1068,18 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 					&gsc_custom_ctrl[9], NULL);
 	ctx->gsc_ctrls.csc_range = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[10], NULL);
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	ctx->gsc_ctrls.use_sysmmu = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[11], NULL);
+	ctx->gsc_ctrls.use_phys = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[12], NULL);
+	ctx->gsc_ctrls.phys_y = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[13], NULL);
+	ctx->gsc_ctrls.phys_cb = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[14], NULL);
+	ctx->gsc_ctrls.phys_cr = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[15], NULL);
+#endif
 
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
@@ -1042,7 +1119,17 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 	gsc_dbg("num_planes= %d, nr_comp= %d, pix_size= %d",
 		frame->fmt->num_planes, frame->fmt->nr_comp, pix_size);
 
-	addr->y = gsc->vb2->plane_addr(vb, 0);
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	if (!gsc->vb2->use_sysmmu) {
+		if (gsc->vb2->use_phys)
+			addr->y = ctx->gsc_ctrls.phys_y->val;
+		else
+			WARN_ON(vb2_ion_phys_address(
+				vb2_plane_cookie(vb, 0),
+				&addr->y) != 0);
+	} else
+#endif
+		addr->y = gsc->vb2->plane_addr(vb, 0);
 
 	if (frame->fmt->num_planes == 1) {
 		switch (frame->fmt->nr_comp) {
@@ -1064,11 +1151,34 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 			return -EINVAL;
 		}
 	} else {
-		if (frame->fmt->num_planes >= 2)
-			addr->cb = gsc->vb2->plane_addr(vb, 1);
+		if (frame->fmt->num_planes >= 2) {
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+			if (!gsc->vb2->use_sysmmu) {
+				if (gsc->vb2->use_phys)
+					addr->cb = ctx->gsc_ctrls.phys_cb->val;
+				else
+					WARN_ON(vb2_ion_phys_address(
+						vb2_plane_cookie(vb, 1),
+						&addr->cb) != 0);
+			} else
+#endif
+				addr->cb = gsc->vb2->plane_addr(vb, 1);
+		}
 
-		if (frame->fmt->num_planes == 3)
-			addr->cr = gsc->vb2->plane_addr(vb, 2);
+		if (frame->fmt->num_planes == 3) {
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+			if (!gsc->vb2->use_sysmmu) {
+				if (gsc->vb2->use_phys)
+					addr->cr = ctx->gsc_ctrls.phys_cr->val;
+				else
+					WARN_ON(vb2_ion_phys_address(
+						vb2_plane_cookie(vb, 2),
+						&addr->cr) != 0);
+			} else
+
+#endif
+				addr->cr = gsc->vb2->plane_addr(vb, 2);
+		}
 	}
 
 	if (frame->fmt->pixelformat == V4L2_PIX_FMT_YVU420 ||
@@ -1181,13 +1291,19 @@ void gsc_clock_gating(struct gsc_dev *gsc, enum gsc_clk_status status)
 		clk_cnt = atomic_inc_return(&gsc->clk_cnt);
 		if (clk_cnt == 1) {
 			clk_enable(gsc->clock);
-			gsc->vb2->resume(gsc->alloc_ctx);
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+			if (gsc->vb2->use_sysmmu)
+#endif
+				gsc->vb2->resume(gsc->alloc_ctx);
 			set_bit(ST_PWR_ON, &gsc->state);
 		}
 	} else if (status == GSC_CLK_OFF) {
 		clk_cnt = atomic_dec_return(&gsc->clk_cnt);
 		if (clk_cnt == 0) {
-			gsc->vb2->suspend(gsc->alloc_ctx);
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+			if (gsc->vb2->use_sysmmu)
+#endif
+				gsc->vb2->suspend(gsc->alloc_ctx);
 			clk_disable(gsc->clock);
 			clear_bit(ST_PWR_ON, &gsc->state);
 		} else if (clk_cnt < 0) {

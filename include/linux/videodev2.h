@@ -1231,8 +1231,19 @@ enum v4l2_colorfx {
 #define V4L2_CID_CSC_EQ				(V4L2_CID_BASE+51)
 #define V4L2_CID_CSC_RANGE			(V4L2_CID_BASE+52)
 
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+/* for DRM playback scenario */
+#define V4L2_CID_USE_SYSMMU			(V4L2_CID_BASE+53)
+#define V4L2_CID_USE_PHYS			(V4L2_CID_BASE+54)
+#define V4L2_CID_PHYS_Y				(V4L2_CID_BASE+55)
+#define V4L2_CID_PHYS_CB			(V4L2_CID_BASE+56)
+#define V4L2_CID_PHYS_CR			(V4L2_CID_BASE+57)
 /* last CID + 1 */
-#define V4L2_CID_LASTP1				(V4L2_CID_BASE+54)
+#define V4L2_CID_LASTP1				(V4L2_CID_BASE+58)
+#else
+/* last CID + 1 */
+#define V4L2_CID_LASTP1				(V4L2_CID_BASE+53)
+#endif
 
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)

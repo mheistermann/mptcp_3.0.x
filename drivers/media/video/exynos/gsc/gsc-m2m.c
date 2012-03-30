@@ -154,7 +154,10 @@ static void gsc_m2m_device_run(void *priv)
 		goto put_device;
 	}
 
-	gsc_set_prefbuf(gsc, ctx->s_frame);
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	if (gsc->vb2->use_sysmmu)
+#endif
+		gsc_set_prefbuf(gsc, ctx->s_frame);
 	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
 	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
 
@@ -393,6 +396,10 @@ static int gsc_m2m_reqbufs(struct file *file, void *fh,
 			gsc_ctx_state_lock_clear(GSC_DST_FMT, ctx);
 	}
 
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	update_use_sysmmu(gsc->vb2, ctx->gsc_ctrls.use_sysmmu);
+	update_use_phys(gsc->vb2, ctx->gsc_ctrls.use_phys);
+#endif
 	frame = ctx_get_frame(ctx, reqbufs->type);
 	frame->cacheable = ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);
