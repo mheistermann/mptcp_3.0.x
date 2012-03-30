@@ -120,6 +120,7 @@
 	(((val) << (low_bit)) & MXR_MASK(high_bit, low_bit))
 
 /* bits for MXR_STATUS */
+#define MXR_STATUS_SOFT_RESET		(1 << 8)
 #define MXR_STATUS_16_BURST		(1 << 7)
 #define MXR_STATUS_BURST_MASK		(1 << 7)
 #define MXR_STATUS_LAYER_SYNC		(1 << 6)

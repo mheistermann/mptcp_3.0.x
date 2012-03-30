@@ -146,6 +146,8 @@ void mxr_reg_reset(struct mxr_device *mdev)
 	unsigned long flags;
 
 	spin_lock_irqsave(&mdev->reg_slock, flags);
+
+	mxr_write_mask(mdev, MXR_STATUS, ~0, MXR_STATUS_SOFT_RESET);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	/* set output in RGB888 mode */
