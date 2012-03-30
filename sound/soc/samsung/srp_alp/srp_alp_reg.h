@@ -45,6 +45,7 @@
 #define SRP_INTREN			(0x0180)
 #define SRP_INTRMASK			(0x0184)
 #define SRP_INTRSRC			(0x0188)
+#define SRP_INTRIRQ			(0x0308)
 
 /*
  * SRP Configuration register
@@ -147,4 +148,7 @@
 #define SRP_ARM_INTR_SRC		(0x1 << 6)
 #define SRP_DMA_INTR_SRC		(0x1 << 5)
 #define SRP_TMR_INTR_SRC		(0x1F << 0)
+/* INTRIRQ */
+#define SRP_INTRIRQ_MASK		(0xFFFF << 0)
+#define SRP_INTRIRQ_CONF		(0x100 << 0)
 #endif

@@ -56,7 +56,7 @@
 #define START_THRESHOLD	(IBUF_SIZE * 3)
 
 /* Commbox & Etc information */
-#define COMMBOX_SIZE	(0x200)
+#define COMMBOX_SIZE	(0x308)
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)

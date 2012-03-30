@@ -663,16 +663,12 @@ static void srp_check_obuf_info(void)
 	unsigned int buf1 = readl(srp.commbox + SRP_PCM_BUFF1);
 	unsigned int size = readl(srp.commbox + SRP_PCM_BUFF_SIZE);
 
-	/* For EVT0 : will be removed on EVT1 */
-	if (!soc_is_exynos5250()) {
-		if (srp.obuf0_pa != buf0)
-			srp_err("Wrong PCM BUF0[0x%x], OBUF0[0x%x]\n",
+	if (srp.obuf0_pa != buf0)
+		srp_err("Wrong PCM BUF0[0x%x], OBUF0[0x%x]\n",
 						buf0, srp.obuf0_pa);
-		if (srp.obuf1_pa != buf1)
-			srp_err("Wrong PCM BUF1[0x%x], OBUF1[0x%x]\n",
+	if (srp.obuf1_pa != buf1)
+		srp_err("Wrong PCM BUF1[0x%x], OBUF1[0x%x]\n",
 						buf1, srp.obuf1_pa);
-	}
-
 	if ((srp.obuf_size >> 2) != size)
 		srp_err("Wrong OBUF SIZE[%d]\n", size);
 }
@@ -722,14 +718,14 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp_debug("OBUF0 FULL\n");
 				srp.obuf_fill_done[0] = 1;
 				/* For EVT0 : will be removed on EVT1 */
-				if (soc_is_exynos5250()) {
+				if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 					for (i = 0; i < srp.obuf_size; i += 4)
 						memcpy(&srp.pcm_obuf0[i], &srp.obuf0[i], 0x4);
 				}
 			} else {
 				srp_debug("OBUF1 FULL\n");
 				srp.obuf_fill_done[1] = 1;
-				if (soc_is_exynos5250()) {
+				if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 					for (i = 0; i < srp.obuf_size; i += 4)
 						memcpy(&srp.pcm_obuf1[i], &srp.obuf1[i], 0x4);
 				}
@@ -799,7 +795,7 @@ static void srp_prepare_buff(struct device *dev)
 	srp.obuf1 = srp.obuf0 + srp.obuf_size;
 
 	/* For EVT0 : will be removed on EVT1 */
-	if (soc_is_exynos5250()) {
+	if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 		srp.pcm_obuf0 = dma_alloc_writecombine(dev, srp.obuf_size * 2,
 						&srp.pcm_obuf_pa, GFP_KERNEL);
 		srp.pcm_obuf1 = srp.pcm_obuf0 + srp.obuf_size;
@@ -819,8 +815,10 @@ static void srp_prepare_buff(struct device *dev)
 	srp.obuf_num = OBUF_NUM;
 
 	/* For EVT0 : will be removed on EVT1 */
-	srp.mmap_base = soc_is_exynos5250() ? srp.pcm_obuf_pa :
-					      SRP_DMEM_BASE;
+	if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0))
+		srp.mmap_base = srp.pcm_obuf_pa;
+	else
+		srp.mmap_base = SRP_DMEM_BASE;
 
 	srp_info("[VA]IBUF0[0x%p], [PA]IBUF0[0x%x]\n",
 						srp.ibuf0, srp.ibuf0_pa);
@@ -985,16 +983,18 @@ static struct miscdevice srp_miscdev = {
 #ifdef CONFIG_PM
 static void srp_request_pwr_mode(int mode)
 {
-	unsigned long deadline = jiffies + (HZ / 100);
+	unsigned long deadline = jiffies + (HZ / 50);
 	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
 	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
 	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
 	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
+	unsigned int intr_irq = readl(srp.commbox + SRP_INTRIRQ);
 
 	pwr_mode &= ~SRP_POWER_MODE_MASK;
 	intr_en &= ~SRP_INTR_DI;
 	intr_msk |= (SRP_ARM_INTR_MASK | SRP_DMA_INTR_MASK | SRP_TMR_INTR_MASK);
 	intr_src &= ~(SRP_INTRSRC_MASK);
+	intr_irq &= ~(SRP_INTRIRQ_MASK);
 
 	if (!mode)
 		pwr_mode &= ~SRP_POWER_MODE_TRIGGER;
@@ -1004,6 +1004,11 @@ static void srp_request_pwr_mode(int mode)
 	intr_en |= SRP_INTR_EN;
 	intr_msk &= ~SRP_ARM_INTR_MASK;
 	intr_src |= SRP_ARM_INTR_SRC;
+
+	if (soc_is_exynos5250() && (samsung_rev() >= EXYNOS5250_REV_1_0)) {
+		intr_irq |= SRP_INTRIRQ_CONF;
+		writel(intr_irq, srp.commbox + SRP_INTRIRQ);
+	}
 
 	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
 	writel(intr_en, srp.commbox + SRP_INTREN);
@@ -1042,7 +1047,7 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 		if (srp.decoding_started && !srp.pm_suspended) {
 
 			/* IBUF/OBUF Save */
-			if (soc_is_exynos5250()) {
+			if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 				/* EVT0 : Work around code */
 				for (i = 0; i < srp.ibuf_size * 2; i += 4)
 					writel(readl(srp.ibuf0 + i), srp.sp_data.ibuf + i);
@@ -1057,7 +1062,7 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 			/* Request Suspend mode */
 			srp_request_pwr_mode(SUSPEND);
 
-			if (soc_is_exynos5250()) {
+			if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 				/* EVT0 : Work around code */
 				for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
 					writel(readl(srp.dmem + i), srp.fw_info.data + i);
@@ -1075,8 +1080,6 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int srp_resume(struct platform_device *pdev)
 {
-	unsigned long i;
-
 	srp_info("Resume\n");
 
 	if (srp.is_opened) {
@@ -1091,17 +1094,8 @@ static int srp_resume(struct platform_device *pdev)
 			srp_fw_download();
 
 			memcpy(srp.commbox, srp.sp_data.commbox, COMMBOX_SIZE);
-
-			if (soc_is_exynos5250()) {
-				for (i = 0; i < srp.ibuf_size * 2; i += 4)
-					writel(readl(srp.sp_data.ibuf + i), srp.ibuf0 + i);
-
-				for (i = 0; i < srp.obuf_size * 2; i += 4)
-					writel(readl(srp.sp_data.obuf + i), srp.obuf0 + i);
-			} else {
-				memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
-				memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
-			}
+			memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
+			memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
 
 			/* RESET */
 			writel(0x0, srp.commbox + SRP_CONT);
