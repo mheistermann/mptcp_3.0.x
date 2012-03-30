@@ -19,31 +19,40 @@ MALI_INFINITE_CACHE=0
 MALI_LICENSE_IS_GPL=1
 MALI_FAKE_PLATFORM_DEVICE=1
 MALI_MOCK_TEST=0
-
 ifeq ($(CONFIG_VITHAR_HWVER_R0P0),y)
 MALI_HW_VERSION=r0p0
 else
 MALI_HW_VERSION=r0p0_beta_eco1
 endif
-
-MALI_UNCACHED=1
+MALI_UNCACHED=0
 MALI_INSTRUMENTATION_LEVEL=0
-MALI_CUSTOMER_RELEASE=0
-
-MALI_PLATFORM_CONFIG=exynos5
-
+MALI_CUSTOMER_RELEASE=1
 ifeq ($(CONFIG_VITHAR_ENABLE_DS5),y)
 MALI_GATOR_SUPPORT=1
 else
 MALI_GATOR_SUPPORT=0
 endif
+MALI_COVERAGE=0
 
-#MALI_HW_TYPE=2 is disappeared in 12wk05
+MALI_PLATFORM_CONFIG=exynos5
 
 # define path
 #ROOT=.
 VITHAR_ROOT=drivers/gpu/vithar
 #CONFIG_VITHAR = y
+
+##############################################################################################
+# KDS
+##############################################################################################
+
+ROOT=$(VITHAR_ROOT)
+KDS_PATH=kds/lib/kds
+KBUILD_EXTMOD=$(VITHAR_ROOT)/$(KDS_PATH)
+
+include $(ROOT)/$(KDS_PATH)/Makefile
+
+obj-$(CONFIG_VITHAR) += $(addprefix $(KDS_PATH)/,$(SRC:.c=.o))
+
 
 ##############################################################################################
 #OSK
@@ -94,6 +103,7 @@ KBUILD_EXTMOD=$(VITHAR_ROOT)/$(UMP_PATH)
 include $(ROOT)/$(UMP_PATH)/Makefile
 
 obj-$(CONFIG_VITHAR) += $(addprefix $(UMP_PATH)/,$(SRC:.c=.o))
+
 
 
 #=============================================================================================

@@ -43,6 +43,7 @@
 #include <linux/fb.h>
 #include <linux/clk.h>
 #include <mach/regs-clock.h>
+#include <mach/pmu.h>
 #include <mach/regs-pmu.h>
 #include <mach/regs-pmu5.h>
 #include <asm/delay.h>
@@ -681,9 +682,13 @@ static void set_clkout_for_3d(void)
     tmp |= 9 << 8; // divided by (9 + 1)
     __raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
 
-    tmp = 0x0;
-    tmp |= 7 << 8; // CLKOUT_CMU_TOP selected
-    __raw_writel(tmp, S5P_PMU_DEBUG);
+#ifdef PMU_XCLKOUT_SET
+	exynos5_pmu_xclkout_set(1, XCLKOUT_CMU_TOP);
+#else
+	tmp = 0x0;
+	tmp |= 7 << 8; // CLKOUT_CMU_TOP selected
+	__raw_writel(tmp, S5P_PMU_DEBUG);
+#endif
 }
 
 static ssize_t show_clkout(struct device *dev, struct device_attribute *attr, char *buf)
