@@ -674,7 +674,7 @@ depends on PLAT_S5P
 comment "SELECT SYNOPSYS CONTROLLER INTERFACE DRIVER"
 config EXYNOS4_DEV_DWMCI
 	bool "DWMCI"
-	depends on PLAT_S5P
+	depends on PLAT_S5P && MMC_DW
 	default n
 	help
 	IF DWMCI is used, SDHC channel 0 is disabled.
