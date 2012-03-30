@@ -57,6 +57,11 @@ int srp_get_status(int cmd)
 	return (cmd == IS_RUNNING) ? srp.is_running : srp.is_opened;
 }
 
+inline bool srp_fw_use_memcpy(void)
+{
+	return soc_is_exynos4210() ? false : true;
+}
+
 static void srp_obuf_elapsed(void)
 {
 	srp.obuf_ready = srp.obuf_ready ? 0 : 1;
@@ -399,30 +404,42 @@ static void srp_clr_fw_data(void)
 
 static void srp_fw_download(void)
 {
+	void *pdmem;
+	unsigned long *psrc;
+	unsigned long dmemsz;
 	unsigned long n;
-	unsigned long *pval;
 	unsigned int reg = 0;
 
-	/* Fill ICACHE with first 64KB area : ARM access I$ */
-	pval = (unsigned long *)srp.fw_info.vliw;
-	for (n = 0; n < ICACHE_SIZE; n += 4, pval++)
-		writel(ENDIAN_CHK_CONV(*pval), srp.icache + n);
+	/* Fill I-CACHE/DMEM */
+	switch (srp_fw_use_memcpy()) {
+	case false: /* Should be write by the 1word */
+		psrc = (unsigned long *) srp.fw_info.vliw;
+		for (n = 0; n < ICACHE_SIZE; n += 4, psrc++)
+			writel(ENDIAN_CHK_CONV(*psrc), srp.icache + n);
 
-	/* Fill DMEM */
-	if (soc_is_exynos5250()) {
-		pval = (unsigned long *) (srp.fw_info.data + DATA_OFFSET);
-		for (n = DATA_OFFSET; n < DMEM_SIZE; n += 4, pval++)
-		writel(ENDIAN_CHK_CONV(*pval), srp.dmem + n);
-	} else {
-		pval = (unsigned long *)srp.fw_info.data;
-		for (n = 0; n < DMEM_SIZE; n += 4, pval++)
-		writel(ENDIAN_CHK_CONV(*pval), srp.dmem + n);
+		psrc = (unsigned long *) srp.fw_info.data;
+		for (n = 0; n < DMEM_SIZE; n += 4, psrc++)
+			writel(ENDIAN_CHK_CONV(*psrc), srp.dmem + n);
+		break;
+	case true: /* Support to memcpy */
+		psrc = (unsigned long *) srp.fw_info.vliw;
+		memcpy(srp.icache, psrc, ICACHE_SIZE);
+
+		psrc = !soc_is_exynos5250() ? (unsigned long *) srp.fw_info.data
+					    : (unsigned long *) (srp.fw_info.data
+								   + DATA_OFFSET);
+		pdmem = !soc_is_exynos5250() ? (void *) srp.dmem
+					     : (void *) srp.dmem + DATA_OFFSET;
+
+		dmemsz = !soc_is_exynos5250() ? DMEM_SIZE : (DMEM_SIZE - DATA_OFFSET);
+		memcpy(pdmem, psrc, dmemsz);
+		break;
 	}
 
 	/* Fill CMEM : Should be write by the 1word(32bit) */
-	pval = (unsigned long *)srp.fw_info.cga;
-	for (n = 0; n < CMEM_SIZE; n += 4, pval++)
-		writel(ENDIAN_CHK_CONV(*pval), srp.cmem + n);
+	psrc = (unsigned long *) srp.fw_info.cga;
+	for (n = 0; n < CMEM_SIZE; n += 4, psrc++)
+		writel(ENDIAN_CHK_CONV(*psrc), srp.cmem + n);
 
 	reg = readl(srp.commbox + SRP_CFGR);
 	reg |= (SRP_CFGR_BOOT_INST_INT_CC |	/* Fetchs instruction from I$ */
