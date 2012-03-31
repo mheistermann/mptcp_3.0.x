@@ -56,7 +56,7 @@
 #define FIMC_IS_SETFILE					"setfile.bin"
 
 #define FIMC_IS_SHUTDOWN_TIMEOUT			(10*HZ)
-#define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR			(10*HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR			(3*HZ)
 
 #define FIMC_IS_A5_MEM_SIZE				(0x00A00000)
 #define FIMC_IS_REGION_SIZE				(0x5000)
@@ -479,6 +479,7 @@ struct fimc_is_dev {
 	u32					frame_count;
 	u32					sensor_num;
 	struct is_af_info			af;
+	int					low_power_mode;
 
 	const struct fimc_is_vb2		*vb2;
 };

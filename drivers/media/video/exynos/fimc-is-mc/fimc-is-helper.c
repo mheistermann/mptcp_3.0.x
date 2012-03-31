@@ -680,6 +680,23 @@ void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev)
 	writel(0x0, dev->regs + WDT);
 }
 
+void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on)
+{
+	if (on) {
+		printk(KERN_INFO "Set low poweroff mode\n");
+		__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
+		__raw_writel(0x1CF82000, PMUREG_ISP_LOW_POWER_OFF);
+		dev->low_power_mode = true;
+	} else {
+		if (dev->low_power_mode) {
+			printk(KERN_INFO "Clear low poweroff mode\n");
+			__raw_writel(0xFFFFFFFF, PMUREG_ISP_ARM_OPTION);
+			__raw_writel(0x8, PMUREG_ISP_LOW_POWER_OFF);
+		}
+		dev->low_power_mode = false;
+	}
+}
+
 void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
 {
 	/* 1. Make FIMC-IS power-off state */
@@ -696,9 +713,8 @@ int fimc_is_hw_a5_power_on(struct fimc_is_dev *isp)
 
 	mutex_lock(&isp->lock);
 
-	if (test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power)) {
-		printk("%s:already power on\n", __func__);
-		goto done;
+	if (isp->low_power_mode) {
+		fimc_is_hw_set_low_poweroff(isp, false);
 	}
 
 	dbg("%s\n", __func__);
@@ -783,7 +799,7 @@ int fimc_is_hw_a5_power_off(struct fimc_is_dev *isp)
 		goto done;
 	}
 	/* 1. disable A5 */
-	writel(0x00010000, PMUREG_ISP_ARM_OPTION);
+	writel(0x0, PMUREG_ISP_ARM_OPTION);
 
 	/* 2. A5 power off*/
 	writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
@@ -798,14 +814,26 @@ int fimc_is_hw_a5_power_off(struct fimc_is_dev *isp)
 	}
 
 	/* 4. ISP Power down mode (LOWPWR) */
+
 	writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
 
 	writel(0x0, PMUREG_ISP_CONFIGURATION);
 
 	timeout = 1000;
 	while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7)) {
-		if (timeout == 0)
-			printk(KERN_ERR "ISP power off failed\n");
+		if (timeout == 0) {
+			printk(KERN_ERR "ISP power off failed --> Retry\n");
+			/* Retry */
+			__raw_writel(0x1CF82000, PMUREG_ISP_LOW_POWER_OFF);
+			timeout = 1000;
+			while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7)) {
+				if (timeout == 0) {
+					printk(KERN_ERR "ISP power off failed\n");
+				}
+				timeout--;
+				msleep(1);
+			}
+		}
 		timeout--;
 		msleep(1);
 	}

@@ -68,6 +68,7 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev);
 void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
+void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on);
 void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
 int  fimc_is_fw_clear_insr1(struct fimc_is_dev *dev);
 int  fimc_is_hw_get_sensor_type(enum exynos5_sensor_id sensor_id,

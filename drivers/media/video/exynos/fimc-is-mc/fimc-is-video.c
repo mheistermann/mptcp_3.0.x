@@ -205,7 +205,7 @@ static int fimc_is_scalerc_video_close(struct file *file)
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
 
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
@@ -217,7 +217,9 @@ static int fimc_is_scalerc_video_close(struct file *file)
 
 		if (!ret) {
 			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
-			ret = -EINVAL;
+			fimc_is_hw_set_low_poweroff(isp, true);
+			clear_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
+			ret = 0;
 		}
 
 		dbg("stop flite & mipi (pos:%d) (port:%d)\n",
@@ -930,7 +932,7 @@ static int fimc_is_scalerp_video_close(struct file *file)
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
 
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
@@ -942,7 +944,9 @@ static int fimc_is_scalerp_video_close(struct file *file)
 
 		if (!ret) {
 			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
-			ret = -EINVAL;
+			fimc_is_hw_set_low_poweroff(isp, true);
+			clear_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
+			ret = 0;
 		}
 
 		dbg("staop flite & mipi (pos:%d) (port:%d)\n",
@@ -2218,7 +2222,7 @@ static int fimc_is_3dnr_video_close(struct file *file)
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
 
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
@@ -2229,7 +2233,9 @@ static int fimc_is_3dnr_video_close(struct file *file)
 		mutex_unlock(&isp->lock);
 		if (!ret) {
 			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
-			ret = -EINVAL;
+			fimc_is_hw_set_low_poweroff(isp, true);
+			clear_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
+			ret = 0;
 		}
 
 		dbg("staop flite & mipi (pos:%d) (port:%d)\n",
