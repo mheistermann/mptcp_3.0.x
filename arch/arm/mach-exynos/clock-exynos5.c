@@ -743,6 +743,25 @@ static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1_mid = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 14, .size = 1 },
 };
 
+static struct clk *clk_src_mid1_list[] = {
+	[0] = &exynos5_clk_sclk_vpll.clk,
+	[1] = &exynos5_clk_mout_cpll.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_mid1 = {
+	.sources	= clk_src_mid1_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_mid1_list),
+};
+
+/* For ACLK_300_disp1_mid1 */
+static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1_mid1 = {
+	.clk	= {
+		.name		= "mout_aclk_300_disp1_mid1",
+	},
+	.sources = &exynos5_clkset_mid1,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP1, .shift = 8, .size = 1 },
+};
+
 /* For ACLK_300_disp1 */
 struct clk *exynos5_clkset_mout_aclk_300_disp1_list[] = {
 	[0] = &exynos5_clk_mout_aclk_300_disp1_mid.clk,
@@ -752,6 +771,16 @@ struct clk *exynos5_clkset_mout_aclk_300_disp1_list[] = {
 struct clksrc_sources exynos5_clkset_mout_aclk_300_disp1 = {
 	.sources	= exynos5_clkset_mout_aclk_300_disp1_list,
 	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_aclk_300_disp1_list),
+};
+
+struct clk *exynos5_clkset_mout_aclk_300_disp1_rev1_list[] = {
+	[0] = &exynos5_clk_mout_aclk_300_disp1_mid.clk,
+	[1] = &exynos5_clk_mout_aclk_300_disp1_mid1.clk,
+};
+
+struct clksrc_sources exynos5_clkset_mout_aclk_300_disp1_rev1 = {
+	.sources	= exynos5_clkset_mout_aclk_300_disp1_rev1_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_aclk_300_disp1_rev1_list),
 };
 
 static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1 = {
@@ -795,16 +824,6 @@ static struct clksrc_clk exynos5_clk_mout_aclk_300_gscl_mid = {
 	},
 	.sources = &exynos5_clkset_aclk,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 24, .size = 1 },
-};
-
-static struct clk *clk_src_mid1_list[] = {
-	[0] = &exynos5_clk_sclk_vpll.clk,
-	[1] = &exynos5_clk_mout_cpll.clk,
-};
-
-static struct clksrc_sources exynos5_clkset_mid1 = {
-	.sources	= clk_src_mid1_list,
-	.nr_sources	= ARRAY_SIZE(clk_src_mid1_list),
 };
 
 /* For ACLK_300_gscl_mid1 */
@@ -2117,6 +2136,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_dout_aclk_333,
 	&exynos5_clk_aclk_333,
 	&exynos5_clk_mout_aclk_300_disp1_mid,
+	&exynos5_clk_mout_aclk_300_disp1_mid1,
 	&exynos5_clk_mout_aclk_300_disp1,
 	&exynos5_clk_dout_aclk_300_disp1,
 	&exynos5_clk_aclk_300_disp1,
@@ -2583,6 +2603,7 @@ void __init exynos5_register_clocks(void)
 		exynos5_clk_mout_bpll.sources = &exynos5_clkset_mout_bpll;
 		exynos5_clk_aclk_400.sources = &exynos5_clkset_aclk_g3d;
 		exynos5_clk_mout_aclk_300_gscl.sources = &exynos5_clkset_aclk_300_gscl_rev1;
+		exynos5_clk_mout_aclk_300_disp1.sources = &exynos5_clkset_mout_aclk_300_disp1_rev1;
 	} else if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
 		exynos5_clk_sclk_jpeg.sources = NULL;
 		exynos5_clk_sclk_jpeg.reg_src.reg = 0;
