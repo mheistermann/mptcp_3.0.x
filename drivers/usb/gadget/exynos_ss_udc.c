@@ -1013,6 +1013,9 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 	struct exynos_ss_udc_req *udc_req;
 	int ret;
 	bool restart;
+	u16 wValue;
+	u16 wIndex;
+	u8 recip;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
 
@@ -1020,11 +1023,16 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 	    udc->state != USB_STATE_CONFIGURED)
 		return -EINVAL;
 
-	switch (ctrl->bRequestType & USB_RECIP_MASK) {
+	wValue = le16_to_cpu(ctrl->wValue);
+	wIndex = le16_to_cpu(ctrl->wIndex);
+	recip = ctrl->bRequestType & USB_RECIP_MASK;
+
+	switch (recip) {
 	case USB_RECIP_DEVICE:
-		switch (le16_to_cpu(ctrl->wValue)) {
+		switch (wValue) {
 		case USB_DEVICE_U1_ENABLE:
-			if (udc->state == USB_STATE_ADDRESS)
+			if (udc->gadget.speed != USB_SPEED_SUPER ||
+			    udc->state == USB_STATE_ADDRESS)
 				return -EINVAL;
 
 			__bic32(udc->regs + EXYNOS_USB3_DCTL,
@@ -1032,7 +1040,8 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 			break;
 
 		case USB_DEVICE_U2_ENABLE:
-			if (udc->state == USB_STATE_ADDRESS)
+			if (udc->gadget.speed != USB_SPEED_SUPER ||
+			    udc->state == USB_STATE_ADDRESS)
 				return -EINVAL;
 
 			__bic32(udc->regs + EXYNOS_USB3_DCTL,
@@ -1045,10 +1054,10 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 		break;
 
 	case USB_RECIP_ENDPOINT:
-		udc_ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
+		udc_ep = ep_from_windex(udc, wIndex);
 		if (!udc_ep) {
 			dev_dbg(udc->dev, "%s: no endpoint for 0x%04x\n",
-					  __func__, le16_to_cpu(ctrl->wIndex));
+					  __func__, wIndex);
 			return -ENOENT;
 		}
 
@@ -1056,7 +1065,7 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 		    udc_ep->epnum != 0)
 			return -EINVAL;
 
-		switch (le16_to_cpu(ctrl->wValue)) {
+		switch (wValue) {
 		case USB_ENDPOINT_HALT:
 			if (!udc_ep->wedged) {
 				ret = exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
@@ -1096,7 +1105,9 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep *udc_ep;
 	int ret;
+	u16 wValue;
 	u16 wIndex;
+	u8 recip;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
 
@@ -1104,11 +1115,13 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 	    udc->state != USB_STATE_CONFIGURED)
 		return -EINVAL;
 
+	wValue = le16_to_cpu(ctrl->wValue);
 	wIndex = le16_to_cpu(ctrl->wIndex);
+	recip = ctrl->bRequestType & USB_RECIP_MASK;
 
-	switch (ctrl->bRequestType & USB_RECIP_MASK) {
+	switch (recip) {
 	case USB_RECIP_DEVICE:
-		switch (le16_to_cpu(ctrl->wValue)) {
+		switch (wValue) {
 		case USB_DEVICE_TEST_MODE:
 			if (wIndex & 0xff)
 				return -EINVAL;
@@ -1118,23 +1131,31 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 				return ret;
 			break;
 		case USB_DEVICE_U1_ENABLE:
-			if (udc->state == USB_STATE_ADDRESS)
+			if (udc->gadget.speed != USB_SPEED_SUPER ||
+			    udc->state == USB_STATE_ADDRESS)
 				return -EINVAL;
-			/* Temporarily disabled because of HW bug */
-#if 0
-			__orr32(udc->regs + EXYNOS_USB3_DCTL,
-				EXYNOS_USB3_DCTL_InitU1Ena);
-#endif
+
+			/*
+			 * Enable U1 entry only for DWC3 revisions > 1.85a,
+			 * since earlier revisions have a bug
+			 */
+			if (udc->release > 0x185a)
+				__orr32(udc->regs + EXYNOS_USB3_DCTL,
+					EXYNOS_USB3_DCTL_InitU1Ena);
 			break;
 
 		case USB_DEVICE_U2_ENABLE:
-			if (udc->state == USB_STATE_ADDRESS)
+			if (udc->gadget.speed != USB_SPEED_SUPER ||
+			    udc->state == USB_STATE_ADDRESS)
 				return -EINVAL;
-			/* Temporarily disabled because of HW bug */
-#if 0
-			__orr32(udc->regs + EXYNOS_USB3_DCTL,
-				EXYNOS_USB3_DCTL_InitU2Ena);
-#endif
+
+			/*
+			 * Enable U2 entry only for DWC3 revisions > 1.85a,
+			 * since earlier revisions have a bug
+			 */
+			if (udc->release > 0x185a)
+				__orr32(udc->regs + EXYNOS_USB3_DCTL,
+					EXYNOS_USB3_DCTL_InitU2Ena);
 			break;
 
 		default:
@@ -1154,7 +1175,7 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 		    udc_ep->epnum != 0)
 			return -EINVAL;
 
-		switch (le16_to_cpu(ctrl->wValue)) {
+		switch (wValue) {
 		case USB_ENDPOINT_HALT:
 			ret = exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
 			if (ret < 0)
