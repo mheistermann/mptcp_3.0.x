@@ -343,7 +343,6 @@ int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 	return vb2_sdvmm_cache_flush(vb, plane_no);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_ION)
-
 void s5p_mfc_cache_clean_fw(void *cookie)
 {
 	int nents = 0;

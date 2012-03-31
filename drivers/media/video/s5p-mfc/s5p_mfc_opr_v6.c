@@ -27,6 +27,10 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+#include <plat/iovmm.h>
+#endif
+
 #include "s5p_mfc_common.h"
 
 #include "s5p_mfc_cmd.h"
@@ -74,6 +78,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	unsigned int mb_width, mb_height;
+	void *alloc_ctx = dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 
 	mfc_debug_enter();
 
@@ -204,10 +209,13 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		break;
 	}
 
+	if (ctx->is_drm)
+		alloc_ctx = dev->alloc_ctx_drm;
+
 	/* Allocate only if memory from bank 1 is necessary */
 	if (ctx->port_a_size > 0) {
 		ctx->port_a_buf = s5p_mfc_mem_allocate(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->port_a_size);
+				alloc_ctx, ctx->port_a_size);
 		if (IS_ERR(ctx->port_a_buf)) {
 			ctx->port_a_buf = 0;
 			printk(KERN_ERR
@@ -238,6 +246,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf_size_v6 *buf_size = dev->variant->buf_size->buf;
+	void *alloc_ctx = dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 
 	mfc_debug_enter();
 
@@ -271,15 +280,18 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 		break;
 	}
 
-	ctx->ctx.alloc = s5p_mfc_mem_allocate(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx_buf_size);
+	if (ctx->is_drm) {
+		ctx->ctx_buf_size = buf_size->h264_dec_ctx;
+		alloc_ctx = dev->alloc_ctx_drm;
+	}
+
+	ctx->ctx.alloc = s5p_mfc_mem_allocate(alloc_ctx, ctx->ctx_buf_size);
 	if (IS_ERR(ctx->ctx.alloc)) {
 		mfc_err("Allocating context buffer failed.\n");
 		return PTR_ERR(ctx->ctx.alloc);
 	}
 
 	ctx->ctx.ofs = s5p_mfc_mem_dma_addr(ctx->ctx.alloc);
-
 	ctx->ctx.virt = s5p_mfc_mem_vaddr(ctx->ctx.alloc);
 	if (!ctx->ctx.virt) {
 		s5p_mfc_mem_free(ctx->ctx.alloc);
@@ -328,18 +340,24 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 {
 	struct s5p_mfc_buf_size_v6 *buf_size = dev->variant->buf_size->buf;
+	void *alloc_ctx = dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 
 	mfc_debug_enter();
 
-	dev->ctx_buf.alloc = s5p_mfc_mem_allocate(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], buf_size->dev_ctx);
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+	alloc_ctx = dev->alloc_ctx_drm;
+#endif
+	dev->ctx_buf.alloc = s5p_mfc_mem_allocate(alloc_ctx, buf_size->dev_ctx);
 	if (IS_ERR(dev->ctx_buf.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
 		return PTR_ERR(dev->ctx_buf.alloc);
 	}
 
 	dev->ctx_buf.ofs = s5p_mfc_mem_dma_addr(dev->ctx_buf.alloc);
-
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+	iovmm_map_oto(&dev->plat_dev->dev, dev->ctx_buf.ofs,
+			buf_size->dev_ctx);
+#endif
 	dev->ctx_buf.virt = s5p_mfc_mem_vaddr(dev->ctx_buf.alloc);
 	if (!dev->ctx_buf.virt) {
 		s5p_mfc_mem_free(dev->ctx_buf.alloc);
@@ -362,6 +380,9 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
 {
 	if (dev->ctx_buf.alloc) {
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+		iovmm_unmap_oto(&dev->plat_dev->dev, dev->ctx_buf.ofs);
+#endif
 		s5p_mfc_mem_free(dev->ctx_buf.alloc);
 		dev->ctx_buf.alloc = NULL;
 		dev->ctx_buf.ofs = 0;
@@ -488,7 +509,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
 		WRITEL(buf->cookie.raw.chroma, S5P_FIMV_D_CHROMA_DPB + i * 4);
 
-		if (i == 0) {
+		if (i == 0 && (!ctx->is_drm)) {
 			dpb_vir = vb2_plane_vaddr(&buf->vb, 0);
 			memset(dpb_vir, 0x0, ctx->luma_size);
 			s5p_mfc_cache_inv(&buf->vb, 0);
@@ -1783,6 +1804,8 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 	mfc_debug(1, "ctx->state=%d\n", ctx->state);
 	/* Last frame has already been sent to MFC
 	 * Now obtaining frames from MFC buffer */
+
+	dev->curr_ctx_drm = ctx->is_drm;
 
 	s5p_mfc_clock_on();
 	if (ctx->type == MFCINST_DECODER) {

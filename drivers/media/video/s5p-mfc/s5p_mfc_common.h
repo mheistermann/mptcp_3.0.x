@@ -261,6 +261,15 @@ struct s5p_mfc_dev {
 	struct work_struct watchdog_work;
 
 	struct vb2_alloc_ctx **alloc_ctx;
+
+	/* for DRM */
+	int curr_ctx_drm;
+	int fw_status;
+	int num_drm_inst;
+	struct s5p_mfc_extra_buf drm_info;
+	struct vb2_alloc_ctx *alloc_ctx_fw;
+	struct vb2_alloc_ctx *alloc_ctx_sh;
+	struct vb2_alloc_ctx *alloc_ctx_drm;
 };
 
 /**
@@ -600,6 +609,9 @@ struct s5p_mfc_ctx {
 
 	/* For 6.x */
 	size_t scratch_buf_size;
+
+	/* for DRM */
+	int is_drm;
 };
 
 #define fh_to_mfc_ctx(x)	\
