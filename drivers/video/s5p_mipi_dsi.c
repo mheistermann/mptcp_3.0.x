@@ -39,6 +39,7 @@
 #include <plat/fb.h>
 #include <plat/regs-mipidsim.h>
 #include <plat/dsim.h>
+#include <plat/cpu.h>
 
 #include <mach/map.h>
 
@@ -93,7 +94,8 @@ static int s5p_mipi_dsi_register_fb(struct mipi_dsim_device *dsim)
 }
 
 #ifdef CONFIG_LCD_MIPI_TC358764
-int s5p_mipi_dsi_wait_int_status(struct mipi_dsim_device *dsim, unsigned int intSrc)
+int s5p_mipi_dsi_wait_int_status(struct mipi_dsim_device *dsim,
+				unsigned int intSrc)
 {
 	while (1) {
 		if ((s5p_mipi_dsi_get_int_status(dsim) & intSrc)) {
@@ -250,8 +252,10 @@ int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim, unsigned int data_id,
 			(data1 & 0xff00) >> 8);
 	}
 #ifdef CONFIG_LCD_MIPI_TC358764
-	if (s5p_mipi_dsi_wait_int_status(dsim, INTSRC_SFR_FIFO_EMPTY) == 0)
-		return -1;
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		if (s5p_mipi_dsi_wait_int_status(dsim, INTSRC_SFR_FIFO_EMPTY) == 0)
+			return -1;
+	}
 #endif
 
 	if (check_rx_ack)
@@ -691,28 +695,40 @@ static void s5p_mipi_dsi_late_resume(struct early_suspend *handler)
 		container_of(handler, struct mipi_dsim_device, early_suspend);
 	struct platform_device *pdev = to_platform_device(dsim->dev);
 
+	pm_runtime_get_sync(&pdev->dev);
+	clk_enable(dsim->clock);
+
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	int again = 1;
-	while (again != 0 && again <= 1000) {
-		pm_runtime_get_sync(&pdev->dev);
-		clk_enable(dsim->clock);
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		int again = 1;
+		while (again != 0 && again <= 1000) {
+			s5p_mipi_dsi_init_dsim(dsim);
+			s5p_mipi_dsi_init_link(dsim);
+			s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+			s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+			s5p_mipi_dsi_clear_int_status(dsim,
+					INTSRC_SFR_FIFO_EMPTY);
+			if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+				again++;
+			else
+				again = 0;
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+			if (again != 0)
+				s5p_mipi_dsi_sw_reset(dsim);
+		}
+	} else {
 		s5p_mipi_dsi_init_dsim(dsim);
 		s5p_mipi_dsi_init_link(dsim);
 		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
 		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
-		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
-			again++;
-		else
-			again = 0;
+		s5p_mipi_dsi_clear_int_status(dsim,
+				INTSRC_SFR_FIFO_EMPTY);
+		dsim->dsim_lcd_drv->displayon(dsim);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
-		if (again != 0)
-			s5p_mipi_dsi_sw_reset(dsim);
 	}
 #else
-	pm_runtime_get_sync(&pdev->dev);
-	clk_enable(dsim->clock);
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
@@ -739,28 +755,40 @@ static int s5p_mipi_dsi_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mipi_dsim_device *dsim = platform_get_drvdata(pdev);
 
+	pm_runtime_get_sync(&pdev->dev);
+	clk_enable(dsim->clock);
+
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	int again = 1;
-	while (again != 0 && again <= 1000) {
-		pm_runtime_get_sync(dev);
-		clk_enable(dsim->clock);
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		int again = 1;
+		while (again != 0 && again <= 1000) {
+			s5p_mipi_dsi_init_dsim(dsim);
+			s5p_mipi_dsi_init_link(dsim);
+			s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+			s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+			s5p_mipi_dsi_clear_int_status(dsim,
+					INTSRC_SFR_FIFO_EMPTY);
+			if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+				again++;
+			else
+				again = 0;
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+			if (again != 0)
+				s5p_mipi_dsi_sw_reset(dsim);
+		}
+	} else {
 		s5p_mipi_dsi_init_dsim(dsim);
 		s5p_mipi_dsi_init_link(dsim);
 		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
 		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
-		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
-			again++;
-		else
-			again = 0;
+		s5p_mipi_dsi_clear_int_status(dsim,
+				INTSRC_SFR_FIFO_EMPTY);
+		dsim->dsim_lcd_drv->displayon(dsim);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
-		if (again != 0)
-			s5p_mipi_dsi_sw_reset(dsim);
 	}
 #else
-	pm_runtime_get_sync(dev);
-	clk_enable(dsim->clock);
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
@@ -796,10 +824,6 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	struct mipi_dsim_config *dsim_config;
 	struct s5p_platform_mipi_dsim *dsim_pd;
 	int ret = -1;
-
-#ifdef CONFIG_LCD_MIPI_TC358764
-	int again = 1;
-#endif
 
 	if (!dsim)
 		dsim = kzalloc(sizeof(struct mipi_dsim_device),
@@ -878,26 +902,38 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	while (again != 0 && again <= 1000) {
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		int again = 1;
+		while (again != 0 && again <= 1000) {
+			s5p_mipi_dsi_init_dsim(dsim);
+			s5p_mipi_dsi_init_link(dsim);
+			s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+			s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+			s5p_mipi_dsi_clear_int_status(dsim,
+					INTSRC_SFR_FIFO_EMPTY);
+			if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+				again++;
+			else
+				again = 0;
+			s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+			if (again != 0)
+				s5p_mipi_dsi_sw_reset(dsim);
+		}
+	} else {
 		s5p_mipi_dsi_init_dsim(dsim);
 		s5p_mipi_dsi_init_link(dsim);
-		/* initialize mipi-dsi client(lcd panel). */
 		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
 		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
-		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
-			again++;
-		else
-			again = 0;
+		s5p_mipi_dsi_clear_int_status(dsim,
+				INTSRC_SFR_FIFO_EMPTY);
+		dsim->dsim_lcd_drv->displayon(dsim);
 		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
-		if (again != 0)
-			s5p_mipi_dsi_sw_reset(dsim);
 	}
 #else
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-	/* initialize mipi-dsi client(lcd panel). */
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 	dsim->dsim_lcd_drv->displayon(dsim);
