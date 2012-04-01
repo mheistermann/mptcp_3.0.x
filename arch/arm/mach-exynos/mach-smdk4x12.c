@@ -3795,9 +3795,9 @@ static void __init exynos_sysmmu_init(void)
 	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc2).dev, &s5p_device_fimc2.dev);
 	platform_set_sysmmu(&SYSMMU_PLATDEV(fimc3).dev, &s5p_device_fimc3.dev);
 #endif
-#ifdef CONFIG_VIDEO_EXYNOS_TV
+#if defined(CONFIG_VIDEO_EXYNOS_TV)
 	platform_set_sysmmu(&SYSMMU_PLATDEV(tv).dev, &s5p_device_mixer.dev);
-#elif CONFIG_VIDEO_TVOUT
+#elif defined(CONFIG_VIDEO_TVOUT)
 	platform_set_sysmmu(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
 #endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
