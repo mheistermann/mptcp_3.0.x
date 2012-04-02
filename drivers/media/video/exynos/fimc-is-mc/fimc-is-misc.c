@@ -2064,6 +2064,85 @@ int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 	return ret;
 }
 
+int fimc_is_v4l2_caf_start_stop(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case CAF_STOP:
+		if (!is_af_use(dev)) {
+			/* 6A3 can't support AF */
+			dev->af.af_state = FIMC_IS_AF_IDLE;
+		} else {
+			if (dev->af.af_state == FIMC_IS_AF_IDLE)
+				return ret;
+			/* Abort or lock CAF */
+			dev->af.af_state = FIMC_IS_AF_ABORT;
+			IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
+			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
+
+			IS_ISP_SET_PARAM_AA_MODE(dev,
+				ISP_AF_MODE_CONTINUOUS);
+			IS_ISP_SET_PARAM_AA_SCENE(dev,
+				ISP_AF_SCENE_NORMAL);
+			IS_ISP_SET_PARAM_AA_SLEEP(dev,
+					ISP_AF_SLEEP_OFF);
+			IS_ISP_SET_PARAM_AA_FACE(dev,
+				ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
+			IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
+			IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean(
+				(void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			ret = wait_event_timeout(dev->irq_queue,
+			(dev->af.af_state == FIMC_IS_AF_IDLE), HZ/5);
+			if (!ret) {
+				dev_err(&dev->pdev->dev,
+				"Focus change timeout:%s\n", __func__);
+				return -EBUSY;
+			}
+		}
+		break;
+	case CAF_START:
+		if (!is_af_use(dev)) {
+			/* 6A3 can't support AF */
+			dev->af.af_state = FIMC_IS_AF_LOCK;
+			dev->af.af_lock_state = FIMC_IS_AF_LOCKED;
+			dev->is_shared_region->af_status = 1;
+			fimc_is_mem_cache_clean((void *)IS_SHARED(dev),
+			(unsigned long)(sizeof(struct is_share_region)));
+		} else {
+			dev->af.mode = IS_FOCUS_MODE_CONTINUOUS;
+			IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
+			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_CONTINUOUS);
+			IS_ISP_SET_PARAM_AA_SLEEP(dev, ISP_AF_SLEEP_OFF);
+			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
+			IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
+			IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+			IS_INC_PARAM_NUM(dev);
+			dev->af.af_state = FIMC_IS_AF_SETCONFIG;
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			dev->af.af_lock_state = 0;
+			dev->af.ae_lock_state = 0;
+			dev->af.awb_lock_state = 0;
+			dev->af.prev_pos_x = 0;
+			dev->af.prev_pos_y = 0;
+		}
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
 int fimc_is_v4l2_isp_iso(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;

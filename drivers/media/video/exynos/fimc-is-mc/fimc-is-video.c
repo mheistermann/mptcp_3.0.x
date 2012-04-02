@@ -1577,14 +1577,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		}
 		break;
 	case V4L2_CID_CAMERA_CAF_START_STOP:
-		switch (ctrl->value) {
-		case CAF_STOP:
-			break;
-		case CAF_START:
-			break;
-		default:
-			break;
-		}
+		ret = fimc_is_v4l2_caf_start_stop(isp, ctrl->value);
 		break;
 	/* AWB, AE Lock/Unlock */
 	case V4L2_CID_CAMERA_AEAWB_LOCK_UNLOCK:
