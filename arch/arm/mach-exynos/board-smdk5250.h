@@ -15,6 +15,7 @@
 #ifndef __MACH_EXYNOS_BOARD_SMDK5250_H
 #define __MACH_EXYNOS_BOARD_SMDK5250_H
 
+void exynos5_smdk5250_mmc_init(void);
 void exynos5_smdk5250_display_init(void);
 void exynos5_smdk5250_power_init(void);
 
