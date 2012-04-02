@@ -1548,8 +1548,12 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		ret = fimc_is_v4l2_shot_mode(isp, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		/* TODO */
-		/* ret = fimc_is_v4l2_frame_rate(isp, ctrl->value); */
+#ifdef FRAME_RATE_ENABLE
+		/* FW partially supported it */
+		ret = fimc_is_v4l2_frame_rate(isp, ctrl->value);
+#else
+		err("ERR(%s) disabled FRAME_RATE\n", __func__);
+#endif
 		break;
 	/* Focus */
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_X:
@@ -1692,25 +1696,34 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 			printk(KERN_INFO "VT mode is selected\n");
 		break;
 	case V4L2_CID_CAMERA_SET_ODC:
-		/* TODO */
-		/* ret = fimc_is_ctrl_odc(isp, ctrl->value); */
+#ifdef ODC_ENABLE
+		ret = fimc_is_ctrl_odc(isp, ctrl->value);
+#else
+		err("ERR(%s) disabled ODC\n", __func__);
+#endif
 		break;
 	case V4L2_CID_CAMERA_SET_3DNR:
-		/* TODO */
-		/* ret = fimc_is_ctrl_3dnr(isp, ctrl->value); */
+#ifdef TDNR_ENABLE
+		ret = fimc_is_ctrl_3dnr(isp, ctrl->value);
+#else
+		err("ERR(%s) disabled 3DNR\n", __func__);
+#endif
 		break;
 	case V4L2_CID_CAMERA_ZOOM:
-#ifdef DZOOM_EVT0
+#ifdef DZOOM_ENABLE
+		/* FW partially supported it */
 		ret = fimc_is_digital_zoom(isp, ctrl->value);
 #else
-		err("enable DZOOM_EVT0 for Zoom test\n");
+		err("ERR(%s) disabled DZOOM\n", __func__);
 #endif
 		break;
 	case V4L2_CID_CAMERA_SET_DIS:
-		/* TODO */
-		/* blocked because of FW bug */
-		/* ret = fimc_is_ctrl_dis(isp, ctrl->value); */
-		//err("DIS is not supported yet\n");
+#ifdef DIS_ENABLE
+		/* FW partially supported it */
+		ret = fimc_is_ctrl_dis(isp, ctrl->value);
+#else
+		err("ERR(%s) disabled DIS\n", __func__);
+#endif
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
 		break;

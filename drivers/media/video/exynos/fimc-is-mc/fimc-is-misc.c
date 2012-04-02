@@ -715,7 +715,8 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 	clear_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
 	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
 	fimc_is_hw_set_param(dev);
-	/* FW bug - should be wait
+#ifdef DIS_ENABLE
+	/* FW bug - should be wait */
 	ret = wait_event_timeout(dev->irq_queue,
 		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
 		FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -724,7 +725,7 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 			"set param wait timeout : %s\n", __func__);
 		return -EBUSY;
 	}
-	*/
+#endif
 
 	if(test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)){
 		clear_bit(IS_ST_RUN, &dev->state);

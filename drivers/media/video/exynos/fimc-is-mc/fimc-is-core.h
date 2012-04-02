@@ -13,7 +13,11 @@
 #define FIMC_IS_CORE_H
 
 /*#define DEBUG 1 */
-/*#define DZOOM_EVT0	1*/
+/*#define FRAME_RATE_ENABLE	1*/
+/*#define ODC_ENABLE	1*/
+/*#define TDNR_ENABLE	1*/
+/*#define DZOOM_ENABLE	1*/
+/*#define DIS_ENABLE	1*/
 #define BUF_MASK	1
 /*#define NO_WAIT_INTR_FOR_MASK	1*/
 
