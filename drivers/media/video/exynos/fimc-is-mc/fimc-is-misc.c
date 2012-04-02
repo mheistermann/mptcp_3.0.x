@@ -2533,10 +2533,34 @@ int fimc_is_v4l2_isp_exposure_legacy(struct fimc_is_dev *dev, int value)
 int fimc_is_v4l2_isp_brightness(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
-	if (value >= -4 && value < 5) {
+	switch (value) {
+	case IS_BRIGHTNESS_MINUS_2 :
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, value);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -2);
+		break;
+	case IS_BRIGHTNESS_MINUS_1 :
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -1);
+		break;
+	case IS_BRIGHTNESS_DEFAULT :
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+		break;
+	case IS_BRIGHTNESS_PLUS_1 :
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 1);
+		break;
+	case IS_BRIGHTNESS_PLUS_2 :
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 2);
+		break;
+	}
+	if (value >= 0 && value < IS_BRIGHTNESS_MAX) {
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
