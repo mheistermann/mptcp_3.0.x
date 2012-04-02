@@ -1302,26 +1302,26 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 #if (defined BUF_MASK)  && !defined(NO_WAIT_INTR_FOR_MASK)
 				if((dev->is_p_region->parameter.scalerp.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_SCALERP_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					test_bit(PARAM_SCALERP_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
 					set_bit(IS_ST_SCALERP_MASK_DONE, &dev->state);
 					break;
 				}
 				if((dev->is_p_region->parameter.scalerc.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_SCALERC_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					test_bit(PARAM_SCALERC_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
 					set_bit(IS_ST_SCALERC_MASK_DONE, &dev->state);
 					break;
 				}
 				if( (dev->is_p_region->parameter.tdnr.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_TDNR_DMA_OUTPUT - 32, &dev->i2h_cmd.arg[2])){
+					test_bit(PARAM_TDNR_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
 					set_bit(IS_ST_TDNR_MASK_DONE, &dev->state);
 				    	break;
 				}
 #endif
-				if (test_bit(PARAM_ISP_AA, (long unsigned int *)&dev->i2h_cmd.arg[1]) &&
+				if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
 					dev->af.af_state == FIMC_IS_AF_SETCONFIG){
 					dev->af.af_state = FIMC_IS_AF_RUNNING;
 				}
-				else if (test_bit(PARAM_ISP_AA, (long unsigned int *)&dev->i2h_cmd.arg[1]) &&
+				else if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
 					dev->af.af_state == FIMC_IS_AF_ABORT){
 					dev->af.af_state = FIMC_IS_AF_IDLE;
 				}
