@@ -695,8 +695,10 @@ int vb2_ion_cache_flush(struct vb2_buffer *vb, u32 num_planes)
 						page_to_phys(page) + start_off,
 						page_to_phys(page) + szflush);
 
-				if (kmapped)
+				if (kmapped) {
 					kunmap_atomic(addr);
+					kmapped = false;
+				}
 
 				sz -= szflush;
 				start_off = 0;
