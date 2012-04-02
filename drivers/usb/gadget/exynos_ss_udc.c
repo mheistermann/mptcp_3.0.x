@@ -2918,7 +2918,7 @@ static int exynos_ss_udc_suspend(struct platform_device *pdev,
 
 	if (udc->driver) {
 		call_gadget(udc, suspend);
-		EXYNOS_SS_UDC_DISABLE(udc)
+		EXYNOS_SS_UDC_DISABLE(udc);
 	}
 
 	return 0;
