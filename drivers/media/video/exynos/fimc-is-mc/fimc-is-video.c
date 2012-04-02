@@ -1567,14 +1567,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		ret = fimc_is_v4l2_af_start_stop(isp, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_TOUCH_AF_START_STOP:
-		switch (ctrl->value) {
-		case TOUCH_AF_STOP:
-			break;
-		case TOUCH_AF_START:
-			break;
-		default:
-			break;
-		}
+		ret = fimc_is_v4l2_touch_af_start_stop(isp, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_CAF_START_STOP:
 		ret = fimc_is_v4l2_caf_start_stop(isp, ctrl->value);

@@ -19,6 +19,7 @@ int stop_mipi_csi(int channel);
 
 int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value);
 int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value);
+int fimc_is_v4l2_touch_af_start_stop(struct fimc_is_dev *dev, int value);
 int fimc_is_v4l2_caf_start_stop(struct fimc_is_dev *dev, int value);
 int fimc_is_ctrl_odc(struct fimc_is_dev *dev, int value);
 int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value);
