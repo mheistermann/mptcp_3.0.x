@@ -31,6 +31,78 @@
 #include "s5p_mfc_dec.h"
 #include "s5p_mfc_pm.h"
 
+#define STREAM_SAVE
+
+#ifdef STREAM_SAVE
+#include <linux/syscalls.h>
+#include <linux/uaccess.h>
+#include <linux/file.h>
+
+static void save_stream(unsigned long addr, unsigned int size)
+{
+	struct file *file;
+	loff_t pos = 0;
+	int fd;
+	mm_segment_t old_fs;
+	char filename[128];
+	char save_path[128] = "/data/app";
+
+	static int frame_count = 0;
+	char infobuf[128];
+	int infolen;
+	char infoname[128];
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	sprintf(filename, "%s/stream.dump", save_path);
+	fd = sys_open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd >= 0) {
+		file = fget(fd);
+
+		if (file) {
+			vfs_write(file, (u8 *)addr, size, &pos);
+			fput(file);
+		}
+
+		sys_close(fd);
+	} else {
+		mfc_err("failed to open file to dump: %d\n", fd);
+	}
+
+	sprintf(infoname, "%s/stream.info", save_path);
+	infolen = sprintf(infobuf, "%d, %d\n", frame_count, size);
+
+	fd = sys_open(infoname, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd >= 0) {
+		file = fget(fd);
+
+		if (file) {
+			vfs_write(file, (u8 *)infobuf, infolen, &pos);
+			fput(file);
+		}
+
+		sys_close(fd);
+	} else {
+		mfc_err("failed to open file to dump: %d\n", fd);
+	}
+
+	frame_count++;
+
+	set_fs(old_fs);
+}
+
+static void vb2_save_buf(struct vb2_buffer *vb, unsigned int plane_no)
+{
+	unsigned char *addr;
+
+	addr = (unsigned char *)vb2_plane_vaddr(vb, plane_no);
+	s5p_mfc_cache_inv(vb, plane_no);
+
+	save_stream((unsigned long)addr, vb->v4l2_planes[plane_no].bytesused);
+}
+#endif
+
 #define DEF_SRC_FMT	2
 #define DEF_DST_FMT	0
 
@@ -2070,6 +2142,10 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		list_add_tail(&buf->list, &ctx->src_queue);
 		ctx->src_queue_cnt++;
 		spin_unlock_irqrestore(&dev->irqlock, flags);
+
+#ifdef STREAM_SAVE
+		vb2_save_buf(vb, 0);
+#endif
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		buf->used = 0;
 		mfc_debug(2, "Dst queue: %p\n", &ctx->dst_queue);
