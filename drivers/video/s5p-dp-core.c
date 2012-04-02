@@ -483,7 +483,7 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 	int lane_count;
 	u8 buf[5];
 
-	u8 *adjust_request;
+	u8 adjust_request[2];
 	u8 voltage_swing;
 	u8 pre_emphasis;
 	u8 training_lane;
@@ -498,8 +498,8 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 		/* set training pattern 2 for EQ */
 		s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
 
-		adjust_request = link_status + (DPCD_ADDR_ADJUST_REQUEST_LANE0_1
-						- DPCD_ADDR_LANE0_1_STATUS);
+		adjust_request[0] = link_status[4];
+		adjust_request[1] = link_status[5];
 
 		s5p_dp_get_adjust_train(dp, adjust_request);
 
@@ -571,7 +571,7 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 	u8 buf[5];
 	u32 reg;
 
-	u8 *adjust_request;
+	u8 adjust_request[2];
 
 	udelay(400);
 
@@ -580,8 +580,8 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 	lane_count = dp->link_train.lane_count;
 
 	if (s5p_dp_clock_recovery_ok(link_status, lane_count) == 0) {
-		adjust_request = link_status + (DPCD_ADDR_ADJUST_REQUEST_LANE0_1
-						- DPCD_ADDR_LANE0_1_STATUS);
+		adjust_request[0] = link_status[4];
+		adjust_request[1] = link_status[5];
 
 		if (s5p_dp_channel_eq_ok(link_status, lane_count) == 0) {
 			/* traing pattern Set to Normal */
