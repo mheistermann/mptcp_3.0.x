@@ -342,7 +342,7 @@ static struct max8997_regulator_data __initdata max8997_regulators[] = {
 	{ MAX8997_BUCK4, &max8997_buck4_data, },
 };
 
-static struct max8997_platform_data __initdata exynos5_max8997_info = {
+static struct max8997_platform_data __initdata smdk5250_max8997_info = {
 	.num_regulators = ARRAY_SIZE(max8997_regulators),
 	.regulators     = max8997_regulators,
 
@@ -497,7 +497,7 @@ struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
 	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
 };
 
-static struct max77686_platform_data exynos4_max77686_info = {
+static struct max77686_platform_data smdk5250_max77686_info = {
 	.num_regulators = ARRAY_SIZE(max77686_regulators),
 	.regulators = max77686_regulators,
 	.irq_gpio	= 0,
@@ -635,7 +635,7 @@ struct s5m_opmode_data s5m8767_opmode_data[S5M8767_REG_MAX] = {
 	[S5M8767_BUCK4] = {S5M8767_BUCK4, S5M_OPMODE_STANDBY},
 };
 
-static struct s5m_platform_data exynos5_s5m8767_pdata = {
+static struct s5m_platform_data smdk5250_s5m8767_pdata = {
 	.device_type		= S5M8767X,
 	.irq_base		= IRQ_BOARD_START,
 	.num_regulators		= ARRAY_SIZE(gaia_regulators),
@@ -684,16 +684,16 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 #ifdef CONFIG_REGULATOR_S5M8767
 	{
 		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
-		.platform_data = &exynos5_s5m8767_pdata,
+		.platform_data = &smdk5250_s5m8767_pdata,
 		.irq		= IRQ_EINT(26),
 	},
 #else
 	{
 		I2C_BOARD_INFO("max8997", 0x66),
-		.platform_data	= &exynos5_max8997_info,
+		.platform_data	= &smdk5250_max8997_info,
 	}, {
 		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
-		.platform_data	= &exynos4_max77686_info,
+		.platform_data	= &smdk5250_max77686_info,
 	},
 #endif
 };
@@ -748,7 +748,7 @@ static struct platform_device *smdk5250_power_devices[] __initdata = {
 	&exynos5_busfreq,
 };
 
-static int exynos5_notifier_call(struct notifier_block *this,
+static int smdk5250_notifier_call(struct notifier_block *this,
 					unsigned long code, void *_cmd)
 {
 	int mode = 0;
@@ -762,8 +762,8 @@ static int exynos5_notifier_call(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-static struct notifier_block exynos5_reboot_notifier = {
-	.notifier_call = exynos5_notifier_call,
+static struct notifier_block smdk5250_reboot_notifier = {
+	.notifier_call = smdk5250_notifier_call,
 };
 
 void __init exynos5_smdk5250_power_init(void)
@@ -801,7 +801,7 @@ void __init exynos5_smdk5250_power_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DDR_L], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_RIGHT0_BUS], &exynos5_busfreq.dev);
 #endif
-	register_reboot_notifier(&exynos5_reboot_notifier);
+	register_reboot_notifier(&smdk5250_reboot_notifier);
 
 	platform_add_devices(smdk5250_power_devices,
 			ARRAY_SIZE(smdk5250_power_devices));
