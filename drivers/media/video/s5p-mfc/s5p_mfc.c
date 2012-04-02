@@ -76,6 +76,14 @@ static inline void clear_magic(unsigned char *addr)
 }
 #endif
 
+void mfc_workqueue_try_run(struct work_struct *work)
+{
+	struct s5p_mfc_dev *dev = container_of(work, struct s5p_mfc_dev,
+						work_struct);
+
+	s5p_mfc_try_run(dev);
+}
+
 /* Helper functions for interrupt processing */
 /* Remove from hw execution round robin */
 inline void clear_work_bit(struct s5p_mfc_ctx *ctx)
@@ -385,7 +393,7 @@ static void s5p_mfc_handle_frame_error(struct s5p_mfc_ctx *ctx,
 
 	s5p_mfc_clock_off();
 
-	s5p_mfc_try_run(dev);
+	queue_work(dev->irq_workqueue, &dev->work_struct);
 }
 
 /* Handle frame decoding interrupt */
@@ -422,7 +430,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 
 		s5p_mfc_clock_off();
 
-		s5p_mfc_try_run(dev);
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 		return;
 	}
 	if (dec->dpb_flush)
@@ -523,7 +531,7 @@ leave_handle_frame:
 
 	s5p_mfc_clock_off();
 
-	s5p_mfc_try_run(dev);
+	queue_work(dev->irq_workqueue, &dev->work_struct);
 }
 
 /* Error handling for interrupt */
@@ -637,7 +645,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 
 			s5p_mfc_clock_off();
 
-			s5p_mfc_try_run(dev);
+			queue_work(dev->irq_workqueue, &dev->work_struct);
 		} else {
 			s5p_mfc_handle_frame(ctx, reason, err);
 		}
@@ -685,7 +693,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 
 		s5p_mfc_clock_off();
 
-		s5p_mfc_try_run(dev);
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 		wake_up_ctx(ctx, reason, err);
 		break;
 	case S5P_FIMV_R2H_CMD_OPEN_INSTANCE_RET:
@@ -757,7 +765,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			s5p_mfc_clock_off();
 
 			wake_up_interruptible(&ctx->queue);
-			s5p_mfc_try_run(dev);
+			queue_work(dev->irq_workqueue, &dev->work_struct);
 		} else {
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
@@ -783,7 +791,7 @@ irq_cleanup_hw:
 
 	s5p_mfc_clock_off();
 
-	s5p_mfc_try_run(dev);
+	queue_work(dev->irq_workqueue, &dev->work_struct);
 	mfc_debug(2, "%s-- (via irq_cleanup_hw)\n", __func__);
 	return IRQ_HANDLED;
 }
@@ -1155,6 +1163,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	int ret = -ENOENT;
 	unsigned int alloc_ctx_num;
 	size_t size;
+	char workqueue_name[MFC_WORKQUEUE_LEN];
 
 	pr_debug("%s++\n", __func__);
 	dev = kzalloc(sizeof *dev, GFP_KERNEL);
@@ -1312,6 +1321,14 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 		dev->fw.ver = 0x50;
 	}
 
+	sprintf(workqueue_name, "mfc_workqueue");
+	dev->irq_workqueue = create_workqueue(workqueue_name);
+	if (dev->irq_workqueue == NULL) {
+		dev_err(&pdev->dev, "failed to create workqueue for mfc\n");
+		goto workqueue_fail;
+	}
+	INIT_WORK(&dev->work_struct, mfc_workqueue_try_run);
+
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	dev->alloc_ctx_fw = (struct vb2_alloc_ctx *)
 		vb2_ion_create_context(&pdev->dev,
@@ -1418,9 +1435,11 @@ alloc_ctx_drm_fail:
 alloc_ctx_sh_fail:
 	vb2_ion_destroy_context(dev->alloc_ctx_fw);
 alloc_ctx_fw_fail:
+#endif
+	destroy_workqueue(dev->irq_workqueue);
+workqueue_fail:
 	s5p_mfc_mem_cleanup_multi((void **)dev->alloc_ctx,
 			alloc_ctx_num);
-#endif
 alloc_ctx_fail:
 	video_unregister_device(dev->vfd_enc);
 rel_vdev_enc:

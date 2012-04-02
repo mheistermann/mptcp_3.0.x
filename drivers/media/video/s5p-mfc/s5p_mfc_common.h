@@ -19,6 +19,7 @@
 #include <linux/videodev2.h>
 #include <linux/videodev2_exynos_media.h>
 #include <linux/slab.h>
+#include <linux/workqueue.h>
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -54,6 +55,7 @@
 #define MFC_FW_NAME		"mfc_fw.bin"
 
 #define STUFF_BYTE		4
+#define MFC_WORKQUEUE_LEN	32
 
 #define MFC_BASE_MASK		((1 << 17) - 1)
 #define MFC_VER_MAJOR(ver)	((ver >> 4) & 0xF)
@@ -271,6 +273,9 @@ struct s5p_mfc_dev {
 	struct vb2_alloc_ctx *alloc_ctx_fw;
 	struct vb2_alloc_ctx *alloc_ctx_sh;
 	struct vb2_alloc_ctx *alloc_ctx_drm;
+
+	struct work_struct work_struct;
+	struct workqueue_struct *irq_workqueue;
 };
 
 /**
