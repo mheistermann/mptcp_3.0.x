@@ -44,8 +44,7 @@ struct secmem_region {
 	unsigned long	len;
 };
 
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412) || \
-		defined(CONFIG_CPU_EXYNOS5250)
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void secmem_crypto_register(struct secmem_crypto_driver_ftn *ftn);
 void secmem_crypto_deregister(void);
 #else
