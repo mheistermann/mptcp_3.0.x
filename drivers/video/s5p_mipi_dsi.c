@@ -172,7 +172,7 @@ int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim, unsigned int data_id,
 	delay_val = MHZ / dsim->dsim_config->esc_clk;
 	udelay = 10 * delay_val;
 
-	mdelay(udelay);
+	msleep(udelay);
 
 	switch (data_id) {
 	/* short packet types of packet types for command. */
@@ -561,7 +561,7 @@ int s5p_mipi_dsi_init_link(struct mipi_dsim_device *dsim)
 		/* set clock configuration */
 		s5p_mipi_dsi_set_clock(dsim, dsim->dsim_config->e_byte_clk, 1);
 
-		mdelay(100);
+		msleep(100);
 
 		/* check clock and data lane state are stop state */
 		while (!(s5p_mipi_dsi_is_lane_state(dsim))) {
