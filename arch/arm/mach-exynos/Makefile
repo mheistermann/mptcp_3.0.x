@@ -60,6 +60,7 @@ obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-mmc.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-display.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-power.o
+obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-audio.o
 
 # device support
 
