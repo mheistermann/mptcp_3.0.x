@@ -1780,14 +1780,6 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	reg = readl(udc->regs + EXYNOS_USB3_DSTS);
 	speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
 
-	/* Suspend the inactive Phy */
-	if (speed == USB_SPEED_SUPER)
-		__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
-			EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
-	else
-		__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
-			EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
-
 	switch (speed) {
 	/* High-speed */
 	case 0:
@@ -1815,6 +1807,14 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 		mps = EP_SS_MPS;
 		break;
 	}
+
+	/* Suspend the inactive Phy */
+	if (udc->gadget.speed == USB_SPEED_SUPER)
+		__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+			EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+	else
+		__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
 
 	udc->eps[0].ep.maxpacket = mps0;
 	for (i = 1; i < EXYNOS_USB3_EPS; i++)
