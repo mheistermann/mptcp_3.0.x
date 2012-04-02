@@ -469,7 +469,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			mfc_debug(2, "Running again the same buffer.\n");
 
 			stream_vir = vb2_plane_vaddr(&src_buf->vb, 0);
-			s5p_mfc_cache_inv(src_buf->vb.planes[0].mem_priv, 0);
+			s5p_mfc_cache_inv(&src_buf->vb, 0);
 
 			offset = s5p_mfc_find_start_code(
 					stream_vir + dec->consumed, remained);
