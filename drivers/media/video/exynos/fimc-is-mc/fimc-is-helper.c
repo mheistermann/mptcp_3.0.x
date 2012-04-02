@@ -1850,7 +1850,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 {
 	u32 front_width, front_height, back_width, back_height;
 	u32 dis_width, dis_height;
-	u32 crop_width, crop_height, crop_x, crop_y;
+	u32 crop_width = 0, crop_height = 0, crop_x = 0, crop_y = 0;
 	u32 front_crop_ratio, back_crop_ratio;
 
 	/* ISP */
@@ -1915,6 +1915,9 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	front_width =dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width;
 	front_height = dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height;
 
+	back_width = dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width;
+	back_height = dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height;
+
 	IS_SCALERC_SET_PARAM_OTF_INPUT_WIDTH(dev,
 		front_width);
 	IS_SCALERC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
@@ -1927,65 +1930,58 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	IS_SCALERC_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev,
 		front_height);
 
-	if (dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width <
-		dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.width)
-		back_width = dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.width;
-	else
-		back_width = dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width;
+	front_crop_ratio = front_width * 1000 / front_height;
+	back_crop_ratio = back_width * 1000 / back_height;
 
-	if (dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height <
-		dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.height)
-		back_height = dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.height;
-	else
-		back_height = dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height;
+	if (front_crop_ratio == back_crop_ratio){
+		crop_width = front_width;
+		crop_height = front_height;
 
-	/* TODO
-	* check align and size in the case of using DIS
-	*/
-	if (dev->back.dis_on){
-			dis_width = back_width * 125/100;
-			dis_height = back_height * 125/100;
-	}else{
-			dis_width = back_width;
-			dis_height = back_height;
+	} else if (front_crop_ratio < back_crop_ratio){
+		crop_width = front_width;
+		crop_height = (front_width * (1*1000*100/back_crop_ratio))/100;
+		crop_width = ALIGN(crop_width, 8);
+		crop_height = ALIGN(crop_height, 8);
+
+	} else if (front_crop_ratio > back_crop_ratio){
+		crop_height = front_height;
+		crop_width = front_height * (1*1000*back_crop_ratio);
+		crop_width = ALIGN(crop_width, 8);
+		crop_height = ALIGN(crop_height, 8);
 	}
 
+	if (dev->back.dis_on) {
+		if (crop_width <= DEFAULT_CAPTURE_STILL_CROP_WIDTH
+			&& crop_height <=  DEFAULT_CAPTURE_STILL_CROP_HEIGHT) {
+			dis_width = (crop_width * 100) / 125;
+			dis_height = (crop_height * 100) / 125;
+
+		} else {
+			crop_width = back_width * 125 / 100;
+			crop_height = back_height * 125 / 100;
+			dis_width = back_width;
+			dis_height = back_height;
+		}
+	} else {
+			dis_width = crop_width;
+			dis_height = crop_height;
+	}
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
-		dis_width);
+		crop_width);
 	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
-		dis_height);
+		crop_height);
 
-	/* TODO
-	* change equation to support various size
-	*/
 	dbg("calulate crop size\n");
 	dbg("front w: %d front h: %d\n", front_width, front_height);
 	dbg("dis w: %d dis h: %d\n", dis_width, dis_height);
 	dbg("back w: %d back h: %d\n", back_width, back_height);
 
-	front_crop_ratio = front_width*1000/front_height;
-	back_crop_ratio = dis_width*1000/dis_height;
+	dbg("front_crop_ratio: %d back_crop_ratio: %d\n",
+			front_crop_ratio, back_crop_ratio);
 
-	dbg("front_crop_ratio: %d back_crop_ratio: %d\n", front_crop_ratio, back_crop_ratio);
-	if (front_crop_ratio > back_crop_ratio){
-		crop_width = front_width;
-		crop_height = front_height;
-	}
-	else {
-		crop_width = front_width;
-		crop_height = (front_width * (1*1000*100/back_crop_ratio))/100;
-		crop_width = ALIGN(crop_width, 8);
-		crop_height = ALIGN(crop_height, 8);
-	}
-
-	if (dev->back.dis_on){
-		crop_width = dis_width;
-		crop_height = dis_height;
-	}
-
-	crop_x = (front_width - crop_width)/2;
-	crop_y = (front_height -crop_height)/2;
+	crop_x = (front_width - crop_width) / 2;
+	crop_y = (front_height - crop_height) / 2;
 	crop_x &= 0xffe;
 	crop_y &= 0xffe;
 
@@ -1998,8 +1994,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	dev->back.dis_width = dis_width;
 	dev->back.dis_height = dis_height;
 
-	dbg("crop w: %d crop h: %d\n", crop_width, crop_height);
-	dbg("crop x: %d crop y: %d\n", crop_x, crop_y);
+	printk("crop w: %d crop h: %d\n", crop_width, crop_height);
+	printk("crop x: %d crop y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);
@@ -2014,16 +2010,16 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_WIDTH(dev,
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width);
+		front_width);
 	IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_HEIGHT(dev,
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height);
+		front_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OUTPUT_CROP);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		dis_width);
+		crop_width);
 	IS_SCALERC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		dis_height);
+		crop_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
@@ -2031,7 +2027,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		front_width);
 	IS_SCALERC_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
 		front_height);
-	if((front_width != dis_width) || (front_height != dis_height))
+	if((front_width != crop_width) || (front_height != crop_height))
 		IS_SCALERC_SET_PARAM_DMA_OUTPUT_OUTPATH(dev,
 			2);  /* unscaled image */
 	else
@@ -2042,72 +2038,72 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 
 	/* ODC */
 	IS_ODC_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		dis_width);
+		crop_width);
 	IS_ODC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		dis_height);
+		crop_height);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_ODC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		dis_width);
+		crop_width);
 	IS_ODC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		dis_height);
+		crop_height);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* DIS */
 	IS_DIS_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		dis_width);
+		crop_width);
 	IS_DIS_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		dis_height);
+		crop_height);
 	IS_SET_PARAM_BIT(dev, PARAM_DIS_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_DIS_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_DIS_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_DIS_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* 3DNR */
 	IS_TDNR_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_TDNR_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_TDNR_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_TDNR_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_TDNR_SET_PARAM_DMA_OUTPUT_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_TDNR_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_DMA_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* ScalerP */
 	IS_SCALERP_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_SCALERP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERP_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERP_SET_PARAM_INPUT_CROP_IN_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_WIDTH(dev,
-		back_width);
+		dis_width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_HEIGHT(dev,
-		back_height);
+		dis_height);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
@@ -2133,6 +2129,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width);
 	IS_SCALERP_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height);
+
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERP_DMA_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
