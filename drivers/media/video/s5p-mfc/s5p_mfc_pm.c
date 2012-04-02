@@ -262,9 +262,6 @@ void s5p_mfc_clock_off(void)
 
 	mfc_debug(3, "- %d", state);
 
-	if (!dev->curr_ctx_drm)
-		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
-
 	if (dev->fw.date >= 0x120206) {
 		s5p_mfc_write_reg(0x1, S5P_FIMV_MFC_BUS_RESET_CTRL);
 
@@ -278,6 +275,9 @@ void s5p_mfc_clock_off(void)
 			val = s5p_mfc_read_reg(S5P_FIMV_MFC_BUS_RESET_CTRL);
 		} while ((val & 0x2) == 0);
 	}
+
+	if (!dev->curr_ctx_drm)
+		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
 	clk_disable(pm->clock);
 
 	if (state < 0) {
