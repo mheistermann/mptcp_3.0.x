@@ -20,5 +20,6 @@ void exynos5_smdk5250_display_init(void);
 void exynos5_smdk5250_power_init(void);
 void exynos5_smdk5250_audio_init(void);
 void exynos5_smdk5250_usb_init(void);
+void exynos5_smdk5250_input_init(void);
 
 #endif

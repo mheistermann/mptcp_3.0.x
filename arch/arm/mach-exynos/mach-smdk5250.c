@@ -14,9 +14,7 @@
 #include <linux/spi/spi_gpio.h>
 #include <linux/clk.h>
 #include <linux/gpio.h>
-#include <linux/gpio_event.h>
 #include <linux/i2c.h>
-#include <linux/input.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/memblock.h>
@@ -460,16 +458,6 @@ static struct platform_device m5mols_fixed_voltage = {
 };
 #endif
 
-struct egalax_i2c_platform_data {
-	unsigned int gpio_int;
-	unsigned int gpio_en;
-	unsigned int gpio_rst;
-};
-
-static struct egalax_i2c_platform_data exynos5_egalax_data = {
-	.gpio_int	= EXYNOS5_GPX3(1),
-};
-
 static struct i2c_board_info i2c_devs2[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 	{
@@ -489,78 +477,11 @@ static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
 };
 #endif
 
-static struct gpio_event_direct_entry smdk5250_keypad_key_map[] = {
-	{
-		.gpio   = EXYNOS5_GPX0(0),
-		.code   = KEY_POWER,
-	}
-};
-
-static struct gpio_event_input_info smdk5250_keypad_key_info = {
-	.info.func              = gpio_event_input_func,
-	.info.no_suspend        = true,
-	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
-	.type                   = EV_KEY,
-	.keymap                 = smdk5250_keypad_key_map,
-	.keymap_size            = ARRAY_SIZE(smdk5250_keypad_key_map)
-};
-
-static struct gpio_event_info *smdk5250_input_info[] = {
-	&smdk5250_keypad_key_info.info,
-};
-
-static struct gpio_event_platform_data smdk5250_input_data = {
-	.names  = {
-		"smdk5250-keypad",
-		NULL,
-	},
-	.info           = smdk5250_input_info,
-	.info_count     = ARRAY_SIZE(smdk5250_input_info),
-};
-
-static struct platform_device smdk5250_input_device = {
-	.name   = GPIO_EVENT_DEV_NAME,
-	.id     = 0,
-	.dev    = {
-		.platform_data = &smdk5250_input_data,
-	},
-};
-
-static void __init smdk5250_gpio_power_init(void)
-{
-	int err = 0;
-
-	err = gpio_request_one(EXYNOS5_GPX0(0), 0, "GPX0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPX0 for "
-				"suspend/resume control\n");
-		return;
-	}
-	s3c_gpio_setpull(EXYNOS5_GPX0(0), S3C_GPIO_PULL_NONE);
-
-	gpio_free(EXYNOS5_GPX0(0));
-}
-
-#ifdef CONFIG_WAKEUP_ASSIST
-static struct platform_device wakeup_assist_device = {
-	.name = "wakeup_assist",
-};
-#endif
-
-static struct i2c_board_info i2c_devs7[] __initdata = {
-	{
-		I2C_BOARD_INFO("egalax_i2c", 0x04),
-		.irq		= IRQ_EINT(25),
-		.platform_data	= &exynos5_egalax_data,
-	},
-};
-
 static struct platform_device *smdk5250_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c2,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
-	&s3c_device_i2c7,
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
@@ -618,10 +539,6 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 	&s5p_device_cec,
 #endif
-#endif
-	&smdk5250_input_device,
-#ifdef CONFIG_WAKEUP_ASSIST
-	&wakeup_assist_device,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
@@ -1054,14 +971,13 @@ static void __init smdk5250_machine_init(void)
 	exynos5_smdk5250_power_init();
 	exynos5_smdk5250_audio_init();
 	exynos5_smdk5250_usb_init();
+	exynos5_smdk5250_input_init();
 
 	s3c_i2c2_set_platdata(NULL);
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 
 	s3c_i2c4_set_platdata(NULL);
 	s3c_i2c5_set_platdata(NULL);
-	s3c_i2c7_set_platdata(NULL);
-	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();
@@ -1094,8 +1010,6 @@ static void __init smdk5250_machine_init(void)
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
 	exynos_sysmmu_init();
-
-	smdk5250_gpio_power_init();
 
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 
