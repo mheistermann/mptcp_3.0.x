@@ -17,7 +17,6 @@
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
 
-#ifdef CONFIG_USB_EHCI_S5P
 /* USB EHCI Host Controller registration */
 static struct resource s5p_ehci_resource[] = {
 	[0] = {
@@ -61,9 +60,7 @@ void __init s5p_ehci_set_platdata(struct s5p_ehci_platdata *pd)
 	if (!npd->phy_resume)
 		npd->phy_resume = s5p_usb_phy_resume;
 }
-#endif
 
-#ifdef CONFIG_USB_OHCI_S5P
 /* USB Host Controlle OHCI registrations */
 static struct resource s5p_ohci_resource[] = {
 	[0] = {
@@ -107,4 +104,3 @@ void __init s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd)
 	if (!npd->phy_resume)
 		npd->phy_resume = s5p_usb_phy_resume;
 }
-#endif
