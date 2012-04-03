@@ -599,7 +599,7 @@ static void jpeg_device_dec_run(void *priv)
 	jpeg_set_dec_out_fmt(dev->reg_base, dec_param.out_fmt);
 	jpeg_set_dec_bitstream_size(dev->reg_base, dec_param.size);
 #ifdef CONFIG_JPEG_V2_2
-	jpeg_set_timer_count(dev->reg_base, dec_param.size * 32 + 0xff);
+	jpeg_set_timer_count(dev->reg_base, dec_param.in_width * dec_param.in_height * 8 + 0xff);
 #endif
 	jpeg_set_enc_dec_mode(dev->reg_base, DECODING);
 
