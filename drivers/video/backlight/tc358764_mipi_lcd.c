@@ -81,9 +81,8 @@ static int init_lcd(struct mipi_dsim_device *dsim)
 				return 0;
 			usleep_range(6000, 7000);
 		}
+		msleep(800);
 	}
-
-	msleep(800);
 
 	return 1;
 }
