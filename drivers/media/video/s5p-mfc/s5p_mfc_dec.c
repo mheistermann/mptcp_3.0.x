@@ -31,7 +31,7 @@
 #include "s5p_mfc_dec.h"
 #include "s5p_mfc_pm.h"
 
-#define STREAM_SAVE
+#undef STREAM_SAVE
 
 #ifdef STREAM_SAVE
 #include <linux/syscalls.h>
