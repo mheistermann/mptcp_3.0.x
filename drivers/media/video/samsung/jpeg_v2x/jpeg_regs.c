@@ -484,6 +484,11 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 	case RGB_888:
 	case YCRYCB_422_1P:
 	case YCBYCR_422_1P:
+#if defined (CONFIG_JPEG_V2_2)
+	case BGR_888:
+	case CBYCRY_422_1P:
+	case CRYCBY_422_1P:
+#endif
 		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
 		writel(0, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
 		writel(0, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
