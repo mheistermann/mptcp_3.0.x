@@ -88,7 +88,9 @@ struct check_device_op {
 	enum hc_type		type;
 };
 
-static struct check_device_op chk_sdhc_op[] = {
+struct check_device_op *chk_sdhc_op;
+
+static struct check_device_op chk_sdhc_op_rev0[] = {
 #if defined(CONFIG_EXYNOS4_DEV_DWMCI)
 	{.base = 0, .pdev = &exynos_device_dwmci, .type = HC_MSHC},
 #endif
@@ -104,6 +106,22 @@ static struct check_device_op chk_sdhc_op[] = {
 #if defined(CONFIG_S3C_DEV_HSMMC3)
 	{.base = 0, .pdev = &s3c_device_hsmmc3, .type = HC_SDHC},
 #endif
+};
+
+static struct check_device_op chk_sdhc_op_rev1[] = {
+#if defined(CONFIG_EXYNOS4_DEV_DWMCI)
+	{.base = 0, .pdev = &exynos_device_dwmci0, .type = HC_MSHC},
+#endif
+#if defined(CONFIG_EXYNOS5_DEV_DWMCI1)
+	{.base = 0, .pdev = &exynos_device_dwmci1, .type = HC_MSHC},
+#endif
+#if defined(CONFIG_EXYNOS5_DEV_DWMCI2)
+	{.base = 0, .pdev = &exynos_device_dwmci2, .type = HC_MSHC},
+#endif
+#if defined(CONFIG_EXYNOS5_DEV_DWMCI3)
+	{.base = 0, .pdev = &exynos_device_dwmci3, .type = HC_MSHC},
+#endif
+
 };
 
 #define S3C_HSMMC_PRNSTS	(0x24)
@@ -606,7 +624,13 @@ static int __init exynos5_init_cpuidle(void)
 		}
 	}
 
-	sdmmc_dev_num = ARRAY_SIZE(chk_sdhc_op);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		sdmmc_dev_num = ARRAY_SIZE(chk_sdhc_op_rev0);
+		chk_sdhc_op = chk_sdhc_op_rev0;
+	} else {
+		sdmmc_dev_num = ARRAY_SIZE(chk_sdhc_op_rev1);
+		chk_sdhc_op = chk_sdhc_op_rev1;
+	}
 
 	for (i = 0; i < sdmmc_dev_num; i++) {
 
