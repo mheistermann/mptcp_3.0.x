@@ -1882,12 +1882,11 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		*/
 		/* FIXME: check it out in the MFC6.1 */
 		cacheable = (ctx->cacheable & MFCMASK_DST_CACHE) ? 1 : 0;
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], cacheable);
 		if (ctx->is_drm)
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm, true);
+			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm, cacheable);
 		else
 			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				true);
+				cacheable);
 
 		if (ctx->capture_state != QUEUE_FREE) {
 			mfc_err("invalid capture state: %d\n", ctx->capture_state);
@@ -1913,20 +1912,15 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		/* cacheable setting */
 		cacheable = (ctx->cacheable & MFCMASK_SRC_CACHE) ? 1 : 0;
-		if (!IS_MFCV6(dev))
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], cacheable);
-		else
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], cacheable);
 		if (ctx->is_drm) {
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm,
-				ctx->cacheable);
+			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm, cacheable);
 		} else {
 			if (!IS_MFCV6(dev))
 				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
-					ctx->cacheable);
+					cacheable);
 			else
 				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-					ctx->cacheable);
+					cacheable);
 		}
 		if (ctx->output_state != QUEUE_FREE) {
 			mfc_err("invalid output state: %d\n", ctx->output_state);

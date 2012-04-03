@@ -1334,6 +1334,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			if (!IS_MFCV6(dev))
 				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
 					cacheable);
+
 			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
 				cacheable);
 		}
