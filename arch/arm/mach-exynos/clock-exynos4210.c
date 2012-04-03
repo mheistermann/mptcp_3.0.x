@@ -84,7 +84,7 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= (1 << 14),
 	}, {
 		.name		= SYSMMU_CLOCK_NAME,
-		.devname	= SYSMMU_CLOCK_DEVNAME(2d, 14),
+		.devname	= SYSMMU_CLOCK_DEVNAME(2d, 15),
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
