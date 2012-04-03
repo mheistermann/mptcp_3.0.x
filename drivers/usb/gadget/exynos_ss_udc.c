@@ -1163,6 +1163,29 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 		}
 		break;
 
+	case USB_RECIP_INTERFACE:
+		switch (wValue) {
+		case USB_INTRF_FUNC_SUSPEND:
+			if (udc->gadget.speed != USB_SPEED_SUPER ||
+			    udc->state == USB_STATE_ADDRESS)
+				return -EINVAL;
+
+			/*
+			 * Currently, there is no functions supporting
+			 * FUNCTION_SUSPEND feature. Moreover, if a function
+			 * doesn't support the feature (true for all), composite
+			 * driver returns error on 'setup' call. This causes
+			 * Command Verifier test to fail. To fix it, will use
+			 * dummy handler instead.
+			 */
+
+			break;
+
+		default:
+			return -ENOENT;
+		}
+		break;
+
 	case USB_RECIP_ENDPOINT:
 		udc_ep = ep_from_windex(udc, wIndex);
 		if (!udc_ep) {
