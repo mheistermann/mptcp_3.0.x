@@ -104,6 +104,78 @@ static void srp_pending_ctrl(int ctrl)
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN");
 }
 
+static void srp_request_intr_mode(int mode)
+{
+	unsigned long deadline;
+	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
+	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
+	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
+	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
+	unsigned int intr_irq = readl(srp.commbox + SRP_INTRIRQ);
+	unsigned int check_mode = 0;
+
+	pwr_mode &= ~SRP_POWER_MODE_MASK;
+	intr_en &= ~SRP_INTR_DI;
+	intr_msk |= (SRP_ARM_INTR_MASK | SRP_DMA_INTR_MASK | SRP_TMR_INTR_MASK);
+	intr_src &= ~(SRP_INTRSRC_MASK);
+	intr_irq &= ~(SRP_INTRIRQ_MASK);
+
+	switch (mode) {
+	case SUSPEND:
+		pwr_mode &= ~SRP_POWER_MODE_TRIGGER;
+		check_mode = SRP_SUSPENED_CHECKED;
+		break;
+	case RESUME:
+		pwr_mode |= SRP_POWER_MODE_TRIGGER;
+		check_mode = 0;
+		break;
+	case RESET:
+		pwr_mode |= SRP_SW_RESET_TRIGGER;
+		check_mode = SRP_SW_RESET_DONE;
+		break;
+	default:
+		srp_err("Not support request mode to srp\n");
+		break;
+	}
+
+	intr_en |= SRP_INTR_EN;
+	intr_msk &= ~SRP_ARM_INTR_MASK;
+	intr_src |= SRP_ARM_INTR_SRC;
+
+	if (soc_is_exynos5250() && (samsung_rev() >= EXYNOS5250_REV_1_0)) {
+		intr_irq |= SRP_INTRIRQ_CONF;
+		writel(intr_irq, srp.commbox + SRP_INTRIRQ);
+	}
+
+	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
+	writel(intr_en, srp.commbox + SRP_INTREN);
+	writel(intr_msk, srp.commbox + SRP_INTRMASK);
+	writel(intr_src, srp.commbox + SRP_INTRSRC);
+
+	srp_debug("PWR_MODE[0x%x], INTREN[0x%x], INTRMSK[0x%x], INTRSRC[0x%x]\n",
+						readl(srp.commbox + SRP_POWER_MODE),
+						readl(srp.commbox + SRP_INTREN),
+						readl(srp.commbox + SRP_INTRMASK),
+						readl(srp.commbox + SRP_INTRSRC));
+
+	if (check_mode) {
+		deadline = jiffies + (HZ / 50);
+		srp_pending_ctrl(RUN);
+		do {
+			/* Waiting for completed suspended mode */
+			if ((readl(srp.commbox + SRP_POWER_MODE)
+					& check_mode))
+				break;
+		} while (time_before(jiffies, deadline));
+		srp_pending_ctrl(STALL);
+
+		/* Clear Suspend mode */
+		pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
+		pwr_mode &= ~check_mode;
+		writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
+	}
+}
+
 static void srp_check_stream_info(void)
 {
 	if (!srp.dec_info.channels) {
@@ -149,7 +221,17 @@ static void srp_reset(void)
 	srp_debug("Reset\n");
 
 	/* RESET */
-	writel(reg, srp.commbox + SRP_CONT);
+	if (soc_is_exynos5250()) {
+		if (!srp.first_init) {
+			writel(reg, srp.commbox + SRP_CONT);
+			srp.first_init = 1;
+		} else {
+			/* Request sw reset */
+			srp_request_intr_mode(RESET);
+		}
+	} else
+		writel(reg, srp.commbox + SRP_CONT);
+
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 
 	/* Store Total Count */
@@ -429,7 +511,7 @@ static void srp_fw_download(void)
 					    : (unsigned long *) (srp.fw_info.data
 								   + DATA_OFFSET);
 		pdmem = !soc_is_exynos5250() ? (void *) srp.dmem
-					     : (void *) srp.dmem + DATA_OFFSET;
+					     : (void *) (srp.dmem + DATA_OFFSET);
 
 		dmemsz = !soc_is_exynos5250() ? DMEM_SIZE : (DMEM_SIZE - DATA_OFFSET);
 		memcpy(pdmem, psrc, dmemsz);
@@ -484,9 +566,9 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case SRP_INIT:
 		srp_debug("SRP_INIT\n");
+		srp_set_default_fw();
 		srp_flush_ibuf();
 		srp_flush_obuf();
-		srp_set_default_fw();
 		srp_reset();
 		break;
 
@@ -981,62 +1063,6 @@ static struct miscdevice srp_miscdev = {
 };
 
 #ifdef CONFIG_PM
-static void srp_request_pwr_mode(int mode)
-{
-	unsigned long deadline = jiffies + (HZ / 50);
-	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
-	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
-	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
-	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
-	unsigned int intr_irq = readl(srp.commbox + SRP_INTRIRQ);
-
-	pwr_mode &= ~SRP_POWER_MODE_MASK;
-	intr_en &= ~SRP_INTR_DI;
-	intr_msk |= (SRP_ARM_INTR_MASK | SRP_DMA_INTR_MASK | SRP_TMR_INTR_MASK);
-	intr_src &= ~(SRP_INTRSRC_MASK);
-	intr_irq &= ~(SRP_INTRIRQ_MASK);
-
-	if (!mode)
-		pwr_mode &= ~SRP_POWER_MODE_TRIGGER;
-	else
-		pwr_mode |= SRP_POWER_MODE_TRIGGER;
-
-	intr_en |= SRP_INTR_EN;
-	intr_msk &= ~SRP_ARM_INTR_MASK;
-	intr_src |= SRP_ARM_INTR_SRC;
-
-	if (soc_is_exynos5250() && (samsung_rev() >= EXYNOS5250_REV_1_0)) {
-		intr_irq |= SRP_INTRIRQ_CONF;
-		writel(intr_irq, srp.commbox + SRP_INTRIRQ);
-	}
-
-	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
-	writel(intr_en, srp.commbox + SRP_INTREN);
-	writel(intr_msk, srp.commbox + SRP_INTRMASK);
-	writel(intr_src, srp.commbox + SRP_INTRSRC);
-
-	srp_debug("PWR_MODE[0x%x], INTREN[0x%x], INTRMSK[0x%x], INTRSRC[0x%x]\n",
-						readl(srp.commbox + SRP_POWER_MODE),
-						readl(srp.commbox + SRP_INTREN),
-						readl(srp.commbox + SRP_INTRMASK),
-						readl(srp.commbox + SRP_INTRSRC));
-	if (!mode) {
-		srp_pending_ctrl(RUN);
-		do {
-			/* Waiting for completed suspended mode */
-			if ((readl(srp.commbox + SRP_POWER_MODE)
-					& SRP_SUSPENED_CHECKED))
-				break;
-		} while (time_before(jiffies, deadline));
-		srp_pending_ctrl(STALL);
-
-		/* Clear Suspend mode */
-		pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
-		pwr_mode &= ~SRP_SUSPENED_CHECKED;
-		writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
-	}
-}
-
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	unsigned long i;
@@ -1060,7 +1086,7 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 			}
 
 			/* Request Suspend mode */
-			srp_request_pwr_mode(SUSPEND);
+			srp_request_intr_mode(SUSPEND);
 
 			if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 				/* EVT0 : Work around code */
@@ -1099,7 +1125,7 @@ static int srp_resume(struct platform_device *pdev)
 
 			/* RESET */
 			writel(0x0, srp.commbox + SRP_CONT);
-			srp_request_pwr_mode(RESUME);
+			srp_request_intr_mode(RESUME);
 
 			srp.pm_resumed = true;
 		}
@@ -1173,6 +1199,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err7;
 	}
 
+	srp.first_init = 0;
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
 

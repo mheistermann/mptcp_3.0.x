@@ -134,7 +134,9 @@
 /* For Suspend/Resume */
 #define SRP_POWER_MODE_MASK		(0xFFFF)
 #define SRP_POWER_MODE_TRIGGER		(0x1)
+#define SRP_SW_RESET_TRIGGER		(0x1 << 2)
 #define SRP_SUSPENED_CHECKED		(0x1 << 1)
+#define SRP_SW_RESET_DONE		(0x1 << 3)
 /* INTREN */
 #define SRP_INTR_EN			(0x1)
 #define SRP_INTR_DI			(0x0)

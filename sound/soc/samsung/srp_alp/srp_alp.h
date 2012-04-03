@@ -179,6 +179,7 @@ struct srp_info {
 	unsigned long	pcm_size;
 
 	/* SRP status information */
+	unsigned int	first_init;
 	unsigned int	decoding_started;
 	unsigned int	is_opened;
 	unsigned int	is_running;
@@ -205,7 +206,8 @@ enum {
 /* Request Suspend/Resume */
 enum {
 	SUSPEND = 0,
-	RESUME = 1,
+	RESUME,
+	RESET,
 };
 
 #endif /* __SRP_ALP_H */
