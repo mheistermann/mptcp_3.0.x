@@ -76,7 +76,7 @@ extern int gsc_dbg;
 #define FIMD_NAME_SIZE			32
 #define GSC_M2M_BUF_NUM			0
 #define GSC_OUT_BUF_MAX			2
-#define GSC_MAX_CTRL_NUM		19
+#define GSC_MAX_CTRL_NUM		16
 #define GSC_OUT_MAX_MASK_NUM		7
 #define GSC_OUT_DEF_SRC			15
 #define GSC_OUT_DEF_DST			7
@@ -86,10 +86,7 @@ extern int gsc_dbg;
 #define DEFAULT_GSC_SOURCE_HEIGHT	480
 #define DEFAULT_CSC_EQ			1
 #define DEFAULT_CSC_RANGE		1
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 #define DEFAULT_USE_SYSMMU		1
-#define DEFAULT_USE_PHYS		0
-#endif
 
 #define GSC_LAST_DEV_ID			3
 #define GSC_PAD_SINK			0
@@ -280,13 +277,8 @@ struct gsc_ctrls {
 	struct v4l2_ctrl	*csc_eq_mode;
 	struct v4l2_ctrl	*csc_eq;
 	struct v4l2_ctrl	*csc_range;
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-	struct v4l2_ctrl	*phys_y;
-	struct v4l2_ctrl	*phys_cb;
-	struct v4l2_ctrl	*phys_cr;
+	struct v4l2_ctrl	*m2m_ctx_num;
 	struct v4l2_ctrl	*use_sysmmu;
-	struct v4l2_ctrl	*use_phys;
-#endif
 };
 
 /**
@@ -501,10 +493,7 @@ struct gsc_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	bool use_sysmmu;
-	bool use_phys;
-#endif
 };
 
 struct gsc_pipeline {
@@ -773,26 +762,17 @@ static inline struct gsc_dev *entity_to_gsc(struct media_entity *me)
 	return entity_data_to_gsc(v4l2_get_subdevdata(sd));
 }
 
-static inline void user_to_drv(struct v4l2_ctrl *ctrl, s32 value)
+static inline void update_ctrl_value(struct v4l2_ctrl *ctrl, s32 value)
 {
 	ctrl->cur.val = ctrl->val = value;
 }
 
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 static inline void update_use_sysmmu(const struct gsc_vb2 *vb2,
 				     struct v4l2_ctrl *ctrl)
 {
 	bool *use_sysmmu = (bool *)&vb2->use_sysmmu;
 	*use_sysmmu = ctrl->cur.val;
 }
-
-static inline void update_use_phys(const struct gsc_vb2 *vb2,
-				     struct v4l2_ctrl *ctrl)
-{
-	bool *use_phys = (bool *)&vb2->use_phys;
-	*use_phys = ctrl->cur.val;
-}
-#endif
 
 void gsc_hw_set_sw_reset(struct gsc_dev *dev);
 void gsc_hw_set_one_frm_mode(struct gsc_dev *dev, bool mask);

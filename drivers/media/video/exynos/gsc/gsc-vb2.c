@@ -40,9 +40,7 @@ const struct gsc_vb2 gsc_vb2_cma = {
 	.suspend	= gsc_cma_suspend,
 	.cache_flush	= gsc_cma_cache_flush,
 	.set_cacheable	= gsc_cma_set_cacheable,
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	.use_sysmmu	= false;
-#endif
 };
 #elif defined(CONFIG_VIDEOBUF2_ION)
 void *gsc_ion_init(struct gsc_dev *gsc)
@@ -69,8 +67,6 @@ const struct gsc_vb2 gsc_vb2_ion = {
 	.suspend	= vb2_ion_detach_iommu,
 	.cache_flush	= vb2_ion_cache_flush,
 	.set_cacheable	= vb2_ion_set_cached,
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	.use_sysmmu	= true,
-#endif
 };
 #endif
