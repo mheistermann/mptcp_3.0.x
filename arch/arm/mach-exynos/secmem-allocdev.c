@@ -32,7 +32,7 @@
 
 struct miscdevice secmem;
 struct secmem_crypto_driver_ftn *crypto_driver;
-#if defined(CONFIG_CPU_EXYNOS5250)
+#if defined(CONFIG_ION)
 extern struct ion_device *ion_exynos;
 #endif
 
@@ -114,7 +114,7 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		break;
 	}
-#if defined(CONFIG_CPU_EXYNOS5250)
+#if defined(CONFIG_ION)
 	case SECMEM_IOC_GET_FD_PHYS_ADDR:
 	{
 		struct ion_client *client;

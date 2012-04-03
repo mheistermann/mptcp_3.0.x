@@ -14,7 +14,7 @@
 #define __ASM_ARCH_SECMEM_H __FILE__
 
 #include <linux/miscdevice.h>
-#if defined(CONFIG_CPU_EXYNOS5250)
+#if defined(CONFIG_ION)
 #include <linux/ion.h>
 #endif
 
@@ -25,7 +25,7 @@ struct secchunk_info {
 };
 
 extern struct miscdevice secmem;
-#if defined(CONFIG_CPU_EXYNOS5250)
+#if defined(CONFIG_ION)
 struct secfd_info {
 	int             fd;
 	ion_phys_addr_t phys;
