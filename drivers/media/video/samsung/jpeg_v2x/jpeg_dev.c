@@ -649,6 +649,10 @@ static irqreturn_t jpeg_irq(int irq, void *priv)
 
 	spin_lock(&ctrl->slock);
 
+#ifdef CONFIG_JPEG_V2_2
+	jpeg_clean_interrupt(ctrl->reg_base);
+#endif
+
 	if (ctrl->mode == ENCODING)
 		ctx = v4l2_m2m_get_curr_priv(ctrl->m2m_dev_enc);
 	else

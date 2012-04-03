@@ -25,6 +25,7 @@ void jpeg_set_enc_out_fmt(void __iomem *base,
 					enum jpeg_stream_format out_fmt);
 void jpeg_set_enc_tbl(void __iomem *base);
 void jpeg_set_interrupt(void __iomem *base);
+void jpeg_clean_interrupt(void __iomem *base);
 unsigned int jpeg_get_int_status(void __iomem *base);
 void jpeg_set_huf_table_enable(void __iomem *base, int value);
 void jpeg_set_dec_scaling(void __iomem *base,

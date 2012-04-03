@@ -414,6 +414,11 @@ void jpeg_set_interrupt(void __iomem *base)
 	writel(S5P_JPEG_INT_EN_ALL, base + S5P_JPEG_INT_EN_REG);
 }
 
+void jpeg_clean_interrupt(void __iomem *base)
+{
+	writel(0, base + S5P_JPEG_INT_EN_REG);
+}
+
 unsigned int jpeg_get_int_status(void __iomem *base)
 {
 	unsigned int	int_status;
