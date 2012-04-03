@@ -2025,4 +2025,23 @@ struct is_share_region {
 	u32 chip_rev_no;
 };
 
+typedef struct is_debug_control {
+	u32 uiWritePoint; 	/* 0~500KB boundary*/
+	u32 uiAssertFlag; 	/* 0:Not Inovked, 1:Invoked*/
+	u32 uiPAbortFlag; 	/* 0:Not Inovked, 1:Invoked*/
+	u32 uiDAbortFlag; 	/* 0:Not Inovked, 1:Invoked*/
+	u32 uiPDReadyFlag; 	/* 0:Normal, 1:EnterIdle(Ready to power down)*/
+	u32 uiISPFrameErr; 	/* Frame Error Count.*/
+	u32 uiDRCFrameErr; 	/* Frame Error Count.*/
+	u32 uiSCCFrameErr; 	/* Frame Error Count.*/
+	u32 uiODCFrameErr; 	/* Frame Error Count.*/
+	u32 uiDISFrameErr; 	/* Frame Error Count.*/
+	u32 uiTDNRFrameErr; 	/* Frame Error Count.*/
+	u32 uiSCPFrameErr; 	/* Frame Error Count.*/
+	u32 uiFDFrameErr; 	/* Frame Error Count.*/
+	u32 uiISPFrameDrop; 	/* Frame Drop Count.*/
+	u32 uiDRCFrameDrop; 	/* Frame Drop Count.*/
+	u32 uiDISFrameDrop; 	/* Frame Drop Count.*/
+} *PIS_DebugControl;
+
 #endif

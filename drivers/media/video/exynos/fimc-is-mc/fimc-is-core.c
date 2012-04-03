@@ -1373,8 +1373,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 			break;
 		}
-	}
-	else if (intr_pos == INTR_FRAME_DONE_ISP) {
+	} else if (intr_pos == INTR_FRAME_DONE_ISP) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR20);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR21);
 		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR22);
@@ -1384,10 +1383,10 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 		dbg("Bayer returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_BAYER].vbq.bufs[buf_index],
 						VB2_BUF_STATE_DONE);
-	}else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
-		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR24);
-		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR25);
-		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR26);
+	} else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR30);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
 		buf_index =  dev->i2h_cmd.arg[2];
@@ -1397,9 +1396,9 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				VB2_BUF_STATE_DONE);
 	} else if (intr_pos == INTR_FRAME_DONE_TDNR) {
 
-		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
-		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
-		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR30);
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR36);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR37);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR38);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
 		buf_index =  dev->i2h_cmd.arg[2];
@@ -1409,9 +1408,9 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				VB2_BUF_STATE_DONE);
 
 	} else if (intr_pos == INTR_FRAME_DONE_SCALERP) {
-		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR32);
-		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR33);
-		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR34);
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR44);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR45);
+		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR46);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
 
 #ifdef DZOOM_EVT0

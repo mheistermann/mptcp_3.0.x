@@ -95,6 +95,7 @@ enum error {
 
 	ERROR_CONTROL_NO		= ERROR_COMMON_NO,
 	ERROR_CONTROL_BYPASS		= 11,	/* Enable or Disable */
+	ERROR_CONTROL_BUF		= 12,	/* invalid buffer info */
 
 	ERROR_OTF_INPUT_NO		= ERROR_COMMON_NO,
 	/* invalid command */
@@ -156,6 +157,7 @@ enum error {
 	ERROR_SENSOR_UNSUPPORT_FUNC,
 	ERROR_SENSOR_UNSUPPORT_PERI,
 	ERROR_SENSOR_UNSUPPORT_AF,
+	ERROR_SENSOR_STOP_FAIL,
 
 	/* ISP Error (200~299) */
 	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
