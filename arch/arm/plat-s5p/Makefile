@@ -53,6 +53,5 @@ obj-$(CONFIG_S5P_DEV_USBGADGET)	+= dev-usbgadget.o
 obj-$(CONFIG_S5P_DEV_MIPI_DSI)	+= dev-dsim.o
 obj-$(CONFIG_S5P_DEV_MIPI_DSIM)	+= dev-mipidsim.o
 obj-$(CONFIG_S5P_SETUP_MIPIPHY)	+= setup-mipiphy.o
-obj-$(CONFIG_S5P_DEV_THERMAL)	+= dev-tmu.o
 obj-$(CONFIG_S5P_DEV_ACE) 	+= dev-ace.o
 obj-$(CONFIG_S5P_DEV_I2C_HDMIPHY)	+= dev-i2c-hdmiphy.o
