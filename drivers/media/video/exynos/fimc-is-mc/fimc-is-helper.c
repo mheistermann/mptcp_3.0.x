@@ -1252,7 +1252,7 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 #ifdef DZOOM_EVT0
 	IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
 		1);
-	dev->is_p_region->shared[100] = dev->mem.dvaddr_isp;
+	dev->is_p_region->shared[100] = (u32)dev->mem.dvaddr_isp;
 	IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
 		(u32)dev->mem.dvaddr_shared + 100*sizeof(u32));
 	dbg("ISP buf daddr : 0x%08x\n", dev->mem.dvaddr_isp);
