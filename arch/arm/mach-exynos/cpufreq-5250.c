@@ -182,6 +182,31 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 850000 },	/* L20 */
 };
 
+static const unsigned int asv_voltage_rev0[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
+	{ 0 },	/* L0 */
+	{ 0 },	/* L1 */
+	{ 0 },	/* L2 */
+	{ 0 },	/* L3 */
+	{ 0 },	/* L4 */
+	{ 1200000 },	/* L5 */
+	{ 1200000 },	/* L6 */
+	{ 1200000 },	/* L7 */
+	{ 1200000 },	/* L8 */
+	{ 1200000 },	/* L9 */
+	{ 1200000 },	/* L10 */
+	{ 1200000 },	/* L11 */
+	{ 1175000 },	/* L12 */
+	{ 1125000 },	/* L13 */
+	{ 1075000 },	/* L14 */
+	{ 1050000 },	/* L15 */
+	{ 1000000 },	/* L16 */
+	{ 950000 },	/* L17 */
+	{ 925000 },	/* L18 */
+	{ 925000 },	/* L19 */
+	{ 900000 },	/* L20 */
+};
+
+
 #if defined(CONFIG_EXYNOS5250_ABB_WA)
 #define ARM_RBB		6	/* +300mV */
 unsigned int exynos5250_arm_volt;
@@ -308,7 +333,7 @@ static void exynos5250_set_frequency(unsigned int old_index,
 	unsigned int voltage;
 
 	if (samsung_rev() < EXYNOS5250_REV_1_0) {
-		voltage = asv_voltage[new_index][0];
+		voltage = asv_voltage_rev0[new_index][0];
 		exynos5250_set_arm_abbg(voltage, INT_VOLT);
 	}
 #endif
@@ -383,8 +408,12 @@ static void __init set_volt_table(void)
 	}
 	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
-	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-		exynos5250_volt_table[i] = asv_voltage[i][asv_group];
+	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
+		if (samsung_rev() < EXYNOS5250_REV_1_0)
+			exynos5250_volt_table[i] = asv_voltage_rev0[i][asv_group];
+		else
+			exynos5250_volt_table[i] = asv_voltage[i][asv_group];
+	}
 }
 
 int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
