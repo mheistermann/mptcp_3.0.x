@@ -91,6 +91,7 @@ static void __init smdk5250_usbswitch_init(void)
 		pdata->gpio_device_detect = 0;
 		pdata->gpio_host_vbus = 0;
 	} else {
+#if defined(CONFIG_USB_EHCI_S5P) || defined(CONFIG_USB_OHCI_S5P)
 		pdata->gpio_host_detect = EXYNOS5_GPX1(6);
 		err = gpio_request_one(pdata->gpio_host_detect, GPIOF_IN,
 			"HOST_DETECT");
@@ -103,18 +104,6 @@ static void __init smdk5250_usbswitch_init(void)
 		s3c_gpio_setpull(pdata->gpio_host_detect, S3C_GPIO_PULL_NONE);
 		gpio_free(pdata->gpio_host_detect);
 
-		pdata->gpio_device_detect = EXYNOS5_GPX3(4);
-		err = gpio_request_one(pdata->gpio_device_detect, GPIOF_IN,
-			"DEVICE_DETECT");
-		if (err) {
-			printk(KERN_ERR "failed to request device gpio\n");
-			return;
-		}
-
-		s3c_gpio_cfgpin(pdata->gpio_device_detect, S3C_GPIO_SFN(0xF));
-		s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
-		gpio_free(pdata->gpio_device_detect);
-
 		pdata->gpio_host_vbus = EXYNOS5_GPX2(6);
 		err = gpio_request_one(pdata->gpio_host_vbus,
 			GPIOF_OUT_INIT_LOW,
@@ -126,6 +115,21 @@ static void __init smdk5250_usbswitch_init(void)
 
 		s3c_gpio_setpull(pdata->gpio_host_vbus, S3C_GPIO_PULL_NONE);
 		gpio_free(pdata->gpio_host_vbus);
+#endif
+
+#ifdef CONFIG_USB_S3C_OTGD
+		pdata->gpio_device_detect = EXYNOS5_GPX3(4);
+		err = gpio_request_one(pdata->gpio_device_detect, GPIOF_IN,
+			"DEVICE_DETECT");
+		if (err) {
+			printk(KERN_ERR "failed to request device gpio\n");
+			return;
+		}
+
+		s3c_gpio_cfgpin(pdata->gpio_device_detect, S3C_GPIO_SFN(0xF));
+		s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_device_detect);
+#endif
 	}
 
 	/* USB 3.0 DRD detect GPIO */
@@ -133,6 +137,7 @@ static void __init smdk5250_usbswitch_init(void)
 		pdata->gpio_drd_host_detect = 0;
 		pdata->gpio_drd_device_detect = 0;
 	} else {
+#ifdef CONFIG_USB_XHCI_EXYNOS
 		pdata->gpio_drd_host_detect = EXYNOS5_GPX1(7);
 		err = gpio_request_one(pdata->gpio_drd_host_detect, GPIOF_IN,
 			"DRD_HOST_DETECT");
@@ -145,7 +150,9 @@ static void __init smdk5250_usbswitch_init(void)
 		s3c_gpio_setpull(pdata->gpio_drd_host_detect,
 			S3C_GPIO_PULL_NONE);
 		gpio_free(pdata->gpio_drd_host_detect);
+#endif
 
+#ifdef CONFIG_EXYNOS_DEV_SS_UDC
 		pdata->gpio_drd_device_detect = EXYNOS5_GPX0(6);
 		err = gpio_request_one(pdata->gpio_drd_device_detect, GPIOF_IN,
 			"DRD_DEVICE_DETECT");
@@ -159,6 +166,7 @@ static void __init smdk5250_usbswitch_init(void)
 		s3c_gpio_setpull(pdata->gpio_drd_device_detect,
 			S3C_GPIO_PULL_NONE);
 		gpio_free(pdata->gpio_drd_device_detect);
+#endif
 	}
 
 	s5p_usbswitch_set_platdata(pdata);
