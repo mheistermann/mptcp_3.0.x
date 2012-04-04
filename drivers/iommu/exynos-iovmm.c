@@ -361,6 +361,7 @@ err_map_map:
 	gen_pool_free(vmm->vmm_pool, start, size);
 err_map_nomem_lock:
 	spin_unlock_irqrestore(&vmm->lock, flags);
+	kfree(region);
 err_map_nomem:
 	dev_dbg(dev, "IOVMM: Failed to allocated VM region for %#x bytes.\n",
 									size);
