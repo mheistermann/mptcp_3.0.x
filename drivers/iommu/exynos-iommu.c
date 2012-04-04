@@ -416,7 +416,7 @@ finish:
 static int __exynos_sysmmu_enable(struct sysmmu_drvdata *data,
 			unsigned long pgtable, struct iommu_domain *domain)
 {
-	int i, ret;
+	int i, ret = 0;
 	unsigned long flags;
 
 	write_lock_irqsave(&data->lock, flags);
@@ -432,8 +432,6 @@ static int __exynos_sysmmu_enable(struct sysmmu_drvdata *data,
 		dev_dbg(data->sysmmu, "(%s) Already enabled\n", data->dbgname);
 		goto finish;
 	}
-
-	ret = 0;
 
 	if (data->clk[0])
 		clk_enable(data->clk[0]);
@@ -462,11 +460,6 @@ static int __exynos_sysmmu_enable(struct sysmmu_drvdata *data,
 finish:
 	write_unlock_irqrestore(&data->lock, flags);
 
-	if ((ret < 0) && (ret != -EBUSY)) {
-		__exynos_sysmmu_disable(data);
-		dev_dbg(data->sysmmu, "(%s) Failed to enable\n", data->dbgname);
-	}
-
 	return ret;
 }
 
@@ -478,14 +471,20 @@ int exynos_sysmmu_enable(struct device *dev, unsigned long pgtable)
 	BUG_ON(!memblock_is_memory(pgtable));
 
 	ret = pm_runtime_get_sync(data->sysmmu);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_dbg(data->sysmmu, "(%s) Failed to enable\n", data->dbgname);
 		return ret;
+	}
 
 	ret = __exynos_sysmmu_enable(data, pgtable, NULL);
-	if (ret < 0)
+	if (WARN_ON(ret < 0)) {
 		pm_runtime_put(data->sysmmu);
-	else
+		dev_err(data->sysmmu,
+			"(%s) Already enabled with page table %#lx\n",
+			data->dbgname, data->pgtable);
+	} else {
 		data->dev = dev;
+	}
 
 	return ret;
 }
