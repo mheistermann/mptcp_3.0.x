@@ -31,8 +31,8 @@
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
 #endif
 
-#if defined(CONFIG_EXYNOS_SETUP_THERMAL)
-#include <plat/s5p-tmu.h>
+#if defined(CONFIG_EXYNOS_THERMAL)
+#include <mach/tmu.h>
 #endif
 
 #include "board-smdk5250.h"
@@ -715,7 +715,7 @@ static struct platform_device exynos5_busfreq = {
 	.name = "exynos-busfreq",
 };
 
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+#ifdef CONFIG_EXYNOS_THERMAL
 /* below temperature base on the celcius degree */
 struct tmu_data exynos_tmu_data __initdata = {
 	.ts = {
@@ -742,7 +742,7 @@ static struct platform_device *smdk5250_power_devices[] __initdata = {
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
 #endif
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+#ifdef CONFIG_EXYNOS_THERMAL
 	&exynos_device_tmu,
 #endif
 	&exynos5_busfreq,
@@ -789,8 +789,8 @@ void __init exynos5_smdk5250_power_init(void)
 	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
 #endif
 
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
-	s5p_tmu_set_platdata(&exynos_tmu_data);
+#ifdef CONFIG_EXYNOS_THERMAL
+	exynos_tmu_set_platdata(&exynos_tmu_data);
 #endif
 
 #ifdef CONFIG_BUSFREQ_OPP
