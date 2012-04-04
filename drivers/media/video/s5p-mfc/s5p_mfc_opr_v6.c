@@ -610,7 +610,8 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_enc *enc = ctx->enc_priv;
-	size_t buf_addr1, buf_size1;
+	size_t buf_addr1;
+	int buf_size1;
 	int i;
 
 	mfc_debug_enter();

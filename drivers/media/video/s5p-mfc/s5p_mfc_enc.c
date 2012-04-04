@@ -2318,10 +2318,6 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 		p->codec.h264.level = h264_level(ctrl->value);
-		if (p->codec.h264.level < 0) {
-			mfc_err("Level number is wrong\n");
-			ret = p->codec.h264.level;
-		}
 		break;
 	case V4L2_CID_MPEG_MFC51_VIDEO_H264_INTERLACE:
 		p->codec.h264.interlace = ctrl->value;

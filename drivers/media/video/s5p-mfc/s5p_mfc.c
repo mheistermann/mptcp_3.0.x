@@ -612,7 +612,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	/* Reset the timeout watchdog */
 	atomic_set(&dev->watchdog_cnt, 0);
 	ctx = dev->ctx[dev->curr_ctx];
-	if (ctx)
+	if (ctx->type == MFCINST_DECODER)
 		dec = ctx->dec_priv;
 
 	/* Get the reason of interrupt and the error code */
@@ -651,10 +651,10 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		}
 		break;
 	case S5P_FIMV_R2H_CMD_SEQ_DONE_RET:
-		if (ctx->c_ops->post_seq_start) {
+		if (ctx->type == MFCINST_ENCODER) {
 			if (ctx->c_ops->post_seq_start(ctx))
 				mfc_err("post_seq_start() failed\n");
-		} else {
+		} else if (ctx->type == MFCINST_DECODER) {
 			if (ctx->src_fmt->fourcc != V4L2_PIX_FMT_FIMV1) {
 				ctx->img_width = s5p_mfc_get_img_width();
 				ctx->img_height = s5p_mfc_get_img_height();
@@ -744,7 +744,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 					}
 					spin_unlock_irqrestore(&dev->irqlock, flags);
 				} else {
-					if (dec && dec->dpb_flush)
+					if (dec->dpb_flush)
 						dec->dpb_flush = 0;
 				}
 			} else if (ctx->type == MFCINST_ENCODER) {
@@ -1435,8 +1435,8 @@ alloc_ctx_drm_fail:
 alloc_ctx_sh_fail:
 	vb2_ion_destroy_context(dev->alloc_ctx_fw);
 alloc_ctx_fw_fail:
-#endif
 	destroy_workqueue(dev->irq_workqueue);
+#endif
 workqueue_fail:
 	s5p_mfc_mem_cleanup_multi((void **)dev->alloc_ctx,
 			alloc_ctx_num);
