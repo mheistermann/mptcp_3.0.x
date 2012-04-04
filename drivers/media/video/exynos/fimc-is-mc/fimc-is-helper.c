@@ -940,6 +940,59 @@ int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 	return 0;
 }
 
+int fimc_is_hw_update_bufmask(struct fimc_is_dev *dev, unsigned int dev_num)
+{
+	int buf_mask;
+	int i = 0;
+	int cnt = 0;
+
+	buf_mask = dev->video[dev_num].buf_mask;
+
+	for (i = 0; i < 16; i++) {
+		if (((buf_mask & (1 << i)) >> i) == 1) {
+			cnt++;
+		}
+	}
+	dbg("dev_num: %u, buf_mask: %#x, cnt: %d\n", dev_num, buf_mask, cnt);
+
+	if (cnt == 1) {
+		err("ERR: Not enough buffers[dev_num: %u, buf_mask: %#x]\n", dev_num, buf_mask);
+		goto done;
+	}
+
+	switch (dev_num) {
+	case 0: /* Bayer */
+		if (readl(dev->regs + ISSR23) != 0x0)
+			err("WARN: Bayer buffer mask is unchecked\n");
+
+		writel(buf_mask, dev->regs + ISSR23);
+		break;
+	case 1:  /* Scaler-C */
+		if (readl(dev->regs + ISSR31) != 0x0)
+			err("WARN: Scaler-C buffer mask is unchecked\n");
+
+		writel(buf_mask, dev->regs + ISSR31);
+		break;
+	case 2: /* 3DNR */
+		if (readl(dev->regs + ISSR39) != 0x0)
+			err("WARN: 3DNT buffer mask is unchecked\n");
+
+		writel(buf_mask, dev->regs + ISSR39);
+		break;
+	case 3: /* Scaler-P */
+		if (readl(dev->regs + ISSR47) != 0x0)
+			err("WARN: Scaler-P buffer mask is unchecked\n");
+
+		writel(buf_mask, dev->regs + ISSR47);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+done:
+	return 0;
+}
+
 int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset)
 {
 	dev->i2h_cmd.num_valid_args = offset;

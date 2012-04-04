@@ -399,46 +399,17 @@ static int fimc_is_scalerc_video_qbuf(struct file *file, void *priv,
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
-#ifdef BUF_MASK
 	if (test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state)){
 		video->buf_mask |= (1<<buf->index);
-		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-		IS_SCALERC_SET_PARAM_DMA_OUTPUT_CMD(isp,
-			DMA_OUTPUT_UPDATE_MASK_BITS);
-		IS_SCALERC_SET_PARAM_DMA_OUTPUT_MASK(isp,
-			video->buf_mask);
-		IS_SET_PARAM_BIT(isp, PARAM_SCALERC_DMA_OUTPUT);
-		IS_INC_PARAM_NUM(isp);
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_mask = video->buf_mask;
 
-		fimc_is_mem_cache_clean((void *)isp->is_p_region,
-			IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-		fimc_is_hw_set_param(isp);
-#else
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_SCALERC_MASK_DONE, &isp->state);
-		fimc_is_hw_set_param(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_SCALERC_MASK_DONE, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-#endif
+		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
 	}
 	else dbg("%s :: index(%d)\n", __func__, buf->index);
-#endif
+
 	vb_ret = vb2_qbuf(&video->vbq, buf);
+
 	return vb_ret;
 }
 
@@ -448,45 +419,14 @@ static int fimc_is_scalerc_video_dqbuf(struct file *file, void *priv,
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
 	vb_ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
 
-#ifdef BUF_MASK
 	video->buf_mask &= ~(1<<buf->index);
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_mask = video->buf_mask;
 
 	dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-	IS_SCALERC_SET_PARAM_DMA_OUTPUT_CMD(isp,
-		DMA_OUTPUT_UPDATE_MASK_BITS);
-	IS_SCALERC_SET_PARAM_DMA_OUTPUT_MASK(isp,
-		video->buf_mask);
-	IS_SET_PARAM_BIT(isp, PARAM_SCALERC_DMA_OUTPUT);
-	IS_INC_PARAM_NUM(isp);
 
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-	fimc_is_hw_set_param(isp);
-#else
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-	clear_bit(IS_ST_SCALERC_MASK_DONE, &isp->state);
-	fimc_is_hw_set_param(isp);
-	mutex_lock(&isp->lock);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_SCALERC_MASK_DONE, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	mutex_unlock(&isp->lock);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
-	}
-#endif
-#endif
 	return vb_ret;
 }
 
@@ -1122,52 +1062,25 @@ static int fimc_is_scalerp_video_querybuf(struct file *file, void *priv,
 	return ret;
 }
 
+
+
 static int fimc_is_scalerp_video_qbuf(struct file *file, void *priv,
 						struct v4l2_buffer *buf)
 {
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
-#ifdef BUF_MASK
 	if (test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state)){
 		video->buf_mask |= (1<<buf->index);
-		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-		IS_SCALERP_SET_PARAM_DMA_OUTPUT_CMD(isp,
-			DMA_OUTPUT_UPDATE_MASK_BITS);
-		IS_SCALERP_SET_PARAM_DMA_OUTPUT_MASK(isp,
-			video->buf_mask);
-		IS_SET_PARAM_BIT(isp, PARAM_SCALERP_DMA_OUTPUT);
-		IS_INC_PARAM_NUM(isp);
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_mask = video->buf_mask;
 
-		fimc_is_mem_cache_clean((void *)isp->is_p_region,
-			IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-	fimc_is_hw_set_param(isp);
-#else
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_SCALERP_MASK_DONE, &isp->state);
-		fimc_is_hw_set_param(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_SCALERP_MASK_DONE, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-#endif
+		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
 	}
 	else dbg("%s :: index(%d)\n", __func__, buf->index);
-#endif
+
 	vb_ret = vb2_qbuf(&video->vbq, buf);
+
 	return vb_ret;
 }
 
@@ -1177,45 +1090,14 @@ static int fimc_is_scalerp_video_dqbuf(struct file *file, void *priv,
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
 	vb_ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
 
-#ifdef BUF_MASK
 	video->buf_mask &= ~(1<<buf->index);
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_mask = video->buf_mask;
 
 	dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-	IS_SCALERP_SET_PARAM_DMA_OUTPUT_CMD(isp,
-		DMA_OUTPUT_UPDATE_MASK_BITS);
-	IS_SCALERP_SET_PARAM_DMA_OUTPUT_MASK(isp,
-		video->buf_mask);
-	IS_SET_PARAM_BIT(isp, PARAM_SCALERP_DMA_OUTPUT);
-	IS_INC_PARAM_NUM(isp);
 
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-	fimc_is_hw_set_param(isp);
-#else
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-	clear_bit(IS_ST_SCALERP_MASK_DONE, &isp->state);
-	fimc_is_hw_set_param(isp);
-	mutex_lock(&isp->lock);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_SCALERP_MASK_DONE, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	mutex_unlock(&isp->lock);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
-	}
-#endif
-#endif
 	return vb_ret;
 }
 
@@ -2415,45 +2297,15 @@ static int fimc_is_3dnr_video_qbuf(struct file *file, void *priv,
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
-#ifdef BUF_MASK
 	if (test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state)){
 		video->buf_mask |= (1<<buf->index);
-		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-		IS_TDNR_SET_PARAM_DMA_OUTPUT_CMD(isp,
-			DMA_OUTPUT_UPDATE_MASK_BITS);
-		IS_TDNR_SET_PARAM_DMA_OUTPUT_MASK(isp,
-			video->buf_mask);
-		IS_SET_PARAM_BIT(isp, PARAM_TDNR_DMA_OUTPUT);
-		IS_INC_PARAM_NUM(isp);
+		isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_mask = video->buf_mask;
 
-		fimc_is_mem_cache_clean((void *)isp->is_p_region,
-			IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-	fimc_is_hw_set_param(isp);
-#else
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_TDNR_MASK_DONE, &isp->state);
-		fimc_is_hw_set_param(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_TDNR_MASK_DONE, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-#endif
+		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
 	}
 	else dbg("%s :: index(%d)\n", __func__, buf->index);
-#endif
+
 	vb_ret = vb2_qbuf(&video->vbq, buf);
 
 	return vb_ret;
@@ -2465,45 +2317,14 @@ static int fimc_is_3dnr_video_dqbuf(struct file *file, void *priv,
 	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
-#ifndef NO_WAIT_INTR_FOR_MASK
-	int ret;
-#endif
 
 	vb_ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
 
-#ifdef BUF_MASK
 	video->buf_mask &= ~(1<<buf->index);
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_mask = video->buf_mask;
 
 	dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-	IS_TDNR_SET_PARAM_DMA_OUTPUT_CMD(isp,
-		DMA_OUTPUT_UPDATE_MASK_BITS);
-	IS_TDNR_SET_PARAM_DMA_OUTPUT_MASK(isp,
-		video->buf_mask);
-	IS_SET_PARAM_BIT(isp, PARAM_TDNR_DMA_OUTPUT);
-	IS_INC_PARAM_NUM(isp);
 
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-#ifdef NO_WAIT_INTR_FOR_MASK
-	fimc_is_hw_set_param(isp);
-#else
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-	clear_bit(IS_ST_TDNR_MASK_DONE, &isp->state);
-	fimc_is_hw_set_param(isp);
-	mutex_lock(&isp->lock);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_TDNR_MASK_DONE, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	mutex_unlock(&isp->lock);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
-	}
-#endif
-#endif
 	return vb_ret;
 }
 
@@ -3116,38 +2937,15 @@ static int fimc_is_bayer_video_querybuf(struct file *file, void *priv,
 static int fimc_is_bayer_video_qbuf(struct file *file, void *priv,
 						struct v4l2_buffer *buf)
 {
-	int vb_ret, ret;
+	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
 	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state)){
 		video->buf_mask |= (1<<buf->index);
+		isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask = video->buf_mask;
+
 		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(isp,
-			DMA_OUTPUT_UPDATE_MASK_BITS);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_MASK(isp,
-			video->buf_mask);
-		IS_SET_PARAM_BIT(isp, PARAM_ISP_DMA2_OUTPUT);
-		IS_INC_PARAM_NUM(isp);
-
-		fimc_is_mem_cache_clean((void *)isp->is_p_region,
-			IS_PARAM_SIZE);
-
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-		fimc_is_hw_set_param(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
 	}
 	else dbg("%s :: index(%d)\n", __func__, buf->index);
 
@@ -3159,40 +2957,16 @@ static int fimc_is_bayer_video_qbuf(struct file *file, void *priv,
 static int fimc_is_bayer_video_dqbuf(struct file *file, void *priv,
 						struct v4l2_buffer *buf)
 {
-	int vb_ret, ret;
+	int vb_ret;
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
 	vb_ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
 
 	video->buf_mask &= ~(1<<buf->index);
+	isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask = video->buf_mask;
 
 	dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
-	IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(isp,
-		DMA_OUTPUT_UPDATE_MASK_BITS);
-	IS_ISP_SET_PARAM_DMA_OUTPUT2_MASK(isp,
-		video->buf_mask);
-	IS_SET_PARAM_BIT(isp, PARAM_ISP_DMA2_OUTPUT);
-	IS_INC_PARAM_NUM(isp);
-
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-	fimc_is_hw_set_param(isp);
-	mutex_lock(&isp->lock);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	mutex_unlock(&isp->lock);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
-	}
 
 	return vb_ret;
 }

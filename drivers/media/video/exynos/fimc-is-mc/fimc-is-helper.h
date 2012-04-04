@@ -53,6 +53,7 @@ void fimc_is_hw_get_setfile_addr(struct fimc_is_dev *dev);
 void fimc_is_hw_load_setfile(struct fimc_is_dev *dev);
 int  fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev);
 int  fimc_is_hw_set_param(struct fimc_is_dev *dev);
+int  fimc_is_hw_update_bufmask(struct fimc_is_dev *dev, unsigned int dev_num);
 int  fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset);
 void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev);
 int  fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev);

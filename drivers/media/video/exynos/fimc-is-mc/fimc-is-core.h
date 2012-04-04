@@ -18,8 +18,6 @@
 /*#define TDNR_ENABLE	1*/
 /*#define DZOOM_ENABLE	1*/
 /*#define DIS_ENABLE	1*/
-#define BUF_MASK	1
-/*#define NO_WAIT_INTR_FOR_MASK	1*/
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>

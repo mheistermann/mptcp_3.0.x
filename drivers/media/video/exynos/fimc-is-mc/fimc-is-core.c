@@ -420,6 +420,9 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 {
 	int ret;
 	struct flite_frame f_frame;
+#ifdef FIMC_IS_A5_DEBUG_ON
+	unsigned long debug_device = 0;
+#endif
 
 	fimc_is_hw_diable_wdt(dev);
 	dev->sensor.sensor_type = val;
@@ -532,7 +535,6 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		}
 
 #ifdef FIMC_IS_A5_DEBUG_ON
-		int debug_device; = 0;
 		/*set_bit(FIMC_IS_DEBUG_MAIN, &debug_device);
 		set_bit(FIMC_IS_DEBUG_EC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SENSOR, &debug_device);
@@ -544,8 +546,8 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		set_bit(FIMC_IS_DEBUG_ODC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_TDNR, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SCALERP, &debug_device);
-		*/
 		set_bit(FIMC_IS_DEBUG_DIS, &debug_device);
+		*/
 
 
 		fimc_is_hw_set_debug_level(dev,	FIMC_IS_DEBUG_UART,
@@ -1300,23 +1302,6 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 				set_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 
-#if (defined BUF_MASK)  && !defined(NO_WAIT_INTR_FOR_MASK)
-				if((dev->is_p_region->parameter.scalerp.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_SCALERP_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
-					set_bit(IS_ST_SCALERP_MASK_DONE, &dev->state);
-					break;
-				}
-				if((dev->is_p_region->parameter.scalerc.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_SCALERC_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
-					set_bit(IS_ST_SCALERC_MASK_DONE, &dev->state);
-					break;
-				}
-				if( (dev->is_p_region->parameter.tdnr.dma_output.cmd == DMA_OUTPUT_UPDATE_MASK_BITS) &&
-					test_bit(PARAM_TDNR_DMA_OUTPUT - 32, (void *)&dev->i2h_cmd.arg[2])){
-					set_bit(IS_ST_TDNR_MASK_DONE, &dev->state);
-				    	break;
-				}
-#endif
 				if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
 					dev->af.af_state == FIMC_IS_AF_SETCONFIG){
 					dev->af.af_state = FIMC_IS_AF_RUNNING;
@@ -1383,6 +1368,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 		dbg("Bayer returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_BAYER].vbq.bufs[buf_index],
 						VB2_BUF_STATE_DONE);
+		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_BAYER);
 	} else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
@@ -1391,9 +1377,9 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 		buf_index =  dev->i2h_cmd.arg[2];
 		dbg("ScalerC returned buf index : %d\n", buf_index);
-		vb2_buffer_done(
-				dev->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq.bufs[buf_index],
-				VB2_BUF_STATE_DONE);
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_SCALERC);
 	} else if (intr_pos == INTR_FRAME_DONE_TDNR) {
 
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR36);
@@ -1403,10 +1389,9 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 
 		buf_index =  dev->i2h_cmd.arg[2];
 		dbg("3DNR returned buf index : %d\n", buf_index);
-		vb2_buffer_done(
-				dev->video[FIMC_IS_VIDEO_NUM_3DNR].vbq.bufs[buf_index],
-				VB2_BUF_STATE_DONE);
-
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_3DNR].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_3DNR);
 	} else if (intr_pos == INTR_FRAME_DONE_SCALERP) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR44);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR45);
@@ -1420,8 +1405,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 		dbg("ScalerP returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index],
 						VB2_BUF_STATE_DONE);
-
-
+		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_SCALERP);
 	}
 	wake_up(&dev->irq_queue);
 
