@@ -49,6 +49,7 @@ static int gsc_capture_queue_setup(struct vb2_queue *vq, unsigned int *num_buffe
 		sizes[i] = get_plane_size(&ctx->d_frame, i);
 		allocators[i] = ctx->gsc_dev->alloc_ctx;
 	}
+	vb2_queue_init(vq);
 
 	return 0;
 }
