@@ -41,12 +41,10 @@ static struct s5p_mfc_platdata default_mfc_pd __initdata = {
 
 void __init s5p_mfc_set_platdata(struct s5p_mfc_platdata *pd)
 {
-	struct s5p_mfc_platdata *npd;
-
 	if (!pd)
 		pd = &default_mfc_pd;
 
-	npd = s3c_set_platdata(pd, sizeof(struct s5p_mfc_platdata),
+	s3c_set_platdata(pd, sizeof(struct s5p_mfc_platdata),
 				&s5p_device_mfc);
 }
 
