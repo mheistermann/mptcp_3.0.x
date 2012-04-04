@@ -314,7 +314,7 @@ static void send_stop_cmd(struct dw_mci *host, struct mmc_data *data)
 /* DMA interface functions */
 static void dw_mci_stop_dma(struct dw_mci *host)
 {
-	if (host->use_dma) {
+	if (host->using_dma) {
 		host->dma_ops->stop(host);
 		host->dma_ops->cleanup(host);
 	} else {
@@ -550,13 +550,19 @@ static int dw_mci_submit_data_dma(struct dw_mci *host, struct mmc_data *data)
 	int sg_len;
 	u32 temp;
 
+	host->using_dma = 0;
+
 	/* If we don't have a channel, we can't do DMA */
 	if (!host->use_dma)
 		return -ENODEV;
 
 	sg_len = dw_mci_pre_dma_transfer(host, data, 0);
-	if (sg_len < 0)
+	if (sg_len < 0) {
+		host->dma_ops->stop(host);
 		return sg_len;
+	}
+
+	host->using_dma = 1;
 
 	dev_vdbg(&host->pdev->dev,
 		 "sd sg_cpu: %#lx sg_dma: %#lx sg_len: %d\n",
@@ -602,6 +608,7 @@ static void dw_mci_submit_data(struct dw_mci *host, struct mmc_data *data)
 		else
 			host->dir_status = DW_MCI_SEND_STATUS;
 
+		mci_writel(host, RINTSTS, SDMMC_INT_TXDR | SDMMC_INT_RXDR);
 		temp = mci_readl(host, INTMASK);
 		temp |= SDMMC_INT_TXDR | SDMMC_INT_RXDR;
 		mci_writel(host, INTMASK, temp);

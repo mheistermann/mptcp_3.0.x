@@ -121,6 +121,7 @@ struct dw_mci {
 
 	/* DMA interface members*/
 	int			use_dma;
+	int			using_dma;
 
 	dma_addr_t		sg_dma;
 	void			*sg_cpu;
