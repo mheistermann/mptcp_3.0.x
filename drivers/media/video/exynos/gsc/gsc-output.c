@@ -66,6 +66,7 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 		return ret;
 	}
 
+	gsc_hw_set_mixer();
 	if (soc_is_exynos5250_rev1) {
 		gsc_hw_set_sw_reset(gsc);
 		ret = gsc_wait_reset(gsc);

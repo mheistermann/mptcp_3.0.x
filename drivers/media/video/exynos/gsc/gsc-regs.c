@@ -717,6 +717,15 @@ void gsc_hw_set_sfr_update(struct gsc_ctx *ctx)
 	writel(cfg, dev->regs + GSC_ENABLE);
 }
 
+void gsc_hw_set_mixer(void)
+{
+	u32 cfg = readl(SYSREG_DISP1BLK_CFG);
+
+	cfg |= (GSC_OUT_MIXER0_GSC3);
+
+	writel(cfg, SYSREG_DISP1BLK_CFG);
+}
+
 void gsc_hw_set_local_dst(int id, int out, bool on)
 {
 	u32 cfg = readl(SYSREG_GSCBLK_CFG0);

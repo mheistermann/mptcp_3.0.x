@@ -18,6 +18,8 @@
 #include <plat/cpu.h>
 #define SYSREG_DISP1BLK_CFG		(S3C_VA_SYS + 0x0214)
 #define FIFORST_DISP1			(1 << 23)
+#define GSC_OUT_MIXER0			(1 << 7)
+#define GSC_OUT_MIXER0_GSC3		(3 << 5)
 #define SYSREG_GSCBLK_CFG0		(S3C_VA_SYS + 0x0220)
 #define GSC_OUT_DST_FIMD_SEL(x)		(1 << (8 + 2 *(x)))
 #define GSC_OUT_DST_MXR_SEL(x)		(2 << (8 + 2 *(x)))

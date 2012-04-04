@@ -800,6 +800,7 @@ void gsc_hw_set_rotation(struct gsc_ctx *ctx);
 void gsc_hw_set_global_alpha(struct gsc_ctx *ctx);
 void gsc_hw_set_sfr_update(struct gsc_ctx *ctx);
 void gsc_hw_set_local_dst(int id, int out, bool on);
+void gsc_hw_set_mixer(void);
 void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx);
 void gsc_hw_set_pxlasync_camif_lo_mask(struct gsc_dev *dev, bool on);
 void gsc_hw_set_h_coef(struct gsc_ctx *ctx);
