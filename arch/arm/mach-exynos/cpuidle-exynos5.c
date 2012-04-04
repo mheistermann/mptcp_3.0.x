@@ -33,6 +33,7 @@
 #include <mach/regs-clock.h>
 #include <mach/smc.h>
 #include <mach/clock-domain.h>
+#include <mach/regs-usb-phy.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_DIRECTGO_ADDR       (S5P_VA_SYSRAM_NS + 0x24)
@@ -488,6 +489,9 @@ static int __maybe_unused exynos5_check_enter_mode(void)
 
 	if (loop_sdmmc_check())
 		return S5P_CHECK_DIDLE;
+
+        if (exynos_check_usb_op())
+                return S5P_CHECK_DIDLE;
 
 	return S5P_CHECK_LPA;
 }
