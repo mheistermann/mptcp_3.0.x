@@ -1933,19 +1933,19 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	front_crop_ratio = front_width * 1000 / front_height;
 	back_crop_ratio = back_width * 1000 / back_height;
 
-	if (front_crop_ratio == back_crop_ratio){
+	if (front_crop_ratio == back_crop_ratio) {
 		crop_width = front_width;
 		crop_height = front_height;
 
-	} else if (front_crop_ratio < back_crop_ratio){
+	} else if (front_crop_ratio < back_crop_ratio) {
 		crop_width = front_width;
-		crop_height = (front_width * (1*1000*100/back_crop_ratio))/100;
+		crop_height = (front_width * (1000 * 100 / back_crop_ratio)) / 100;
 		crop_width = ALIGN(crop_width, 8);
 		crop_height = ALIGN(crop_height, 8);
 
-	} else if (front_crop_ratio > back_crop_ratio){
+	} else if (front_crop_ratio > back_crop_ratio) {
 		crop_height = front_height;
-		crop_width = front_height * (1*1000*back_crop_ratio);
+		crop_width = (front_height * (back_crop_ratio * 100 / 1000)) / 100 ;
 		crop_width = ALIGN(crop_width, 8);
 		crop_height = ALIGN(crop_height, 8);
 	}
@@ -1994,8 +1994,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	dev->back.dis_width = dis_width;
 	dev->back.dis_height = dis_height;
 
-	printk("crop w: %d crop h: %d\n", crop_width, crop_height);
-	printk("crop x: %d crop y: %d\n", crop_x, crop_y);
+	dbg("crop w: %d crop h: %d\n", crop_width, crop_height);
+	dbg("crop x: %d crop y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);
