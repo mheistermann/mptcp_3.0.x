@@ -643,7 +643,9 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			srp_info("Stop at EOS [0x%08lX:0x%08X]\n",
 			srp.wbuf_pos,
 			readl(srp.commbox + SRP_READ_BITSTREAM_SIZE));
-			srp.decoding_started = 0;
+
+			if (!soc_is_exynos5250())
+				srp.decoding_started = 0;
 		}
 		val = copy_to_user((unsigned long *)arg,
 			&val, sizeof(unsigned long));
