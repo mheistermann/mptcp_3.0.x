@@ -2469,10 +2469,6 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_MPEG4_LEVEL:
 		p->codec.mpeg4.level = mpeg4_level(ctrl->value);
-		if (p->codec.mpeg4.level < 0) {
-			mfc_err("Level number is wrong\n");
-			ret = p->codec.mpeg4.level;
-		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_MPEG4_I_FRAME_QP:
 		p->codec.mpeg4.rc_frame_qp = ctrl->value;
