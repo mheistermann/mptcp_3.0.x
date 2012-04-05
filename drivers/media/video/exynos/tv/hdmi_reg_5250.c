@@ -2262,6 +2262,21 @@ void hdmi_reg_init(struct hdmi_device *hdev)
 	 * look to CEA-861-D, table 7 for more detail */
 	hdmi_writeb(hdev, HDMI_AVI_BYTE(1), 0 << 5);
 	hdmi_write_mask(hdev, HDMI_CON_1, 2, 3 << 5);
+
+}
+
+void hdmi_set_dvi_mode(struct hdmi_device *hdev)
+{
+	u32 val;
+
+	hdmi_write_mask(hdev, HDMI_MODE_SEL, hdev->dvi_mode ? HDMI_MODE_DVI_EN :
+		HDMI_MODE_HDMI_EN, HDMI_MODE_MASK);
+
+	if (hdev->dvi_mode)
+		val = HDMI_VID_PREAMBLE_DIS | HDMI_GUARD_BAND_DIS;
+	else
+		val = HDMI_VID_PREAMBLE_EN | HDMI_GUARD_BAND_EN;
+	hdmi_write(hdev, HDMI_CON_2, val);
 }
 
 void hdmi_timing_apply(struct hdmi_device *hdev,
