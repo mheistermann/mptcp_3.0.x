@@ -1898,6 +1898,12 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 	/* Disable test mode */
 	__bic32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_TstCtl_MASK);
 
+	/* Enable PHYs */
+	__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+		EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+	__bic32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+		EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
 	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
 	/* End transfer, kill all requests and clear STALL on the
@@ -1946,6 +1952,22 @@ static void exynos_ss_udc_irq_ulstchng(struct exynos_ss_udc *udc, u32 event)
 	u32 link_state;
 
 	link_state = event & EXYNOS_USB3_DEVT_EvtInfo_MASK;
+
+	if (event & EXYNOS_USB3_DEVT_EvtInfo_SS) {
+		if (link_state == EXYNOS_USB3_DEVT_EvtInfo_U3)
+			__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+				EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+		else
+			__bic32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+				EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+	} else {
+		if (link_state == EXYNOS_USB3_DEVT_EvtInfo_Suspend)
+			__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+				EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+		else
+			__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+				EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+	}
 
 	/* Disconnect event detection for SMDK5250 EVT0 */
 #if defined(CONFIG_MACH_SMDK5250)
