@@ -713,8 +713,6 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	case S5P_FIMV_R2H_CMD_FW_STATUS_RET:
 	case S5P_FIMV_R2H_CMD_SLEEP_RET:
 	case S5P_FIMV_R2H_CMD_WAKEUP_RET:
-		if (ctx)
-			clear_work_bit(ctx);
 		s5p_mfc_clear_int_flags();
 		wake_up_dev(dev, reason, err);
 		clear_bit(0, &dev->hw_lock);
