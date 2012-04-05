@@ -1023,6 +1023,14 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		else
 			s3cfb_set_alpha_mode(fbdev, win->id, p.alpha_mode);
 		break;
+
+	case S3CFB_SET_WIN_ON:
+		s3cfb_enable_window(fbdev, win->id);
+		break;
+
+	case S3CFB_SET_WIN_OFF:
+		s3cfb_disable_window(fbdev, win->id);
+		break;
 	}
 
 	return ret;
