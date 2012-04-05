@@ -41,14 +41,14 @@ config ION_EXYNOS_DRM_SECTBL
 config ION_EXYNOS_DRM_MEMSIZE_FIMD_VIDEO
 	int "Reserved memsize in kilobytes for FIMD video"
 	depends on ION_EXYNOS_DRM_VIDEO
-	default 3072
+	default 32768
 
 config ION_EXYNOS_DRM_MEMSIZE_GSC
 	int "Reserved memsize in kilobytes for GSC"
 	depends on ION_EXYNOS_DRM_VIDEO
-	default 1024
+	default 33792
 
 config ION_EXYNOS_DRM_MEMSIZE_MFC_SECURE
 	int "Reserved memsize in kilobytes for MFC secure"
 	depends on ION_EXYNOS_DRM_VIDEO
-	default 1024
+	default 30720
