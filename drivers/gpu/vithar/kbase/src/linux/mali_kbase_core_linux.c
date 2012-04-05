@@ -1014,13 +1014,25 @@ static irqreturn_t kbase_job_irq_handler(int irq, void *data)
 	struct kbase_device *kbdev	= kbase_untag(data);
 	u32 val;
 
-	val = kbase_reg_read(kbdev, JOB_CONTROL_REG(JOB_IRQ_RAWSTAT), NULL);
+	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+
+	if (!kbdev->pm.gpu_powered)
+		{
+		/* GPU is turned off - IRQ is not for us */
+		osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
+		return IRQ_NONE;
+	}
+
+	val = kbase_reg_read(kbdev, JOB_CONTROL_REG(JOB_IRQ_STATUS), NULL);
+
+	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
+
 	if (!val)
 	{
 		return IRQ_NONE;
 	}
 
-	dev_dbg(kbdev->osdev.dev, "%s: irq %d rawstat 0x%x\n", __func__, irq, val);
+	dev_dbg(kbdev->osdev.dev, "%s: irq %d irqstatus 0x%x\n", __func__, irq, val);
 
 	kbase_job_done(kbdev, val);
 
@@ -1032,7 +1044,19 @@ static irqreturn_t kbase_mmu_irq_handler(int irq, void *data)
 	struct kbase_device *kbdev	= kbase_untag(data);
 	u32 val;
 
+	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+
+	if (!kbdev->pm.gpu_powered)
+	{
+		/* GPU is turned off - IRQ is not for us */
+		osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
+		return IRQ_NONE;
+	}
+
 	val = kbase_reg_read(kbdev, MMU_REG(MMU_IRQ_STATUS), NULL);
+
+	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
+
 	if (!val)
 	{
 		return IRQ_NONE;
@@ -1050,14 +1074,25 @@ static irqreturn_t kbase_gpu_irq_handler(int irq, void *data)
 	struct kbase_device *kbdev	= kbase_untag(data);
 	u32 val;
 
+	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+
+	if (!kbdev->pm.gpu_powered)
+	{
+		/* GPU is turned off - IRQ is not for us */
+		osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
+		return IRQ_NONE;
+	}
+
 	val = kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_IRQ_STATUS), NULL);
+
+	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
 
 	if (!val)
 	{
 		return IRQ_NONE;
 	}
 
-	dev_dbg(kbdev->osdev.dev, "%s: irq %d rawstat 0x%x\n", __func__, irq, val);
+	dev_dbg(kbdev->osdev.dev, "%s: irq %d irqstatus 0x%x\n", __func__, irq, val);
 
 	kbase_gpu_interrupt(kbdev, val);
 

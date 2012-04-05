@@ -808,16 +808,18 @@ void MOCKABLE(kbase_pm_clock_on)(kbase_device *kbdev)
 	osk_waitq_clear(&kbdev->pm.power_up_waitqueue);
 	osk_waitq_clear(&kbdev->pm.power_down_waitqueue);
 
-	kbdev->pm.gpu_powered = MALI_TRUE;
-
 	if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
-		kbase_reg_write(kbdev, 0x4008, 1, NULL);
+		kbase_os_reg_write(kbdev, 0x4008, 1);
 
 	if (kbdev->pm.callback_power_on && kbdev->pm.callback_power_on(kbdev))
 	{
 		/* GPU state was lost, reset GPU to ensure it is in a consistent state */
 		kbase_pm_init_hw(kbdev);
 	}
+
+	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+	kbdev->pm.gpu_powered = MALI_TRUE;
+	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
 }
 KBASE_EXPORT_TEST_API(kbase_pm_clock_on)
 
@@ -834,16 +836,18 @@ void MOCKABLE(kbase_pm_clock_off)(kbase_device *kbdev)
 	/* Ensure that any IRQ handlers have finished */
 	kbase_synchronize_irqs(kbdev);
 
-	if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
-		kbase_reg_write(kbdev, 0x4008, 0, NULL);
+	/* The GPU power may be turned off from this point */
+	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+	kbdev->pm.gpu_powered = MALI_FALSE;
+	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
 
 	if (kbdev->pm.callback_power_off)
 	{
 		kbdev->pm.callback_power_off(kbdev);
 	}
 
-	/* The GPU power may be turned off from this point */
-	kbdev->pm.gpu_powered = MALI_FALSE;
+	if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
+		kbase_os_reg_write(kbdev, 0x4008, 0);
 }
 KBASE_EXPORT_TEST_API(kbase_pm_clock_off)
 
@@ -899,13 +903,15 @@ mali_error kbase_pm_init_hw(kbase_device *kbdev)
 		osk_waitq_clear(&kbdev->pm.power_up_waitqueue);
 		osk_waitq_clear(&kbdev->pm.power_down_waitqueue);
 
-		kbdev->pm.gpu_powered = MALI_TRUE;
-
 		if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
-			kbase_reg_write(kbdev, 0x4008, 1, NULL);
+			kbase_os_reg_write(kbdev, 0x4008, 1);
 
 		if (kbdev->pm.callback_power_on)
 			kbdev->pm.callback_power_on(kbdev);
+
+		osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
+		kbdev->pm.gpu_powered = MALI_TRUE;
+		osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
 	}
 	/* Read the ID register */
 	gpu_id = kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_ID), NULL);

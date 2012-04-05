@@ -276,6 +276,8 @@ typedef struct kbase_pm_device_data
 	osk_waitq               power_up_waitqueue;
 	/** The wait queue for power down events. */
 	osk_waitq               power_down_waitqueue;
+	/** Wait queue for whether there is an outstanding event for the policy */
+	osk_waitq               policy_outstanding_event;
 
 	/** The reference count of active contexts on this device. */
 	int                     active_count;
@@ -305,6 +307,8 @@ typedef struct kbase_pm_device_data
 
 	/** Set to true when the GPU is powered and register accesses are possible, false otherwise */
 	mali_bool               gpu_powered;
+	/** Spinlock that must be held when writing gpu_powered */
+	osk_spinlock_irq        gpu_powered_lock;
 
 	/** Structure to hold metrics for the GPU */
 	kbasep_pm_metrics_data  metrics;
@@ -589,24 +593,6 @@ void kbase_pm_wait_for_power_down(struct kbase_device *kbdev);
  * @param kbdev     The kbase device structure for the device (must be a valid pointer)
  */
 void kbase_pm_context_active(struct kbase_device *kbdev);
-
-/** Increment the count of active contexts without waiting.
- *
- * This function increments the count of active contexts like @ref kbase_pm_context_active, however it is safe for use 
- * in atomic contexts. It will only succeed when the GPU is already active, if the GPU is idle then it will return 
- * MALI_ERROR_FUNCTION_FAILED and the count of active contexts will @b not be increased.
- *
- * WARNING: Unlike kbase_pm_context_active this function will not wait for the GPU to be powered, so if another thread 
- * is blocked in kbase_pm_context_active this function will return success even though the GPU has not finished 
- * powering up (although the reference count will have been incremented). For this reason this function must be used 
- * very carefully.
- *
- * @param kbdev     The kbase device structure for the device (must be a valid pointer)
- *
- * @return MALI_ERROR_NONE if the count of active contexts was incremented, MALI_ERROR_FUNCTION_FAILED if the GPU is 
- * not active
- */
-mali_error kbase_pm_context_active_irq(struct kbase_device *kbdev);
 
 /** Decrement the reference count of active contexts.
  *

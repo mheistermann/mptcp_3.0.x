@@ -226,41 +226,19 @@ void kbase_mem_usage_release_pages(kbasep_mem_usage * usage, u32 nr_pages)
 }
 
 #if BASE_HW_ISSUE_6367
-#ifdef CONFIG_VITHAR_RT_PM
-#include <linux/delay.h>
-#endif
 /**
  * @brief Wait for GPU write flush.
  *
  * Wait 1000 GPU clock cycles. This delay is known to give the GPU time to flush its write buffer.
  * @note If GPU resets occur then the counters are reset to zero, the delay may not be as expected.
  */
-#ifdef CONFIG_VITHAR_RT_PM
-static void kbase_wait_write_flush(struct kbase_context *kctx)
-{
-	/* 1000 GPU clock @ the minimum 100Mhz is 10us */
-	udelay(10);
-}
-#else
 #if MALI_NO_MALI
 static void kbase_wait_write_flush(struct kbase_context *kctx) { }
 #else
 static void kbase_wait_write_flush(struct kbase_context *kctx)
 {
 	u32 base_count = 0;
-	if (kbase_pm_context_active_irq(kctx->kbdev) != MALI_ERROR_NONE)
-	{
-		/* The GPU isn't powered. Since this workaround is for situations where we are waiting for the GPU to
-		 * flush its write buffer we assume that if the GPU is off the write buffer must be empty */
-		return;
-	}
-	if (!kctx->kbdev->pm.gpu_powered)
-	{
-		/* We've caught a race. The GPU was powering up when we called kbase_pm_context_active_irq.
-		 * As above we assume that since the GPU was off its write buffer must be empty */
-		kbase_pm_context_idle(kctx->kbdev);
-		return;
-	}
+	kbase_pm_context_active(kctx->kbdev);
 	kbase_pm_request_gpu_cycle_counter(kctx->kbdev);
 	while( MALI_TRUE )
 	{
@@ -282,7 +260,6 @@ static void kbase_wait_write_flush(struct kbase_context *kctx)
 	kbase_pm_release_gpu_cycle_counter(kctx->kbdev);
 	kbase_pm_context_idle(kctx->kbdev);
 }
-#endif
 #endif
 #endif
 

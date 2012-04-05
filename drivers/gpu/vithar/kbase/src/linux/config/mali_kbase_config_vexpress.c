@@ -97,7 +97,7 @@ static void pm_callback_power_off(kbase_device *kbdev)
 	 * However this is disabled normally because it will most likely interfere with
 	 * bus logging etc.
 	 */
-	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_COMMAND), GPU_COMMAND_HARD_RESET, NULL);
+	kbase_os_reg_write(kbdev, GPU_CONTROL_REG(GPU_COMMAND), GPU_COMMAND_HARD_RESET);
 #endif
 }
 

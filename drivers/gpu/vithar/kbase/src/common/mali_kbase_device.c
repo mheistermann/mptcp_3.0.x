@@ -362,6 +362,8 @@ void kbase_device_trace_register_access(kbase_context * kctx, kbase_reg_access_t
 
 void kbase_reg_write(kbase_device *kbdev, u16 offset, u32 value, kbase_context * kctx)
 {
+	OSK_ASSERT(kbdev->pm.gpu_powered);
+	OSK_ASSERT(kctx==NULL || kctx->as_nr != KBASEP_AS_NR_INVALID);
 	/*OSK_ASSERT(kbdev->pm.gpu_powered); Disabled due to MIDBASE-1560*/
 	OSK_PRINT_INFO(OSK_BASE_CORE, "w: reg %04x val %08x", offset, value);
 	kbase_os_reg_write(kbdev, offset, value);
@@ -372,7 +374,8 @@ KBASE_EXPORT_TEST_API(kbase_reg_write)
 u32 kbase_reg_read(kbase_device *kbdev, u16 offset, kbase_context * kctx)
 {
 	u32 val;
-	/*OSK_ASSERT(kbdev->pm.gpu_powered); Disabled due to MIDBASE-1560*/
+	OSK_ASSERT(kbdev->pm.gpu_powered);
+	OSK_ASSERT(kctx==NULL || kctx->as_nr != KBASEP_AS_NR_INVALID);
 	val = kbase_os_reg_read(kbdev, offset);
 	OSK_PRINT_INFO(OSK_BASE_CORE, "r: reg %04x val %08x", offset, val);
 	if (kctx && kctx->jctx.tb) kbase_device_trace_register_access(kctx, REG_READ, offset, val);
@@ -424,7 +427,7 @@ void kbase_gpu_interrupt(kbase_device * kbdev, u32 val)
 	 * further power transitions and we don't want to miss the interrupt raised to notify us that these further
 	 * transitions have finished.
 	 */
-	if (val & (POWER_CHANGED_ALL | POWER_CHANGED_SINGLE))
+	if (val & POWER_CHANGED_ALL)
 	{
 		kbase_pm_check_transitions(kbdev);
 	}
