@@ -344,7 +344,7 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	md = mmc_blk_get(bdev->bd_disk);
 	if (!md) {
 		err = -EINVAL;
-		goto blk_get_failed;
+		goto cmd_done;
 	}
 
 	card = md->queue.card;
@@ -419,8 +419,6 @@ cmd_rel_host:
 
 cmd_done:
 	mmc_blk_put(md);
-
-blk_get_failed:
 	kfree(idata->buf);
 	kfree(idata);
 	return err;
