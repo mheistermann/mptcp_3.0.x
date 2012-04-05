@@ -1153,8 +1153,10 @@ void gsc_cap_irq_handler(struct gsc_dev *gsc)
 
 	done_index = gsc_hw_get_done_output_buf_index(gsc);
 	gsc_dbg("done_index : %d", done_index);
-	if (done_index < 0)
+	if (done_index < 0) {
 		gsc_err("All buffers are masked\n");
+		return;
+	}
 	test_bit(ST_CAPT_RUN, &gsc->state) ? :
 		set_bit(ST_CAPT_RUN, &gsc->state);
 	vb2_buffer_done(gsc->cap.vbq.bufs[done_index], VB2_BUF_STATE_DONE);
