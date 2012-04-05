@@ -2123,6 +2123,25 @@ static struct clksrc_clk exynos5_clk_sclk_jpeg = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_GEN, .shift = 4, .size = 4 },
 };
 
+static struct clksrc_clk exynos5_clk_sclk_c2c = {
+	.clk	= {
+		.name		= "sclk_c2c",
+		.id		= -1,
+	},
+	.sources = &exynos5_clkset_mout_mpll,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_CORE1, .shift = 8, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_SYSRGT, .shift = 4, .size = 3 },
+};
+
+static struct clksrc_clk exynos5_clk_aclk_c2c = {
+	.clk	= {
+		.name		= "aclk_c2c",
+		.id		= -1,
+		.parent		= &exynos5_clk_sclk_c2c.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_SYSRGT, .shift = 8, .size = 3 },
+};
+
 static struct clk *exynos5_clkset_c2c_list[] = {
 	[0] = &exynos5_clk_mout_mpll.clk,
 	[1] = &exynos5_clk_mout_bpll.clk,
@@ -2133,7 +2152,7 @@ static struct clksrc_sources exynos5_clkset_sclk_c2c = {
 	.nr_sources	= ARRAY_SIZE(exynos5_clkset_c2c_list),
 };
 
-static struct clksrc_clk exynos5_clk_sclk_c2c = {
+static struct clksrc_clk exynos5_clk_sclk_c2c_rev0 = {
 	.clk	= {
 		.name		= "sclk_c2c",
 		.id		= -1,
@@ -2143,7 +2162,7 @@ static struct clksrc_clk exynos5_clk_sclk_c2c = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 8, .size = 3 },
 };
 
-static struct clksrc_clk exynos5_clk_aclk_c2c = {
+static struct clksrc_clk exynos5_clk_aclk_c2c_rev0 = {
 	.clk	= {
 		.name		= "aclk_c2c",
 		.id		= -1,
@@ -2682,6 +2701,11 @@ void __init exynos5_register_clocks(void)
 	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
 		s3c_register_clocks(exynos5_uis_clocks, ARRAY_SIZE(exynos5_uis_clocks));
 		s3c_disable_clocks(exynos5_uis_clocks, ARRAY_SIZE(exynos5_uis_clocks));
+	}
+
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		s3c_register_clksrc(&exynos5_clk_sclk_c2c_rev0, 1);
+		s3c_register_clksrc(&exynos5_clk_aclk_c2c_rev0, 1);
 	}
 
 	register_syscore_ops(&exynos5_clock_syscore_ops);
