@@ -2175,7 +2175,7 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 
 static inline int h264_level(enum v4l2_mpeg_video_h264_level lvl)
 {
-	static unsigned int t[V4L2_MPEG_VIDEO_H264_LEVEL_4_0 + 1] = {
+	static unsigned int t[V4L2_MPEG_VIDEO_H264_LEVEL_4_2 + 1] = {
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_1_0   */ 10,
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_1B    */ 9,
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_1_1   */ 11,
@@ -2188,6 +2188,8 @@ static inline int h264_level(enum v4l2_mpeg_video_h264_level lvl)
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_3_1   */ 31,
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_3_2   */ 32,
 		/* V4L2_MPEG_VIDEO_H264_LEVEL_4_0   */ 40,
+		/* V4L2_MPEG_VIDEO_H264_LEVEL_4_1   */ 41,
+		/* V4L2_MPEG_VIDEO_H264_LEVEL_4_2   */ 42,
 	};
 	return t[lvl];
 }
