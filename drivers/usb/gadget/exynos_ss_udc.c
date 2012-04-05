@@ -1860,7 +1860,17 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 	int epnum;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
-
+#ifdef CONFIG_USB_G_ANDROID
+	/*
+	 * Android MTP should be configuration after disconnect uevet
+	 * A reset USB device has the following characteristics:
+	 * - Responds to the default USB address
+	 * - Is not configured
+	 * - Is not initially suspended
+	 */
+	if (udc->state == USB_STATE_CONFIGURED)
+		call_gadget(udc, disconnect);
+#endif
 	/* Disable test mode */
 	__bic32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_TstCtl_MASK);
 
