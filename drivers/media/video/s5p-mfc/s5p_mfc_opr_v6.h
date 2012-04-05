@@ -151,9 +151,9 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 #define DEC_V61_VP8_SCRATCH_SIZE(x, y)				\
 		((x) * 32 + (y) * 128 + 34816)
 #define ENC_V61_H264_SCRATCH_SIZE(x, y)				\
-		(((x) * 64) + (((y) + 1) * 16) + (4096 * 16))
+		(((x) * 64) + (((x) + 1) * 16) + (4096 * 16))
 #define ENC_V61_MPEG4_SCRATCH_SIZE(x, y)			\
-		(((x) * 16) + (((y) + 1) * 16))
+		(((x) * 16) + (((x) + 1) * 16))
 
 /* Scratch buffer size for MFC v6.5 */
 #define DEC_V65_H264_SCRATCH_SIZE(x, y)				\
