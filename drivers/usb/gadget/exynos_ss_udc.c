@@ -1937,6 +1937,33 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 }
 
 /**
+ * exynos_ss_udc_irq_ulstchng - process event USB Link State Change
+ * @udc: The device state.
+ * @event: The event being handled.
+ */
+static void exynos_ss_udc_irq_ulstchng(struct exynos_ss_udc *udc, u32 event)
+{
+	u32 link_state;
+
+	link_state = event & EXYNOS_USB3_DEVT_EvtInfo_MASK;
+
+	/* Disconnect event detection for SMDK5250 EVT0 */
+#if defined(CONFIG_MACH_SMDK5250)
+	if (udc->release == 0x185a) {
+		if (link_state == EXYNOS_USB3_DEVT_EvtInfo_Suspend ||
+		    link_state == EXYNOS_USB3_DEVT_EvtInfo_SS_DIS) {
+			call_gadget(udc, disconnect);
+			EXYNOS_SS_UDC_CABLE_CONNECT(udc, false);
+			dev_dbg(udc->dev, "Disconnection (0x%x, %s)\n",
+				link_state >> EXYNOS_USB3_DEVT_EvtInfo_SHIFT,
+				event & EXYNOS_USB3_DEVT_EvtInfo_SS ?
+				"SS" : "non-SS");
+		}
+	}
+#endif
+}
+
+/**
  * exynos_ss_udc_handle_depevt - handle endpoint-specific event
  * @udc: The device state.
  * @event: The event being handled.
@@ -1979,27 +2006,10 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
  */
 static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 {
-	int event_info;
-
 	switch (event & EXYNOS_USB3_DEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
 		dev_dbg(udc->dev, "USB-Link State Change");
-
-		/* Disconnect event detection for SMDK5250 EVT0 */
-#if defined(CONFIG_MACH_SMDK5250)
-		if (udc->release == 0x185a) {
-			event_info = event & EXYNOS_USB3_DEVT_EventParam_MASK;
-			if (event_info == EXYNOS_USB3_DEVT_EventParam(0x3) ||
-			    event_info == EXYNOS_USB3_DEVT_EventParam(0x4)) {
-				call_gadget(udc, disconnect);
-				EXYNOS_SS_UDC_CABLE_CONNECT(udc, false);
-				dev_dbg(udc->dev, "Disconnect %x %s speed\n",
-					event_info,
-					event & EXYNOS_USB3_DEVT_EventParam_SS ?
-					"Super" : "High");
-			}
-		}
-#endif
+		exynos_ss_udc_irq_ulstchng(udc, event);
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
