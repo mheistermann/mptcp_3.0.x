@@ -542,7 +542,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	int epnum = udc_ep->epnum;
 	int index = get_phys_epnum(udc_ep);
 	unsigned long irqflags;
@@ -1769,7 +1769,7 @@ static void exynos_ss_udc_xfer_notready(struct exynos_ss_udc *udc,
  */
 static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	u32 reg, speed;
 	int mps0, mps;
 	int i;
@@ -1802,6 +1802,7 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 		break;
 	/* SuperSpeed */
 	case 4:
+	default:
 		udc->gadget.speed = USB_SPEED_SUPER;
 		mps0 = EP0_SS_MPS;
 		mps = EP_SS_MPS;
@@ -1854,7 +1855,7 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
  */
 static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	struct exynos_ss_udc_ep *ep;
 	int res;
 	int epnum;
@@ -2265,7 +2266,7 @@ static int exynos_ss_udc_corereset(struct exynos_ss_udc *udc)
  */
 static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	int res;
 
 	/* Start New Configuration */
@@ -2436,7 +2437,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 					struct exynos_ss_udc_ep *udc_ep)
 {
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	int index = get_phys_epnum(udc_ep);
 
 	udc->eps_enabled = false;
