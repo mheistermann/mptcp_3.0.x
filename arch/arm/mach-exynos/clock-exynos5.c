@@ -1429,6 +1429,30 @@ static struct clk exynos5_i2cs_clocks[] = {
 	}
 };
 
+struct clk exynos5_uis_clocks[] = {
+	{
+		.name		= "uis",
+		.devname	= "s3c2440-uis.0",
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 28),
+	}, {
+		.name		= "uis",
+		.devname	= "exynos-uis.1",
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 29),
+	}, {
+		.name		= "uis",
+		.devname	= "exynos-uis.2",
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 30),
+	}, {
+		.name		= "uis",
+		.devname	= "exynos-uis.3",
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 31),
+	},
+};
+
 struct clk exynos5_init_dmaclocks[] = {
 	{
 		.name		= "pdma",
@@ -2636,6 +2660,11 @@ void __init exynos5_register_clocks(void)
 
 	s3c_register_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
 	s3c_disable_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
+
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		s3c_register_clocks(exynos5_uis_clocks, ARRAY_SIZE(exynos5_uis_clocks));
+		s3c_disable_clocks(exynos5_uis_clocks, ARRAY_SIZE(exynos5_uis_clocks));
+	}
 
 	register_syscore_ops(&exynos5_clock_syscore_ops);
 	s3c_pwmclk_init();
