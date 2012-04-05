@@ -466,7 +466,7 @@ static int __devinit exynos_usbswitch_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct exynos_usb_switch *usb_switch;
 	int irq;
-	int ret;
+	int ret = 0;
 
 	usb_switch = kzalloc(sizeof(struct exynos_usb_switch), GFP_KERNEL);
 	if (!usb_switch) {
