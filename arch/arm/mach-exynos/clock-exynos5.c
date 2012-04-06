@@ -218,6 +218,11 @@ static int exynos5_clk_ip_mfc_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_MFC, clk, enable);
 }
 
+static int exynos5_clk_ip_g3d_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_G3D, clk, enable);
+}
+
 static int exynos5_clk_hdmiphy_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_HDMI_PHY_CONTROL, clk, enable);
@@ -1095,6 +1100,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
+		.name		= "g3d",
+		.enable		= exynos5_clk_ip_g3d_ctrl,
+		.ctrlbit	= ((1 << 1) | (1 << 0)),
+	}, {
 		.name		= "isp0",
 		.devname	= "exynos5-fimc-is",
 		.enable		= exynos5_clk_ip_isp0_ctrl,
@@ -1334,6 +1343,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "ppmumfc",
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= ((1 << 5) | (1 << 6)),
+	}, {
+		.name		= "ppmug3d",
+		.enable		= exynos5_clk_ip_g3d_ctrl,
+		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "ppmugen",
 		.enable		= exynos5_clk_ip_gen_ctrl,
