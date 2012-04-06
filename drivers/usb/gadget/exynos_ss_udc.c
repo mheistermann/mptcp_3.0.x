@@ -2961,7 +2961,8 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	iounmap(udc->regs);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	release_mem_region(res->start, resource_size(res));
+	if (res)
+		release_mem_region(res->start, resource_size(res));
 
 	device_unregister(&udc->gadget.dev);
 
