@@ -2800,8 +2800,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	udc = kzalloc(sizeof(struct exynos_ss_udc), GFP_KERNEL);
 	if (!udc) {
 		dev_err(dev, "cannot get memory\n");
-		ret = -ENOMEM;
-		goto err_mem;
+		return -ENOMEM;
 	}
 
 	udc->dev = dev;
