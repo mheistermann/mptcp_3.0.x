@@ -323,10 +323,17 @@ static int hdmi_s_power(struct v4l2_subdev *sd, int on)
 	/* only values < 0 indicate errors */
 	return IS_ERR_VALUE(ret) ? ret : 0;
 #else
-	if (on)
+	if (on) {
+		clk_enable(hdev->res.hdmi);
+		hdmi_hpd_enable(hdev, 1);
+		set_internal_hpd_int(hdev);
 		hdmi_runtime_resume(hdev->dev);
-	else
+	} else {
+		hdmi_hpd_enable(hdev, 0);
+		set_external_hpd_int(hdev);
+		clk_disable(hdev->res.hdmi);
 		hdmi_runtime_suspend(hdev->dev);
+	}
 	return 0;
 #endif
 }
