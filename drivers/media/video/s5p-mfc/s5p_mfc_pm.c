@@ -276,9 +276,11 @@ void s5p_mfc_clock_off(void)
 		} while ((val & 0x2) == 0);
 	}
 
+#if 0
 	if (!dev->curr_ctx_drm)
 		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
 	clk_disable(pm->clock);
+#endif
 
 	if (state < 0) {
 		mfc_err("Clock state is wrong(%d)\n", state);
