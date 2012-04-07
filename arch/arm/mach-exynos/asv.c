@@ -44,8 +44,14 @@ static int __init exynos4_asv_init(void)
 		 * There is already value for asv group.
 		 * So, It is not necessary to execute for getting asv group.
 		 */
-		if (ret)
+		if (ret) {
+			kfree(exynos_asv);
 			return 0;
+		}
+	} else if (soc_is_exynos5250())  {
+		ret = exynos5250_asv_init(exynos_asv);
+                if (ret)
+			goto out2;
 	} else {
 		pr_info("EXYNOS: There is no type for ASV\n");
 		goto out2;
@@ -89,6 +95,8 @@ static int __init exynos4_asv_init(void)
 		pr_info("EXYNOS: No store_result function\n");
 		goto out2;
 	}
+
+	kfree(exynos_asv);
 
 	return 0;
 out2:

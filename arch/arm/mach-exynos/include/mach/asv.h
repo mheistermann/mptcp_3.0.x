@@ -89,5 +89,6 @@ struct samsung_asv {
 
 extern int exynos4210_asv_init(struct samsung_asv *asv_info);
 extern int exynos4x12_asv_init(struct samsung_asv *asv_info);
+extern int exynos5250_asv_init(struct samsung_asv *asv_info);
 
 #endif /* __ASM_ARCH_ASV_H */
