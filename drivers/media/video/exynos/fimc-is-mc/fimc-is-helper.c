@@ -963,25 +963,25 @@ int fimc_is_hw_update_bufmask(struct fimc_is_dev *dev, unsigned int dev_num)
 	switch (dev_num) {
 	case 0: /* Bayer */
 		if (readl(dev->regs + ISSR23) != 0x0)
-			err("WARN: Bayer buffer mask is unchecked\n");
+			dbg("WARN: Bayer buffer mask is unchecked\n");
 
 		writel(buf_mask, dev->regs + ISSR23);
 		break;
 	case 1:  /* Scaler-C */
 		if (readl(dev->regs + ISSR31) != 0x0)
-			err("WARN: Scaler-C buffer mask is unchecked\n");
+			dbg("WARN: Scaler-C buffer mask is unchecked\n");
 
 		writel(buf_mask, dev->regs + ISSR31);
 		break;
 	case 2: /* 3DNR */
 		if (readl(dev->regs + ISSR39) != 0x0)
-			err("WARN: 3DNT buffer mask is unchecked\n");
+			dbg("WARN: 3DNR buffer mask is unchecked\n");
 
 		writel(buf_mask, dev->regs + ISSR39);
 		break;
 	case 3: /* Scaler-P */
 		if (readl(dev->regs + ISSR47) != 0x0)
-			err("WARN: Scaler-P buffer mask is unchecked\n");
+			dbg("WARN: Scaler-P buffer mask is unchecked\n");
 
 		writel(buf_mask, dev->regs + ISSR47);
 		break;
