@@ -127,31 +127,30 @@ static struct fimc_is_fmt *find_format(u32 *pixelformat, u32 *mbus_code, int ind
 
 static void set_plane_size(struct fimc_is_frame *frame, unsigned long sizes[])
 {
-	dbg(" ");
-	switch(frame->format.pixelformat){
-		case V4L2_PIX_FMT_YUYV:
-			dbg("V4L2_PIX_FMT_YUYV(w:%d)(h:%d)\n", frame->width, frame->height);
-			sizes[0] =  frame->width*frame->height*2;
-			break;
-		case V4L2_PIX_FMT_NV12M:
-			dbg("V4L2_PIX_FMT_NV12M(w:%d)(h:%d)\n", frame->width, frame->height);
-			sizes[0] =  frame->width*frame->height;
-			sizes[1] =  frame->width*frame->height/2;
-			break;
-		case V4L2_PIX_FMT_YVU420M:
-			dbg("V4L2_PIX_FMT_YVU420M(w:%d)(h:%d)\n", frame->width, frame->height);
-			sizes[0] =  frame->width*frame->height;
-			sizes[1] =  frame->width*frame->height/4;
-			sizes[2] =  frame->width*frame->height/4;
-			break;
-		case  V4L2_PIX_FMT_SBGGR10:
-			dbg("V4L2_PIX_FMT_SBGGR10(w:%d)(h:%d)\n", frame->width, frame->height);
-			sizes[0] =  frame->width*frame->height*2;
-			break;
-		case V4L2_PIX_FMT_SBGGR12:
-			dbg("V4L2_PIX_FMT_SBGGR12(w:%d)(h:%d)\n", frame->width, frame->height);
-			sizes[0] =  frame->width*frame->height*2;
-			break;
+	switch (frame->format.pixelformat) {
+	case V4L2_PIX_FMT_YUYV:
+		dbg("V4L2_PIX_FMT_YUYV(w:%d)(h:%d)\n", frame->width, frame->height);
+		sizes[0] =  frame->width*frame->height*2;
+		break;
+	case V4L2_PIX_FMT_NV12M:
+		dbg("V4L2_PIX_FMT_NV12M(w:%d)(h:%d)\n", frame->width, frame->height);
+		sizes[0] =  frame->width*frame->height;
+		sizes[1] =  frame->width*frame->height/2;
+		break;
+	case V4L2_PIX_FMT_YVU420M:
+		dbg("V4L2_PIX_FMT_YVU420M(w:%d)(h:%d)\n", frame->width, frame->height);
+		sizes[0] =  frame->width*frame->height;
+		sizes[1] =  frame->width*frame->height/4;
+		sizes[2] =  frame->width*frame->height/4;
+		break;
+	case  V4L2_PIX_FMT_SBGGR10:
+		dbg("V4L2_PIX_FMT_SBGGR10(w:%d)(h:%d)\n", frame->width, frame->height);
+		sizes[0] =  frame->width*frame->height*2;
+		break;
+	case V4L2_PIX_FMT_SBGGR12:
+		dbg("V4L2_PIX_FMT_SBGGR12(w:%d)(h:%d)\n", frame->width, frame->height);
+		sizes[0] =  frame->width*frame->height*2;
+		break;
 	}
 }
 
@@ -180,14 +179,19 @@ static int fimc_is_scalerc_video_open(struct file *file)
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = 0;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt = 0;
 
+	mutex_lock(&isp->lock);
 	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
 		isp->sensor_num = 1;
-
+		printk(KERN_INFO "++++ IS load fw (Scaler C open)\n");
+		mutex_unlock(&isp->lock);
 		fimc_is_load_fw(isp);
 
 		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
+		printk(KERN_INFO "---- IS load fw (Scaler C open)\n");
+	} else {
+		mutex_unlock(&isp->lock);
 	}
 
 	clear_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state);
@@ -203,19 +207,19 @@ static int fimc_is_scalerc_video_close(struct file *file)
 	dbg("%s\n", __func__);
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq);
 
+	mutex_lock(&isp->lock);
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
 
+		printk(KERN_INFO "++++ IS local power off (Scaler C close)\n");
+		mutex_unlock(&isp->lock);
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
-		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
 			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		mutex_unlock(&isp->lock);
-
 		if (!ret) {
 			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
 			fimc_is_hw_set_low_poweroff(isp, true);
@@ -231,6 +235,9 @@ static int fimc_is_scalerc_video_close(struct file *file)
 
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
+		printk(KERN_INFO "---- IS local power off (Scaler C close)\n");
+	} else {
+		mutex_unlock(&isp->lock);
 	}
 
 #ifdef CONFIG_BUSFREQ_OPP
@@ -241,7 +248,7 @@ static int fimc_is_scalerc_video_close(struct file *file)
 		printk(KERN_DEBUG "busfreq locked off\n");
 	}
 	isp->busfreq_num--;
-	if(isp->busfreq_num < 0)
+	if (isp->busfreq_num < 0)
 		isp->busfreq_num = 0;
 	mutex_unlock(&isp->busfreq_lock);
 #endif
@@ -400,14 +407,14 @@ static int fimc_is_scalerc_video_qbuf(struct file *file, void *priv,
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	if (test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state)) {
 		video->buf_mask |= (1<<buf->index);
 		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_mask = video->buf_mask;
 
 		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
+	} else {
+		dbg("%s :: index(%d)\n", __func__, buf->index);
 	}
-	else dbg("%s :: index(%d)\n", __func__, buf->index);
-
 	vb_ret = vb2_qbuf(&video->vbq, buf);
 
 	return vb_ret;
@@ -572,9 +579,7 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 	dbg("%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
 
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) ){
-
-		fimc_is_init_set(isp, isp->sensor.sensor_type);
+		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
 		dbg("IS change mode\n");
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
@@ -596,7 +601,7 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 
 	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)){
+		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		dbg("IS Stream On");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
@@ -847,14 +852,19 @@ static int fimc_is_scalerp_video_open(struct file *file)
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf = 0;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_ref_cnt = 0;
 
+	mutex_lock(&isp->lock);
 	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
 		isp->sensor_num = 1;
-
+		printk(KERN_INFO "++++ IS load fw (Scaler P open)\n");
+		mutex_unlock(&isp->lock);
 		fimc_is_load_fw(isp);
 
 		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
+		printk(KERN_INFO "---- IS load fw (Scaler P open)\n");
+	} else {
+		mutex_unlock(&isp->lock);
 	}
 
 	clear_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state);
@@ -870,19 +880,19 @@ static int fimc_is_scalerp_video_close(struct file *file)
 	dbg("%s\n", __func__);
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq);
 
+	mutex_lock(&isp->lock);
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
 
+		printk(KERN_INFO "++++ IS local power off (Scaler P close)\n");
+		mutex_unlock(&isp->lock);
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
-		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
 			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		mutex_unlock(&isp->lock);
-
 		if (!ret) {
 			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
 			fimc_is_hw_set_low_poweroff(isp, true);
@@ -898,6 +908,9 @@ static int fimc_is_scalerp_video_close(struct file *file)
 
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
+		printk(KERN_INFO "---- IS local power off (Scaler P close)\n");
+	} else {
+		mutex_unlock(&isp->lock);
 	}
 
 #ifdef CONFIG_BUSFREQ_OPP
@@ -908,7 +921,7 @@ static int fimc_is_scalerp_video_close(struct file *file)
 		printk(KERN_DEBUG "busfreq locked off\n");
 	}
 	isp->busfreq_num--;
-	if(isp->busfreq_num < 0)
+	if (isp->busfreq_num < 0)
 		isp->busfreq_num = 0;
 	mutex_unlock(&isp->busfreq_lock);
 #endif
@@ -1071,14 +1084,14 @@ static int fimc_is_scalerp_video_qbuf(struct file *file, void *priv,
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	if (test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state)) {
 		video->buf_mask |= (1<<buf->index);
 		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_mask = video->buf_mask;
 
 		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
+	} else {
+		dbg("%s :: index(%d)\n", __func__, buf->index);
 	}
-	else dbg("%s :: index(%d)\n", __func__, buf->index);
-
 	vb_ret = vb2_qbuf(&video->vbq, buf);
 
 	return vb_ret;
@@ -1158,6 +1171,8 @@ static int fimc_is_scalerp_video_s_input(struct file *file, void *priv,
 									sensor_info->flite_id);
 
 	fimc_is_hw_set_default_size(isp, sensor_info->sensor_id);
+	printk(KERN_INFO "fimc_is_init_set - %d\n", isp->sensor.sensor_type);
+	fimc_is_init_set(isp, isp->sensor.sensor_type);
 
 	dbg("sensor info : pos(%d) type(%d)\n", input, isp->sensor.sensor_type);
 
@@ -1699,9 +1714,7 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 	dbg("%s(pipe_state : %ld)\n", __func__, (int)isp->pipe_state);
 
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) ){
-
-		fimc_is_init_set(isp, isp->sensor.sensor_type);
+		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
 		dbg("IS change mode\n");
 		clear_bit(IS_ST_RUN, &isp->state);
@@ -1724,7 +1737,7 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 
 	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)){
+		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		dbg("IS Stream On");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
@@ -2078,16 +2091,6 @@ static int fimc_is_3dnr_video_open(struct file *file)
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf = 0;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_ref_cnt = 0;
 
-	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
-		isp->sensor_num = 1;
-
-		fimc_is_load_fw(isp);
-
-		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-	}
-
 	clear_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state);
 	return 0;
 
@@ -2096,55 +2099,12 @@ static int fimc_is_3dnr_video_open(struct file *file)
 static int fimc_is_3dnr_video_close(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
-	int ret;
+	int ret = 0;
 
 	dbg("%s\n", __func__);
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].vbq);
 
-	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
-
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-		fimc_is_hw_subip_poweroff(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
-			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			err("wait timeout FIMC_IS_PWR_ST_POWER_ON_OFF : %s\n", __func__);
-			fimc_is_hw_set_low_poweroff(isp, true);
-			clear_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
-			ret = 0;
-		}
-
-		dbg("staop flite & mipi (pos:%d) (port:%d)\n",
-			isp->sensor.id_position,
-			isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
-		stop_fimc_lite(isp->pdata->sensor_info[isp->sensor.id_position]->flite_id);
-		stop_mipi_csi(isp->pdata->sensor_info[isp->sensor.id_position]->csi_id);
-
-		fimc_is_hw_a5_power(isp, 0);
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
-	}
-
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
-	mutex_lock(&isp->busfreq_lock);
-	if (isp->busfreq_num == 1) {
-		dev_unlock(isp->bus_dev, &isp->pdev->dev);
-		printk(KERN_DEBUG "busfreq locked off\n");
-	}
-	isp->busfreq_num--;
-	if(isp->busfreq_num < 0)
-		isp->busfreq_num = 0;
-	mutex_unlock(&isp->busfreq_lock);
-#endif
-#endif
-
-	return 0;
+	return ret;
 }
 
 static unsigned int fimc_is_3dnr_video_poll(struct file *file,
@@ -2298,14 +2258,14 @@ static int fimc_is_3dnr_video_qbuf(struct file *file, void *priv,
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	if (test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state)) {
 		video->buf_mask |= (1<<buf->index);
 		isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_mask = video->buf_mask;
 
 		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
+	} else {
+		dbg("%s :: index(%d)\n", __func__, buf->index);
 	}
-	else dbg("%s :: index(%d)\n", __func__, buf->index);
-
 	vb_ret = vb2_qbuf(&video->vbq, buf);
 
 	return vb_ret;
@@ -2470,9 +2430,7 @@ static int fimc_is_3dnr_start_streaming(struct vb2_queue *q)
 	dbg("%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
 
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) ){
-
-		fimc_is_init_set(isp, isp->sensor.sensor_type);
+		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
 		dbg("IS_ST_CHANGE_MODE\n");
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
@@ -2494,7 +2452,7 @@ static int fimc_is_3dnr_start_streaming(struct vb2_queue *q)
 
 	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)){
+		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		dbg("IS Stream On\n");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
@@ -2762,7 +2720,7 @@ static int fimc_is_bayer_video_close(struct file *file)
 	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)){
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)) {
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 		fimc_is_hw_subip_poweroff(isp);
 
@@ -2941,14 +2899,14 @@ static int fimc_is_bayer_video_qbuf(struct file *file, void *priv,
 	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state)) {
 		video->buf_mask |= (1<<buf->index);
 		isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask = video->buf_mask;
 
 		dbg("%s :: index(%d) mask(0x%08x)\n", __func__, buf->index, video->buf_mask);
+	} else {
+		dbg("%s :: index(%d)\n", __func__, buf->index);
 	}
-	else dbg("%s :: index(%d)\n", __func__, buf->index);
-
 	vb_ret = vb2_qbuf(&video->vbq, buf);
 
 	return vb_ret;
@@ -3113,9 +3071,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 	dbg("%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
 
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) ){
-
-		fimc_is_init_set(isp, isp->sensor.sensor_type);
+		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
 		dbg("IS_ST_CHANGE_MODE\n");
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
@@ -3137,7 +3093,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 
 	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)){
+		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		dbg("IS Stream On\n");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);

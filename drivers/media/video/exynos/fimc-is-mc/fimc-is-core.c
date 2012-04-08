@@ -275,7 +275,7 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 	dev->mem.dvaddr_3dnr = (unsigned char *)(dev->mem.dvaddr +
 											FIMC_IS_A5_MEM_SIZE +
 											SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
-											SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF );
+											SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF);
 	dev->mem.kvaddr_3dnr = dev->mem.kvaddr +
 									FIMC_IS_A5_MEM_SIZE +
 									SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
@@ -370,7 +370,7 @@ int fimc_is_load_fw(struct  fimc_is_dev *dev)
 		}
 		dbg("fimc_is_load_fw end\n");
 	} else {
-		dbg("IS FW was loaded before\n");
+		printk(KERN_ERR "IS FW was already loaded!!\n");
 	}
 	return 0;
 }
@@ -1233,7 +1233,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			break;
 		case IHC_SET_FACE_MARK:
 			dbg("IHC_SET_FACE_MARK - %d, %d \n", dev->i2h_cmd.arg[0],
-			dev->i2h_cmd.arg[1] );
+			dev->i2h_cmd.arg[1]);
 			dev->fd_header.count = dev->i2h_cmd.arg[0];
 			dev->fd_header.index = dev->i2h_cmd.arg[1];
 			/* Implementation of AF with face */
@@ -1296,18 +1296,16 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				atomic_set(&dev->p_region_num, 0);
 
 				/* FW bug - should be removed*/
-				if(dev->i2h_cmd.arg[1] == 0 && dev->i2h_cmd.arg[2] == 0){
+				if (dev->i2h_cmd.arg[1] == 0 && dev->i2h_cmd.arg[2] == 0)
 					break;
-				}
 
 				set_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 
 				if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
-					dev->af.af_state == FIMC_IS_AF_SETCONFIG){
+					dev->af.af_state == FIMC_IS_AF_SETCONFIG) {
 					dev->af.af_state = FIMC_IS_AF_RUNNING;
-				}
-				else if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
-					dev->af.af_state == FIMC_IS_AF_ABORT){
+				} else if (test_bit(PARAM_ISP_AA, (void *)&dev->i2h_cmd.arg[1]) &&
+					dev->af.af_state == FIMC_IS_AF_ABORT) {
 					dev->af.af_state = FIMC_IS_AF_IDLE;
 				}
 
@@ -1724,7 +1722,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	bayer_q->io_modes = VB2_MMAP | VB2_USERPTR;
 	bayer_q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
 	bayer_q->ops = &fimc_is_bayer_qops;
-	bayer_q->mem_ops = isp->vb2->ops;;
+	bayer_q->mem_ops = isp->vb2->ops;
 
 	vb2_queue_init(bayer_q);
 
