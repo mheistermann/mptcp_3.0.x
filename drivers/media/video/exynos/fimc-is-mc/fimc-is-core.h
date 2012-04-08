@@ -12,12 +12,13 @@
 #ifndef FIMC_IS_CORE_H
 #define FIMC_IS_CORE_H
 
-/*#define DEBUG 1*/
-#define FRAME_RATE_ENABLE	1
-/*#define ODC_ENABLE	1*/
-/*#define TDNR_ENABLE	1*/
-/*#define DZOOM_ENABLE	1*/
-/*#define DIS_ENABLE	1*/
+/*#define DEBUG 	(1)*/
+/*#define FRAME_RATE_ENABLE	(1)*/
+/*#define ODC_ENABLE	(1)*/
+/*#define TDNR_ENABLE	(1)*/
+/*#define DZOOM_ENABLE	(1)*/
+/*#define DIS_ENABLE	(1)*/
+#define ALIGN_ASPECT_RATIO_ENABLE	(1)
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
