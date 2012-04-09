@@ -100,6 +100,24 @@ static int exynos5250_check_lot_id(void)
 	return strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id));
 }
 
+static void exynos5250_pre_set_abb(void)
+{
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+	case 2:
+		exynos4x12_set_abb(ABB_MODE_080V);
+		break;
+	case 3:
+	case 4:
+		exynos4x12_set_abb(ABB_MODE_BYPASS);
+		break;
+	default:
+		exynos4x12_set_abb(ABB_MODE_130V);
+		break;
+	}
+}
+
 static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
@@ -126,6 +144,8 @@ static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 
 	pr_info("EXYNOS5250(NO SG): IDS : %d HPM : %d RESULT : %d\n",
 		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
+
+	exynos5250_pre_set_abb();
 
 	return 0;
 }
