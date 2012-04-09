@@ -363,6 +363,9 @@ int hdmi_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
 	struct device *dev = hdev->dev;
+	unsigned long flags;
+
+	spin_lock_irqsave(&hdev->hpd_lock, flags);
 
 	if (!pm_runtime_suspended(hdev->dev) && !hdev->hpd_user_checked)
 		ctrl->value = hdmi_hpd_status(hdev);
@@ -372,6 +375,7 @@ int hdmi_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	dev_dbg(dev, "HDMI cable is %s\n", ctrl->value ?
 			"connected" : "disconnected");
 
+	spin_unlock_irqrestore(&hdev->hpd_lock, flags);
 	return 0;
 }
 
