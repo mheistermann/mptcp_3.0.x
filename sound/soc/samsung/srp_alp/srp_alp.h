@@ -192,6 +192,7 @@ struct srp_info {
 
 	bool	pm_suspended;
 	bool	pm_resumed;
+	bool	initialized;
 
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);

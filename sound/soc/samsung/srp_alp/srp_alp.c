@@ -213,6 +213,129 @@ static void srp_flush_obuf(void)
 		memset(srp.obuf1, 0, srp.obuf_size);
 	}
 }
+static void srp_commbox_init(void)
+{
+	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
+	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
+	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
+	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
+
+	unsigned int reg = 0;
+
+	writel(reg, srp.commbox + SRP_FRAME_INDEX);
+	writel(reg, srp.commbox + SRP_INTERRUPT);
+
+	/* Support Mono Decoding */
+	writel(SRP_ARM_INTR_CODE_SUPPORT_MONO, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+
+	/* Init Ibuf information */
+	if (!soc_is_exynos5250()) {
+		writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
+		writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
+		writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
+	}
+
+	/* Output PCM control : 16bit */
+	writel(SRP_CFGR_OUTPUT_PCM_16BIT, srp.commbox + SRP_CFGR);
+
+	/* Bit stream size : Max */
+	writel(BITSTREAM_SIZE_MAX, srp.commbox + SRP_BITSTREAM_SIZE);
+
+	/* Init Read bitstream size */
+	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
+
+	/* Configure fw address */
+	writel(srp.fw_info.vliw_pa, srp.commbox + SRP_CODE_START_ADDR);
+	writel(srp.fw_info.cga_pa, srp.commbox + SRP_CONF_START_ADDR);
+	writel(srp.fw_info.data_pa, srp.commbox + SRP_DATA_START_ADDR);
+
+	/* Initialize Suspended mode */
+	pwr_mode &= ~SRP_POWER_MODE_MASK;
+	intr_en &= ~SRP_INTR_EN;
+	intr_msk |= SRP_INTR_MASK;
+	intr_src &= ~SRP_INTRSRC_MASK;
+
+	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
+	writel(intr_en, srp.commbox + SRP_INTREN);
+	writel(intr_msk, srp.commbox + SRP_INTRMASK);
+	writel(intr_src, srp.commbox + SRP_INTRSRC);
+}
+
+static void srp_commbox_deinit(void)
+{
+	unsigned int reg = 0;
+
+	srp.audss_clk_enable(true);
+
+	srp_wait_for_pending();
+	srp.decoding_started = 0;
+	writel(reg, srp.commbox + SRP_INTERRUPT);
+}
+
+static void srp_clr_fw_data(void)
+{
+	memset(srp.fw_info.data, 0, DMEM_SIZE);
+	memcpy(srp.fw_info.data, srp_fw_data, sizeof(srp_fw_data));
+}
+
+static void srp_fw_download(void)
+{
+	void *pdmem;
+	unsigned long *psrc;
+	unsigned long dmemsz;
+	unsigned long n;
+	unsigned int reg = 0;
+
+	/* Fill I-CACHE/DMEM */
+	switch (srp_fw_use_memcpy()) {
+	case false: /* Should be write by the 1word */
+		psrc = (unsigned long *) srp.fw_info.vliw;
+		for (n = 0; n < ICACHE_SIZE; n += 4, psrc++)
+			writel(ENDIAN_CHK_CONV(*psrc), srp.icache + n);
+
+		psrc = (unsigned long *) srp.fw_info.data;
+		for (n = 0; n < DMEM_SIZE; n += 4, psrc++)
+			writel(ENDIAN_CHK_CONV(*psrc), srp.dmem + n);
+		break;
+	case true: /* Support to memcpy */
+		psrc = (unsigned long *) srp.fw_info.vliw;
+		memcpy(srp.icache, psrc, ICACHE_SIZE);
+
+		psrc = !soc_is_exynos5250() ? (unsigned long *) srp.fw_info.data
+					    : (unsigned long *) (srp.fw_info.data
+								   + DATA_OFFSET);
+		pdmem = !soc_is_exynos5250() ? (void *) srp.dmem
+					     : (void *) (srp.dmem + DATA_OFFSET);
+
+		dmemsz = !soc_is_exynos5250() ? DMEM_SIZE : (DMEM_SIZE - DATA_OFFSET);
+		memcpy(pdmem, psrc, dmemsz);
+		break;
+	}
+
+	/* Fill CMEM : Should be write by the 1word(32bit) */
+	psrc = (unsigned long *) srp.fw_info.cga;
+	for (n = 0; n < CMEM_SIZE; n += 4, psrc++)
+		writel(ENDIAN_CHK_CONV(*psrc), srp.cmem + n);
+
+	reg = readl(srp.commbox + SRP_CFGR);
+	reg |= (SRP_CFGR_BOOT_INST_INT_CC |	/* Fetchs instruction from I$ */
+		SRP_CFGR_USE_ICACHE_MEM	|	/* SRP can access I$ */
+		SRP_CFGR_USE_I2S_INTR	|
+		SRP_CFGR_FLOW_CTRL_OFF);
+
+	writel(reg, srp.commbox + SRP_CFGR);
+}
+
+static void srp_set_default_fw(void)
+{
+	/* Initialize Commbox & default parameters */
+	srp_commbox_init();
+
+	srp_clr_fw_data();
+
+	/* Download default Firmware */
+	srp_fw_download();
+}
 
 static void srp_reset(void)
 {
@@ -302,6 +425,16 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	ssize_t ret = 0;
 
 	srp_debug("Write(%d bytes)\n", size);
+
+	srp.audss_clk_enable(true);
+
+	if (!srp.initialized) {
+		srp_set_default_fw();
+		srp_flush_ibuf();
+		srp_flush_obuf();
+		srp_reset();
+		srp.initialized = true;
+	}
 
 	if (srp.obuf_fill_done[srp.obuf_ready]
 		&& srp.obuf_copy_done[srp.obuf_ready]) {
@@ -421,128 +554,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	return ret;
 }
 
-static void srp_commbox_init(void)
-{
-	unsigned int pwr_mode = readl(srp.commbox + SRP_POWER_MODE);
-	unsigned int intr_en = readl(srp.commbox + SRP_INTREN);
-	unsigned int intr_msk = readl(srp.commbox + SRP_INTRMASK);
-	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
-
-	unsigned int reg = 0;
-
-	writel(reg, srp.commbox + SRP_FRAME_INDEX);
-	writel(reg, srp.commbox + SRP_INTERRUPT);
-
-	/* Support Mono Decoding */
-	writel(SRP_ARM_INTR_CODE_SUPPORT_MONO, srp.commbox + SRP_ARM_INTERRUPT_CODE);
-
-	/* Init Ibuf information */
-	if (!soc_is_exynos5250()) {
-		writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
-		writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
-		writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
-	}
-
-	/* Output PCM control : 16bit */
-	writel(SRP_CFGR_OUTPUT_PCM_16BIT, srp.commbox + SRP_CFGR);
-
-	/* Bit stream size : Max */
-	writel(BITSTREAM_SIZE_MAX, srp.commbox + SRP_BITSTREAM_SIZE);
-
-	/* Init Read bitstream size */
-	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
-
-	/* Configure fw address */
-	writel(srp.fw_info.vliw_pa, srp.commbox + SRP_CODE_START_ADDR);
-	writel(srp.fw_info.cga_pa, srp.commbox + SRP_CONF_START_ADDR);
-	writel(srp.fw_info.data_pa, srp.commbox + SRP_DATA_START_ADDR);
-
-	/* Initialize Suspended mode */
-	pwr_mode &= ~SRP_POWER_MODE_MASK;
-	intr_en &= ~SRP_INTR_EN;
-	intr_msk |= SRP_INTR_MASK;
-	intr_src &= ~SRP_INTRSRC_MASK;
-
-	writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
-	writel(intr_en, srp.commbox + SRP_INTREN);
-	writel(intr_msk, srp.commbox + SRP_INTRMASK);
-	writel(intr_src, srp.commbox + SRP_INTRSRC);
-}
-
-static void srp_commbox_deinit(void)
-{
-	unsigned int reg = 0;
-
-	srp_wait_for_pending();
-	srp.decoding_started = 0;
-	writel(reg, srp.commbox + SRP_INTERRUPT);
-}
-
-static void srp_clr_fw_data(void)
-{
-	memset(srp.fw_info.data, 0, DMEM_SIZE);
-	memcpy(srp.fw_info.data, srp_fw_data, sizeof(srp_fw_data));
-}
-
-static void srp_fw_download(void)
-{
-	void *pdmem;
-	unsigned long *psrc;
-	unsigned long dmemsz;
-	unsigned long n;
-	unsigned int reg = 0;
-
-	/* Fill I-CACHE/DMEM */
-	switch (srp_fw_use_memcpy()) {
-	case false: /* Should be write by the 1word */
-		psrc = (unsigned long *) srp.fw_info.vliw;
-		for (n = 0; n < ICACHE_SIZE; n += 4, psrc++)
-			writel(ENDIAN_CHK_CONV(*psrc), srp.icache + n);
-
-		psrc = (unsigned long *) srp.fw_info.data;
-		for (n = 0; n < DMEM_SIZE; n += 4, psrc++)
-			writel(ENDIAN_CHK_CONV(*psrc), srp.dmem + n);
-		break;
-	case true: /* Support to memcpy */
-		psrc = (unsigned long *) srp.fw_info.vliw;
-		memcpy(srp.icache, psrc, ICACHE_SIZE);
-
-		psrc = !soc_is_exynos5250() ? (unsigned long *) srp.fw_info.data
-					    : (unsigned long *) (srp.fw_info.data
-								   + DATA_OFFSET);
-		pdmem = !soc_is_exynos5250() ? (void *) srp.dmem
-					     : (void *) (srp.dmem + DATA_OFFSET);
-
-		dmemsz = !soc_is_exynos5250() ? DMEM_SIZE : (DMEM_SIZE - DATA_OFFSET);
-		memcpy(pdmem, psrc, dmemsz);
-		break;
-	}
-
-	/* Fill CMEM : Should be write by the 1word(32bit) */
-	psrc = (unsigned long *) srp.fw_info.cga;
-	for (n = 0; n < CMEM_SIZE; n += 4, psrc++)
-		writel(ENDIAN_CHK_CONV(*psrc), srp.cmem + n);
-
-	reg = readl(srp.commbox + SRP_CFGR);
-	reg |= (SRP_CFGR_BOOT_INST_INT_CC |	/* Fetchs instruction from I$ */
-		SRP_CFGR_USE_ICACHE_MEM	|	/* SRP can access I$ */
-		SRP_CFGR_USE_I2S_INTR	|
-		SRP_CFGR_FLOW_CTRL_OFF);
-
-	writel(reg, srp.commbox + SRP_CFGR);
-}
-
-static void srp_set_default_fw(void)
-{
-	/* Initialize Commbox & default parameters */
-	srp_commbox_init();
-
-	srp_clr_fw_data();
-
-	/* Download default Firmware */
-	srp_fw_download();
-}
-
 static void srp_set_stream_size(void)
 {
 	/* Leave stream size max, if data is available */
@@ -565,11 +576,8 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case SRP_INIT:
+		srp.initialized = false;
 		srp_debug("SRP_INIT\n");
-		srp_set_default_fw();
-		srp_flush_ibuf();
-		srp_flush_obuf();
-		srp_reset();
 		break;
 
 	case SRP_DEINIT:
@@ -695,8 +703,6 @@ static int srp_open(struct inode *inode, struct file *file)
 	srp.is_opened = 1;
 	mutex_unlock(&srp_mutex);
 
-	srp.audss_clk_enable(true);
-
 	if (!(file->f_flags & O_NONBLOCK))
 		srp.block_mode = 1;
 	else
@@ -707,6 +713,7 @@ static int srp_open(struct inode *inode, struct file *file)
 
 	srp.pm_suspended = false;
 	srp.pm_resumed = false;
+	srp.initialized = false;
 
 	return 0;
 }
@@ -1143,6 +1150,8 @@ static int srp_resume(struct platform_device *pdev)
 			writel(0x0, srp.commbox + SRP_CONT);
 			srp_request_intr_mode(RESUME);
 	}
+
+	srp.audss_clk_enable(false);
 
 	return 0;
 }
