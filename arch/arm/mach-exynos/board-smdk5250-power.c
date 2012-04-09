@@ -738,6 +738,7 @@ static struct platform_device *smdk5250_power_devices[] __initdata = {
 	&exynos5_device_pd[PD_ISP],
 	&exynos5_device_pd[PD_GSCL],
 	&exynos5_device_pd[PD_DISP1],
+	&exynos5_device_pd[PD_MAUDIO],
 	&s3c_device_i2c0,
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
@@ -777,6 +778,7 @@ void __init exynos5_smdk5250_power_init(void)
 	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_MAUDIO].dev);
 #elif defined(CONFIG_EXYNOS_DEV_PD)
 	/*
 	 * These power domains should be always on
@@ -787,6 +789,7 @@ void __init exynos5_smdk5250_power_init(void)
 	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_MAUDIO].dev);
 #endif
 
 #ifdef CONFIG_EXYNOS_THERMAL

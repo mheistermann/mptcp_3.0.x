@@ -1039,6 +1039,12 @@ static void __init smdk5250_machine_init(void)
 	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
 #endif
 
+#ifdef CONFIG_SND_SAMSUNG_I2S
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	exynos_device_i2s0.dev.parent = &exynos5_device_pd[PD_MAUDIO].dev;
+#endif
+#endif
+
 #if defined(CONFIG_VIDEO_EXYNOS_TV) && defined(CONFIG_VIDEO_EXYNOS_HDMI)
 	dev_set_name(&s5p_device_hdmi.dev, "exynos5-hdmi");
 	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);

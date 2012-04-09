@@ -66,6 +66,9 @@ int exynos_pd_enable(struct device *dev)
 		udelay(1);
 	}
 
+	if (soc_is_exynos5250() && pdata->base == EXYNOS5_MAU_CONFIGURATION)
+		__raw_writel(0x10000000, EXYNOS5_PAD_RETENTION_MAU_OPTION);
+
 	if (data->read_base)
 		/* dummy read to check the completion of power-on sequence */
 		__raw_readl(data->read_base);
@@ -127,6 +130,12 @@ int exynos_pd_disable(struct device *dev)
 			/* CMU_RESET_ISP_ARM off */
 			__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
 		}
+	}
+
+	if (soc_is_exynos5250() && pdata->base == EXYNOS5_MAU_CONFIGURATION) {
+		__raw_writel(0, EXYNOS5_CMU_CLKSTOP_MAU_SYS_PWR_REG);
+		__raw_writel(0, EXYNOS5_CMU_RESET_MAU_SYS_PWR_REG);
+		__raw_writel(0, EXYNOS5_PAD_RETENTION_MAU_SYS_PWR_REG);
 	}
 
 	__raw_writel(0, pdata->base);
