@@ -14,6 +14,9 @@
 #define __ASM_ARCH_ASV_H __FILE__
 
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
+
+#include <plat/cpu.h>
 
 #define JUDGE_TABLE_END			NULL
 
@@ -40,7 +43,16 @@ static inline void exynos4x12_set_abb_member(enum exynos4x12_abb_member abb_targ
 
 	tmp |= abb_mode_value;
 
-	__raw_writel(tmp, S5P_ABB_MEMBER(abb_target));
+	if (!soc_is_exynos5250())
+		__raw_writel(tmp, S5P_ABB_MEMBER(abb_target));
+	else if (abb_target == ABB_INT)
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_INT));
+	else if (abb_target == ABB_MIF)
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_MIF));
+	else if (abb_target == ABB_G3D)
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_G3D));
+	else if (abb_target == ABB_ARM)
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_ARM));
 }
 
 static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
@@ -54,10 +66,17 @@ static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
 
 	tmp |= abb_mode_value;
 
-	__raw_writel(tmp, S5P_ABB_INT);
-	__raw_writel(tmp, S5P_ABB_MIF);
-	__raw_writel(tmp, S5P_ABB_G3D);
-	__raw_writel(tmp, S5P_ABB_ARM);
+	if (!soc_is_exynos5250()) {
+		__raw_writel(tmp, S5P_ABB_INT);
+		__raw_writel(tmp, S5P_ABB_MIF);
+		__raw_writel(tmp, S5P_ABB_G3D);
+		__raw_writel(tmp, S5P_ABB_ARM);
+	} else {
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_INT));
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_MIF));
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_G3D));
+		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_ARM));
+	}
 }
 
 static inline int exynos4x12_get_abb_member(enum exynos4x12_abb_member abb_target)
