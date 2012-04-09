@@ -106,7 +106,7 @@ static inline bool is_srp_enabled(struct i2s_dai *i2s, u32 stream)
 /* Get srp status(opened/running) infomation */
 static inline int srp_active(struct i2s_dai *i2s, int cmd)
 {
-#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SAMSUNG_ALP)
+#if defined(CONFIG_SND_SAMSUNG_RP)
 	return srp_get_status(cmd);
 #else
 	return 0;
@@ -757,7 +757,7 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 
 	spin_lock_irqsave(&lock, flags);
 
-	if (is_opened(i2s) || is_opened(other))
+	if (is_opened(i2s))
 		goto startup_exit;
 
 	/* Open dai */
@@ -770,11 +770,12 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 	/* Enforce set_sysclk in Master mode */
 	i2s->rclk_srcrate = 0;
 
-	if (!is_opened(other) && !srp_active(i2s, IS_OPENED))
+	if (!is_opened(other) && !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
 
-	if (i2s->reg_saved)
-		i2s_reg_restore(dai);
+		if (i2s->reg_saved)
+			i2s_reg_restore(dai);
+	}
 
 startup_exit:
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
