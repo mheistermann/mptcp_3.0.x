@@ -16,6 +16,7 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/string.h>
 
 #include <mach/asv.h>
 #include <mach/map.h>
@@ -37,6 +38,7 @@
 #define DEFAULT_ASV_GROUP	1
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
+#define LOT_ID_REG		(S5P_VA_CHIPID + 0x14)
 
 struct asv_judge_table exynos5250_limit[] = {
 	/* HPM, IDS */
@@ -68,9 +70,42 @@ static int exynos5250_get_ids(struct samsung_asv *asv_info)
 	return 0;
 }
 
+/*
+ * If lot id is "NZVPU", it is need to modify for ARM_IDS value
+ */
+static int exynos5250_check_lot_id(void)
+{
+	unsigned int lid_reg = 0;
+	unsigned int rev_lid = 0;
+	unsigned int i;
+	unsigned int tmp;
+	char lot_id[5];
+
+	lid_reg = __raw_readl(LOT_ID_REG);
+
+	for (i = 0; i < 32; i++) {
+		tmp = (lid_reg >> i) & 0x1;
+		rev_lid += tmp << (31 - i);
+	}
+
+	lot_id[0] = 'N';
+	lid_reg = (rev_lid >> 11) & 0x1FFFFF;
+
+	for (i = 4; i >= 1; i--) {
+		tmp = lid_reg % 36;
+		lid_reg /= 36;
+		lot_id[i] = (tmp < 10) ? (tmp + '0') : ((tmp - 10) + 'A');
+	}
+
+	return strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id));
+}
+
 static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
+
+	if (!exynos5250_check_lot_id())
+		asv_info->ids_result -= 15;
 
 	if (soc_is_exynos5250()) {
 		for (i = 0; i < ARRAY_SIZE(exynos5250_limit); i++) {
