@@ -44,11 +44,11 @@
 #include "fimc-is-misc.h"
 
 /* PMU for FIMC-IS*/
-#define FIMCLITE0_REG_BASE		(S5P_VA_FIMCLITE0)  /* phy : 0x13c0_0000 */
-#define FIMCLITE1_REG_BASE		(S5P_VA_FIMCLITE1)  /* phy : 0x13c1_0000 */
-#define MIPICSI0_REG_BASE		(S5P_VA_MIPICSI0)   /* phy : 0x13c2_0000 */
-#define MIPICSI1_REG_BASE		(S5P_VA_MIPICSI1)   /* phy : 0x13c3_0000 */
-#define FIMCLITE2_REG_BASE		(S5P_VA_FIMCLITE2)  /* phy : 0x13c9_0000 */
+#define FIMCLITE0_REG_BASE	(S5P_VA_FIMCLITE0)  /* phy : 0x13c0_0000 */
+#define FIMCLITE1_REG_BASE	(S5P_VA_FIMCLITE1)  /* phy : 0x13c1_0000 */
+#define MIPICSI0_REG_BASE	(S5P_VA_MIPICSI0)   /* phy : 0x13c2_0000 */
+#define MIPICSI1_REG_BASE	(S5P_VA_MIPICSI1)   /* phy : 0x13c3_0000 */
+#define FIMCLITE2_REG_BASE	(S5P_VA_FIMCLITE2)  /* phy : 0x13c9_0000 */
 
 #define FLITE_MAX_RESET_READY_TIME	(20) /* 100ms */
 #define FLITE_MAX_WIDTH_SIZE		(8192)
@@ -57,7 +57,7 @@
 
 /*FIMCLite*/
 /* Camera Source size */
-#define FLITE_REG_CISRCSIZE				0x00
+#define FLITE_REG_CISRCSIZE				(0x00)
 #define FLITE_REG_CISRCSIZE_SIZE_H(x)			((x) << 16)
 #define FLITE_REG_CISRCSIZE_SIZE_V(x)			((x) << 0)
 #define FLITE_REG_CISRCSIZE_ORDER422_IN_YCBYCR		(0 << 14)
@@ -95,7 +95,7 @@
 #define FLITE_REG_CIGCTRL_SELCAM_MIPI			(1 << 3)
 
 /* Image Capture Enable */
-#define FLITE_REG_CIIMGCPT				0x08
+#define FLITE_REG_CIIMGCPT				(0x08)
 #define FLITE_REG_CIIMGCPT_IMGCPTEN			(1 << 31)
 #define FLITE_REG_CIIMGCPT_CPT_FREN			(1 << 25)
 #define FLITE_REG_CIIMGCPT_CPT_FRPTR(x)			((x) << 19)
@@ -104,11 +104,11 @@
 #define FLITE_REG_CIIMGCPT_CPT_FRCNT(x)			((x) << 10)
 
 /* Capture Sequence */
-#define FLITE_REG_CICPTSEQ				0x0C
+#define FLITE_REG_CICPTSEQ				(0x0C)
 #define FLITE_REG_CPT_FRSEQ(x)				((x) << 0)
 
 /* Camera Window Offset */
-#define FLITE_REG_CIWDOFST				0x10
+#define FLITE_REG_CIWDOFST				(0x10)
 #define FLITE_REG_CIWDOFST_WINOFSEN			(1 << 31)
 #define FLITE_REG_CIWDOFST_CLROVIY			(1 << 31)
 #define FLITE_REG_CIWDOFST_WINHOROFST(x)		((x) << 16)
@@ -119,12 +119,12 @@
 #define FLITE_REG_CIWDOFST_VEROFF_MASK			(0x1fff << 0)
 
 /* Cmaera Window Offset2 */
-#define FLITE_REG_CIWDOFST2				0x14
+#define FLITE_REG_CIWDOFST2				(0x14)
 #define FLITE_REG_CIWDOFST2_WINHOROFST2(x)		((x) << 16)
 #define FLITE_REG_CIWDOFST2_WINVEROFST2(x)		((x) << 0)
 
 /* Camera Output DMA Format */
-#define FLITE_REG_CIODMAFMT				0x18
+#define FLITE_REG_CIODMAFMT				(0x18)
 #define FLITE_REG_CIODMAFMT_1D_DMA			(1 << 15)
 #define FLITE_REG_CIODMAFMT_2D_DMA			(0 << 15)
 #define FLITE_REG_CIODMAFMT_PACK12			(1 << 14)
@@ -135,21 +135,21 @@
 #define FLITE_REG_CIODMAFMT_YCBYCR			(3 << 4)
 
 /* Camera Output Canvas */
-#define FLITE_REG_CIOCAN				0x20
+#define FLITE_REG_CIOCAN				(0x20)
 #define FLITE_REG_CIOCAN_OCAN_V(x)			((x) << 16)
 #define FLITE_REG_CIOCAN_OCAN_H(x)			((x) << 0)
 
 /* Camera Output DMA Offset */
-#define FLITE_REG_CIOOFF				0x24
+#define FLITE_REG_CIOOFF				(0x24)
 #define FLITE_REG_CIOOFF_OOFF_V(x)			((x) << 16)
 #define FLITE_REG_CIOOFF_OOFF_H(x)			((x) << 0)
 
 /* Camera Output DMA Address */
-#define FLITE_REG_CIOSA					0x30
+#define FLITE_REG_CIOSA					(0x30)
 #define FLITE_REG_CIOSA_OSA(x)				((x) << 0)
 
 /* Camera Status */
-#define FLITE_REG_CISTATUS				0x40
+#define FLITE_REG_CISTATUS				(0x40)
 #define FLITE_REG_CISTATUS_MIPI_VVALID			(1 << 22)
 #define FLITE_REG_CISTATUS_MIPI_HVALID			(1 << 21)
 #define FLITE_REG_CISTATUS_MIPI_DVALID			(1 << 20)
@@ -166,24 +166,24 @@
 #define FLITE_REG_CISTATUS_IRQ_MASK			(0xf << 4)
 
 /* Camera Status2 */
-#define FLITE_REG_CISTATUS2				0x44
+#define FLITE_REG_CISTATUS2				(0x44)
 #define FLITE_REG_CISTATUS2_LASTCAPEND			(1 << 1)
 #define FLITE_REG_CISTATUS2_FRMEND			(1 << 0)
 
 /* Qos Threshold */
-#define FLITE_REG_CITHOLD				0xF0
+#define FLITE_REG_CITHOLD				(0xF0)
 #define FLITE_REG_CITHOLD_W_QOS_EN			(1 << 30)
 #define FLITE_REG_CITHOLD_WTH_QOS(x)			((x) << 0)
 
 /* Camera General Purpose */
-#define FLITE_REG_CIGENERAL				0xFC
+#define FLITE_REG_CIGENERAL				(0xFC)
 #define FLITE_REG_CIGENERAL_CAM_A			(0 << 0)
 #define FLITE_REG_CIGENERAL_CAM_B			(1 << 0)
 
 
 /*MIPI*/
 /* CSIS global control */
-#define S5PCSIS_CTRL					0x00
+#define S5PCSIS_CTRL					(0x00)
 #define S5PCSIS_CTRL_DPDN_DEFAULT			(0 << 31)
 #define S5PCSIS_CTRL_DPDN_SWAP				(1 << 31)
 #define S5PCSIS_CTRL_ALIGN_32BIT			(1 << 20)
@@ -193,11 +193,11 @@
 #define S5PCSIS_CTRL_ENABLE				(1 << 0)
 
 /* D-PHY control */
-#define S5PCSIS_DPHYCTRL				0x04
+#define S5PCSIS_DPHYCTRL				(0x04)
 #define S5PCSIS_DPHYCTRL_HSS_MASK			(0x1f << 27)
 #define S5PCSIS_DPHYCTRL_ENABLE				(0x7 << 0)
 
-#define S5PCSIS_CONFIG					0x08
+#define S5PCSIS_CONFIG					(0x08)
 #define S5PCSIS_CFG_FMT_YCBCR422_8BIT			(0x1e << 2)
 #define S5PCSIS_CFG_FMT_RAW8				(0x2a << 2)
 #define S5PCSIS_CFG_FMT_RAW10				(0x2b << 2)
@@ -205,20 +205,20 @@
 /* User defined formats, x = 1...4 */
 #define S5PCSIS_CFG_FMT_USER(x)				((0x30 + x - 1) << 2)
 #define S5PCSIS_CFG_FMT_MASK				(0x3f << 2)
-#define S5PCSIS_CFG_NR_LANE_MASK			3
+#define S5PCSIS_CFG_NR_LANE_MASK			(3)
 
 /* Interrupt mask. */
-#define S5PCSIS_INTMSK					0x10
-#define S5PCSIS_INTMSK_EN_ALL				0xf000103f
-#define S5PCSIS_INTSRC					0x14
+#define S5PCSIS_INTMSK					(0x10)
+#define S5PCSIS_INTMSK_EN_ALL				(0xf000103f)
+#define S5PCSIS_INTSRC					(0x14)
 
 /* Pixel resolution */
-#define S5PCSIS_RESOL					0x2c
-#define CSIS_MAX_PIX_WIDTH				0xffff
-#define CSIS_MAX_PIX_HEIGHT				0xffff
+#define S5PCSIS_RESOL					(0x2c)
+#define CSIS_MAX_PIX_WIDTH				(0xffff)
+#define CSIS_MAX_PIX_HEIGHT				(0xffff)
 
 static void flite_hw_set_cam_source_size(unsigned long flite_reg_base,
-											struct flite_frame *f_frame)
+					struct flite_frame *f_frame)
 {
 	u32 cfg = 0;
 
@@ -284,8 +284,7 @@ static int flite_hw_set_source_format(unsigned long flite_reg_base)
 	return 0;
 }
 
-static void flite_hw_set_output_dma(unsigned long flite_reg_base,
-										bool enable)
+static void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
 {
 	u32 cfg = 0;
 	cfg = readl(flite_reg_base + FLITE_REG_CIGCTRL);
@@ -328,7 +327,8 @@ static void flite_hw_set_interrupt_source(unsigned long flite_reg_base)
 	writel(cfg, flite_reg_base + FLITE_REG_CIGCTRL);
 }
 
-static void flite_hw_set_interrupt_starten0_disable(unsigned long flite_reg_base)
+static void flite_hw_set_interrupt_starten0_disable
+					(unsigned long flite_reg_base)
 {
 	u32 cfg = 0;
 	cfg = readl(flite_reg_base + FLITE_REG_CIGCTRL);
@@ -348,7 +348,7 @@ static void flite_hw_set_camera_type(unsigned long flite_reg_base)
 }
 
 static void flite_hw_set_window_offset(unsigned long flite_reg_base,
-											struct flite_frame *f_frame)
+					struct flite_frame *f_frame)
 {
 	u32 cfg = 0;
 	u32 hoff2, voff2;
@@ -418,7 +418,8 @@ static void s5pcsis_system_enable(unsigned long mipi_reg_base, int on)
 }
 
 /* Called with the state.lock mutex held */
-static void __s5pcsis_set_format(unsigned long mipi_reg_base, struct flite_frame *f_frame)
+static void __s5pcsis_set_format(unsigned long mipi_reg_base,
+				struct flite_frame *f_frame)
 {
 	u32 val;
 
@@ -440,7 +441,8 @@ static void s5pcsis_set_hsync_settle(unsigned long mipi_reg_base)
 	writel(val, mipi_reg_base + S5PCSIS_DPHYCTRL);
 }
 
-static void s5pcsis_set_params(unsigned long mipi_reg_base, struct flite_frame *f_frame)
+static void s5pcsis_set_params(unsigned long mipi_reg_base,
+				struct flite_frame *f_frame)
 {
 	u32 val;
 
@@ -517,8 +519,8 @@ int enable_mipi(void)
 
 	if (1) {
 		cfg |= S5P_MIPI_DPHY_ENABLE;
-	} else if (!(cfg & (S5P_MIPI_DPHY_SRESETN |
-				S5P_MIPI_DPHY_MRESETN) & (~S5P_MIPI_DPHY_SRESETN))) {
+	} else if (!(cfg & (S5P_MIPI_DPHY_SRESETN | S5P_MIPI_DPHY_MRESETN)
+			& (~S5P_MIPI_DPHY_SRESETN))) {
 		cfg &= ~S5P_MIPI_DPHY_ENABLE;
 	}
 
@@ -533,8 +535,8 @@ int enable_mipi(void)
 
 	if (1) {
 		cfg |= S5P_MIPI_DPHY_ENABLE;
-	} else if (!(cfg & (S5P_MIPI_DPHY_SRESETN |
-				S5P_MIPI_DPHY_MRESETN) & (~S5P_MIPI_DPHY_SRESETN))) {
+	} else if (!(cfg & (S5P_MIPI_DPHY_SRESETN | S5P_MIPI_DPHY_MRESETN)
+			& (~S5P_MIPI_DPHY_SRESETN))) {
 		cfg &= ~S5P_MIPI_DPHY_ENABLE;
 	}
 
@@ -583,24 +585,26 @@ int fimc_is_ctrl_odc(struct fimc_is_dev *dev, int value)
 {
 	int ret;
 
-	if (value == CAMERA_ODC_ON){
+	if (value == CAMERA_ODC_ON) {
 		/* buffer addr setting */
 		dev->back.odc_on = 1;
 		dev->is_p_region->shared[250] = (u32)dev->mem.dvaddr_odc;
 
-		IS_ODC_SET_PARAM_CONTROL_BUFFERNUM(dev, SIZE_ODC_INTERNAL_BUF*NUM_ODC_INTERNAL_BUF);
-		IS_ODC_SET_PARAM_CONTROL_BUFFERADDR(dev, (u32)dev->mem.dvaddr_shared + 250*sizeof(u32));
+		IS_ODC_SET_PARAM_CONTROL_BUFFERNUM(dev,
+			SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF);
+		IS_ODC_SET_PARAM_CONTROL_BUFFERADDR(dev,
+			(u32)dev->mem.dvaddr_shared + 250 * sizeof(u32));
 		IS_ODC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
 
-	}else if (value == CAMERA_ODC_OFF){
+	} else if (value == CAMERA_ODC_OFF) {
 		dev->back.odc_on = 0;
 		IS_ODC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-	}else{
-		printk(KERN_ERR "invalid ODC setting\n");
+	} else {
+		err("invalid ODC setting\n");
 		return -1;
 	}
 
-	if(test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		fimc_is_hw_set_stream(dev, 0); /*stream off */
 		ret = wait_event_timeout(dev->irq_queue,
@@ -635,7 +639,7 @@ int fimc_is_ctrl_odc(struct fimc_is_dev *dev, int value)
 		return -EBUSY;
 	}
 
-	if(test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		fimc_is_hw_change_mode(dev, IS_MODE_PREVIEW_STILL);
@@ -670,23 +674,25 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 {
 	int ret;
 
-	if (value == CAMERA_DIS_ON){
+	if (value == CAMERA_DIS_ON) {
 		/* buffer addr setting */
 		dev->back.dis_on = 1;
 		dev->is_p_region->shared[300] = (u32)dev->mem.dvaddr_dis;
 
-		IS_DIS_SET_PARAM_CONTROL_BUFFERNUM(dev, SIZE_DIS_INTERNAL_BUF*NUM_DIS_INTERNAL_BUF);
-		IS_DIS_SET_PARAM_CONTROL_BUFFERADDR(dev, (u32)dev->mem.dvaddr_shared + 300*sizeof(u32));
+		IS_DIS_SET_PARAM_CONTROL_BUFFERNUM(dev,
+			SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF);
+		IS_DIS_SET_PARAM_CONTROL_BUFFERADDR(dev,
+			(u32)dev->mem.dvaddr_shared + 300 * sizeof(u32));
 		IS_DIS_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
-	}else if (value == CAMERA_DIS_OFF){
+	} else if (value == CAMERA_DIS_OFF) {
 		dev->back.dis_on = 0;
 		IS_DIS_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-	}else{
-		printk(KERN_ERR "invalid DIS setting\n");
+	} else {
+		err("invalid DIS setting\n");
 		return -1;
 	}
 
-	if(test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		fimc_is_hw_set_stream(dev, 0); /*stream off */
 		ret = wait_event_timeout(dev->irq_queue,
@@ -726,7 +732,7 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 	}
 #endif
 
-	if(test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)){
+	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		fimc_is_hw_change_mode(dev, IS_MODE_PREVIEW_STILL);
@@ -761,23 +767,26 @@ int fimc_is_ctrl_3dnr(struct fimc_is_dev *dev, int value)
 {
 	int ret;
 
-	if (value == CAMERA_3DNR_ON){
+	if (value == CAMERA_3DNR_ON) {
 		/* buffer addr setting */
 		dev->back.tdnr_on = 1;
 		dev->is_p_region->shared[350] = (u32)dev->mem.dvaddr_3dnr;
-		printk("3dnr buf:0x%08x size : 0x%08x\n",
-			dev->is_p_region->shared[350], SIZE_3DNR_INTERNAL_BUF*NUM_3DNR_INTERNAL_BUF);
+		dbg("3dnr buf:0x%08x size : 0x%08x\n",
+			dev->is_p_region->shared[350],
+			SIZE_3DNR_INTERNAL_BUF*NUM_3DNR_INTERNAL_BUF);
 
-		IS_TDNR_SET_PARAM_CONTROL_BUFFERNUM(dev, SIZE_3DNR_INTERNAL_BUF*NUM_3DNR_INTERNAL_BUF);
-		IS_TDNR_SET_PARAM_CONTROL_BUFFERADDR(dev, (u32)dev->mem.dvaddr_shared + 350*sizeof(u32));
+		IS_TDNR_SET_PARAM_CONTROL_BUFFERNUM(dev,
+			SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF);
+		IS_TDNR_SET_PARAM_CONTROL_BUFFERADDR(dev,
+			(u32)dev->mem.dvaddr_shared + 350 * sizeof(u32));
 		IS_TDNR_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
 
-	}else if (value == CAMERA_3DNR_OFF){
-		printk("disable 3DNR\n");
+	} else if (value == CAMERA_3DNR_OFF) {
+		dbg("disable 3DNR\n");
 		dev->back.tdnr_on = 0;
 		IS_TDNR_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-	}else{
-		printk(KERN_ERR "invalid ODC setting\n");
+	} else {
+		err("invalid ODC setting\n");
 		return -1;
 	}
 
@@ -853,10 +862,10 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	u32 zoom;
 	int ret;
 
-	if (dev->back.dis_on){
+	if (dev->back.dis_on) {
 		back_width = dev->back.dis_width;
 		back_height = dev->back.dis_height;
-	} else{
+	} else {
 		back_width = dev->back.width;
 		back_height = dev->back.height;
 	}
@@ -2690,27 +2699,27 @@ int fimc_is_v4l2_isp_brightness(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
 	switch (value) {
-	case IS_BRIGHTNESS_MINUS_2 :
+	case IS_BRIGHTNESS_MINUS_2:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -2);
 		break;
-	case IS_BRIGHTNESS_MINUS_1 :
+	case IS_BRIGHTNESS_MINUS_1:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -1);
 		break;
-	case IS_BRIGHTNESS_DEFAULT :
+	case IS_BRIGHTNESS_DEFAULT:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
 		break;
-	case IS_BRIGHTNESS_PLUS_1 :
+	case IS_BRIGHTNESS_PLUS_1:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 1);
 		break;
-	case IS_BRIGHTNESS_PLUS_2 :
+	case IS_BRIGHTNESS_PLUS_2:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 2);
@@ -3233,7 +3242,7 @@ int fimc_is_v4l2_shot_mode(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
 
-	printk("fimc_is_v4l2_shot_mode\n");
+	dbg("%s\n", __func__);
 	IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, value);
 	IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 	IS_INC_PARAM_NUM(dev);
@@ -3241,4 +3250,3 @@ int fimc_is_v4l2_shot_mode(struct fimc_is_dev *dev, int value)
 	fimc_is_hw_set_param(dev);
 	return ret;
 }
-
