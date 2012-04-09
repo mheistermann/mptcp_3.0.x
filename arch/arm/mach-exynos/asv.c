@@ -95,8 +95,6 @@ static int __init exynos4_asv_init(void)
 		pr_info("EXYNOS: No store_result function\n");
 		goto out2;
 	}
-	
-	kfree(exynos_asv);
 
 	kfree(exynos_asv);
 
