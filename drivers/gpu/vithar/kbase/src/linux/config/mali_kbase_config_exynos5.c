@@ -53,7 +53,7 @@ static int pm_callback_power_on(kbase_device *kbdev)
 	/* Nothing is needed on VExpress, but we may have destroyed GPU state (if the below HARD_RESET code is active) */
 	struct kbase_os_device *osdev = &kbdev->osdev;
 	kbase_device_runtime_get_sync(osdev->dev);
-	return 1;
+	return 0;
 }
 
 static void pm_callback_power_off(kbase_device *kbdev)

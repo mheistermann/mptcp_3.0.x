@@ -1716,6 +1716,10 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 	/*
 	 * Atomic transaction on the Context and Run Pool begins
 	 */
+#ifdef CONFIG_VITHAR_RT_PM
+	kbase_pm_context_active(kbdev);
+	kbase_pm_request_gpu_cycle_counter(kbdev);
+#endif
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 	osk_mutex_lock( &js_devdata->runpool_mutex );
 
@@ -1731,6 +1735,10 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 		kbasep_js_runpool_requeue_or_kill_ctx( kbdev, head_kctx );
 
 		osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
+#ifdef CONFIG_VITHAR_RT_PM
+		kbase_pm_release_gpu_cycle_counter(kbdev);
+		kbase_pm_context_idle(kbdev);
+#endif
 		return;
 	}
 
@@ -1794,6 +1802,10 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 	osk_mutex_unlock( &js_devdata->runpool_mutex );
 	osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 	/* Note: after this point, the context could potentially get scheduled out immediately */
+#ifdef CONFIG_VITHAR_RT_PM
+	kbase_pm_release_gpu_cycle_counter(kbdev);
+	kbase_pm_context_idle(kbdev);
+#endif
 }
 
 void kbasep_js_schedule_privileged_ctx( kbase_device *kbdev, kbase_context *kctx )

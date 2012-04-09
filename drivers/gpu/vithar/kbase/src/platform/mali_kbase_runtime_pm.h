@@ -22,10 +22,13 @@
 
 int kbase_device_runtime_suspend(struct device *dev);
 int kbase_device_runtime_resume(struct device *dev);
+int kbase_device_runtime_idle(struct device *dev);
 void kbase_device_runtime_init_workqueue(struct device *dev);
 void kbase_device_runtime_disable(struct device *dev);
 void kbase_device_runtime_get_sync(struct device *dev);
 void kbase_device_runtime_put_sync(struct device *dev);
+void kbase_device_runtime_init(struct device *dev);
+void kbase_device_runtime_allow_rp_control(void);
 
 #define MALI_RTPM_DEBUG 0
 

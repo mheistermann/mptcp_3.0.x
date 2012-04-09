@@ -881,14 +881,13 @@ int kbase_platform_init(struct device *dev)
 	}
 #endif
 
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_init_workqueue(dev);
-#endif
-
 	if(kbase_platform_create_sysfs_file(dev)){
 		return -ENOENT;
 	}
 
+#ifdef CONFIG_VITHAR_RT_PM
+	kbase_device_runtime_init(dev);
+#endif
 #ifdef CONFIG_VITHAR_DVFS
 	kbase_platform_dvfs_init(dev, 3);
 #endif

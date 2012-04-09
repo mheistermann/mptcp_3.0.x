@@ -44,6 +44,7 @@
 #include <linux/workqueue.h>
 
 #define RUNTIME_PM_DELAY_TIME 10
+static int allow_rp_control= 0;
 
 /** Suspend callback from the OS.
  *
@@ -53,8 +54,19 @@
  *
  * @return A standard Linux error code
  */
+int kbase_device_runtime_idle(struct device *dev)
+{
+	return 1;
+}
 int kbase_device_runtime_suspend(struct device *dev)
 {
+	if(allow_rp_control==0) {
+		printk("mali driver is not initialized\n");
+		return 0;
+	}
+#if MALI_RTPM_DEBUG
+	printk("kbase_device_runtime_suspend\n");
+#endif
 	return kbase_platform_cmu_pmu_control(dev, 0);
 }
 
@@ -68,6 +80,13 @@ int kbase_device_runtime_suspend(struct device *dev)
  */
 int kbase_device_runtime_resume(struct device *dev)
 {
+	if(allow_rp_control==0) {
+		printk("mali driver is not initialized\n");
+		return 0;
+	}
+#if MALI_RTPM_DEBUG
+	printk("kbase_device_runtime_resume\n");
+#endif
 	return kbase_platform_cmu_pmu_control(dev, 1);
 }
 
@@ -79,7 +98,7 @@ int kbase_device_runtime_resume(struct device *dev)
  */
 void kbase_device_runtime_disable(struct device *dev)
 {
-    pm_runtime_disable(dev);
+	pm_runtime_disable(dev);
 }
 
 /** Initialize runtiem pm fields in given device 
@@ -88,23 +107,28 @@ void kbase_device_runtime_disable(struct device *dev)
  *
  * @return A standard Linux error code
  */
-static void kbase_device_runtime_init(struct device *dev)
+extern void pm_runtime_init(struct device *dev);
+
+
+void kbase_device_runtime_allow_rp_control(void)
 {
+	allow_rp_control = 1;
+}
+
+void kbase_device_runtime_init(struct device *dev)
+{
+	pm_runtime_init(dev);
 	pm_suspend_ignore_children(dev, true);
 	pm_runtime_enable(dev);
 }
 
-static int rp_started = 1;
 void kbase_device_runtime_get_sync(struct device *dev)
 {
 	int result;
-
-	if(rp_started) {
-		kbase_device_runtime_init(dev);
-		rp_started = 0;
-	}
-
-	result = pm_runtime_get_sync(dev);
+#if MALI_RTPM_DEBUG
+	printk("kbase_device_runtime_get_sync\n");
+#endif
+	result = pm_runtime_resume(dev);
 	//OSK_PRINT_ERROR(OSK_BASE_PM, "get_sync, usage_count=%d  \n", atomic_read(&dev->power.usage_count));
 	if(result < 0)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_get_sync failed (%d)\n", result);
@@ -114,11 +138,10 @@ void kbase_device_runtime_put_sync(struct device *dev)
 {
 	int result;
 
-	if(rp_started) {
-		return;
-	}
-
-	result = pm_runtime_put_sync(dev);
+#if MALI_RTPM_DEBUG
+	printk("kbase_device_runtime_put_sync %d\n", dev->power.runtime_status);
+#endif
+	result = pm_schedule_suspend(dev, RUNTIME_PM_DELAY_TIME);
 	//OSK_PRINT_ERROR(OSK_BASE_PM, "put_sync, usage_count=%d  \n", atomic_read(&dev->power.usage_count));
 	if(result < 0)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_put_sync failed (%d)\n", result);

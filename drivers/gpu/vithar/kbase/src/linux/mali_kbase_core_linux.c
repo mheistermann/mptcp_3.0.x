@@ -2074,6 +2074,7 @@ static struct dev_pm_ops kbase_pm_ops =
 #ifdef CONFIG_VITHAR_RT_PM
 	.runtime_suspend	= kbase_device_runtime_suspend,
 	.runtime_resume		= kbase_device_runtime_resume,
+	.runtime_idle		= kbase_device_runtime_idle,
 #endif
 };
 
@@ -2293,6 +2294,9 @@ static int __init kbase_driver_init(void)
 		platform_driver_unregister(&kbase_platform_driver);
 		return err;
 	}
+#endif
+#ifdef CONFIG_VITHAR_RT_PM
+	kbase_device_runtime_allow_rp_control();
 #endif
 
 	return 0;
