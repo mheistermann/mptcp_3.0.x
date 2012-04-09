@@ -635,7 +635,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 				    struct exynos_ss_udc_req *udc_req,
 				    bool continuing)
 {
-	struct exynos_ss_udc_ep_command epcmd;
+	struct exynos_ss_udc_ep_command epcmd = {{0}, };
 	struct usb_request *ureq = &udc_req->req;
 	enum trb_control trb_type = NORMAL;
 	int epnum = udc_ep->epnum;
