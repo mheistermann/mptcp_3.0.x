@@ -218,10 +218,12 @@ void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd, u32 slot_id)
 	} else
 		printk("dwmci platform data support only exynos4/5!\n");
 
-	if (!npd->init)
-		npd->init = exynos_dwmci_init;
-	if (!npd->get_bus_wd)
-		npd->get_bus_wd = exynos_dwmci_get_bus_wd;
-	if (!npd->set_io_timing)
-		npd->set_io_timing = exynos_dwmci_set_io_timing;
+	if (npd) {
+		if (!npd->init)
+			npd->init = exynos_dwmci_init;
+		if (!npd->get_bus_wd)
+			npd->get_bus_wd = exynos_dwmci_get_bus_wd;
+		if (!npd->set_io_timing)
+			npd->set_io_timing = exynos_dwmci_set_io_timing;
+	}
 }
