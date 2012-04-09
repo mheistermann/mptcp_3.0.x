@@ -21,6 +21,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/regs-pmu-5250.h>
 #include <mach/cpufreq.h>
+#include <mach/asv.h>
 
 #include <plat/clock.h>
 #include <plat/cpu.h>
@@ -156,30 +157,33 @@ static unsigned int exynos5_apll_pms_table[CPUFREQ_LEVEL_END] = {
  * ASV group voltage table
  */
 
-#define NUM_ASV_GROUP	1
+#define NUM_ASV_GROUP	L10
 
-static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
-	{ 0 },	/* L0 */
-	{ 0 },	/* L1 */
-	{ 0 },	/* L2 */
-	{ 0 },	/* L3 */
-	{ 0 },	/* L4 */
-	{ 1300000 },	/* L5 */
-	{ 1250000 },	/* L6 */
-	{ 1200000 },	/* L7 */
-	{ 1150000 },	/* L8 */
-	{ 1100000 },	/* L9 */
-	{ 1075000 },	/* L10 */
-	{ 1050000 },	/* L11 */
-	{ 1025000 },	/* L12 */
-	{ 1000000 },	/* L13 */
-	{ 975000 },	/* L14 */
-	{ 950000 },	/* L15 */
-	{ 950000 },	/* L16 */
-	{ 925000 },	/* L17 */
-	{ 900000 },	/* L18 */
-	{ 875000 },	/* L19 */
-	{ 850000 },	/* L20 */
+
+static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP+1] = {
+	/* ASV0 is not exist */
+	/* ASV0,  ASV1,    ASV2,     ASV3,    ASV4,    ASV5,    ASV6,    ASV7,    ASV8,    ASV9,   ASV10 */
+	{ 0 },  /* L0 */
+	{ 0 },  /* L1 */
+	{ 0 },  /* L2 */
+	{ 0 },  /* L3 */
+	{ 0 },  /* L4 */
+	{ 0,   1300000, 1275000, 1287500, 1275000, 1275000, 1262500, 1250000, 1237500, 1225000, 1225000 },    /* L5 */
+	{ 0,   1250000, 1237500, 1250000, 1237500, 1250000, 1237500, 1225000, 1212500, 1200000, 1200000 },    /* L6 */
+	{ 0,   1225000, 1200000, 1212500, 1200000, 1212500, 1200000, 1187500, 1175000, 1175000, 1150000 },    /* L7 */
+	{ 0,   1200000, 1175000, 1200000, 1175000, 1187500, 1175000, 1162500, 1150000, 1137500, 1125000 },    /* L8 */
+	{ 0,   1150000, 1125000, 1150000, 1125000, 1137500, 1125000, 1112500, 1100000, 1087500, 1075000 },    /* L9 */
+	{ 0,   1125000, 1112500, 1125000, 1112500, 1125000, 1112500, 1100000, 1087500, 1075000, 1062500 },    /* L10 */
+	{ 0,   1100000, 1075000, 1100000, 1087500, 1100000, 1087500, 1075000, 1062500, 1050000, 1037500 },    /* L11 */
+	{ 0,   1075000, 1050000, 1062500, 1050000, 1062500, 1050000, 1050000, 1037500, 1025000, 1012500 },    /* L12 */
+	{ 0,   1050000, 1025000, 1050000, 1037500, 1050000, 1037500, 1025000, 1012500, 1000000,  987500 },    /* L13 */
+	{ 0,   1025000, 1012500, 1025000, 1012500, 1025000, 1012500, 1000000, 1000000,  987500,  975000 },     /* L14 */
+	{ 0,   1012500, 1000000, 1012500, 1000000, 1012500, 1000000,  987500,  975000,  975000,  962500 },     /* L15 */
+	{ 0,   1000000,  975000, 1000000,  975000, 1000000,  987500,  975000,  962500,  962500,  950000 },     /* L16 */
+	{ 0,    975000,  962500,  975000,  962500,  975000,  962500,  950000,  937500,  925000,  925000 },     /* L17 */
+	{ 0,    950000,  937500,  950000,  937500,  950000,  937500,  925000,  925000,  925000,  912500 },     /* L18 */
+	{ 0,    937500,  925000,  937500,  925000,  937500,  925000,  912500,  912500,  900000,  900000 },     /* L19 */
+	{ 0,    925000,  912500,  925000,  912500,  925000,  912500,  900000,  900000,  887500,  887500  },    /* L20 */
 };
 
 static const unsigned int asv_voltage_rev0[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
@@ -205,7 +209,6 @@ static const unsigned int asv_voltage_rev0[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 925000 },	/* L19 */
 	{ 900000 },	/* L20 */
 };
-
 
 #if defined(CONFIG_EXYNOS5250_ABB_WA)
 #define ARM_RBB		6	/* +300mV */
@@ -375,7 +378,7 @@ static void exynos5250_set_frequency(unsigned int old_index,
 
 static void __init set_volt_table(void)
 {
-	unsigned int asv_group = 0;
+	unsigned int asv_group;
 	unsigned int i;
 
 	if (soc_is_exynos5250()) {
@@ -406,8 +409,14 @@ static void __init set_volt_table(void)
 			break;
 		}
 	}
-	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0)
+		asv_group = 0;
+	else
+		asv_group = exynos_result_of_asv;
+
+	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
+	pr_info("DVFS : VDD_ARM Voltage of max level is %d\n", asv_voltage[max_support_idx][asv_group]);
 	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
 		if (samsung_rev() < EXYNOS5250_REV_1_0)
 			exynos5250_volt_table[i] = asv_voltage_rev0[i][asv_group];
