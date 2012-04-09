@@ -29,8 +29,10 @@ enum busfreq_level_idx {
 	LV_1,
 	LV_2,
 	LV_3,
-	LV_INT_END,
-	LV_MIF_END = LV_3,
+	LV_4,
+	LV_5,
+	LV_INT_END = LV_4,
+	LV_MIF_END = LV_5,
 };
 
 struct opp;
