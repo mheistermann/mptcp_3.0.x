@@ -94,9 +94,8 @@ static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 	{950000, 160, 20, 40},
 	{1000000, 200, 35, 65},
 	{1050000, 266, 55, 100},
-#elif (MALI_DVFS_STEP == 3)
-	{812500, 133, 0, 30},
-	{937500, 266, 25, 55},
+#elif (MALI_DVFS_STEP == 2)
+	{937500, 266, 0, 55},
 	{1250000, 533, 45, 100}
 #else
 #error no table
@@ -180,6 +179,7 @@ static void kbase_platform_dvfs_set_vol(int vol)
 	case 937500:
 	case 900000:
 	case 812500:
+	case 800000:
 		kbase_platform_set_voltage(NULL, vol);
 		break;
 	default:
