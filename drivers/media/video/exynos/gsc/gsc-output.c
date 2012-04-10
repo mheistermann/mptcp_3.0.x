@@ -33,9 +33,9 @@
 
 int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 {
-	int ret;
-
 	if (!soc_is_exynos5250_rev1) {
+		int ret;
+
 		gsc_hw_set_sw_reset(gsc);
 		ret = gsc_wait_reset(gsc);
 		if (ret < 0) {
@@ -44,14 +44,13 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 		}
 		gsc_disp_fifo_sw_reset(gsc);
 		gsc_pixelasync_sw_reset(gsc);
+		gsc_hw_enable_control(gsc, false);
+		ret = gsc_wait_stop(gsc);
+		if (ret < 0) {
+			gsc_err("gscaler stop timeout");
+			return ret;
+		}
 	}
-	gsc_hw_enable_control(gsc, false);
-	ret = gsc_wait_stop(gsc);
-	if (ret < 0) {
-		gsc_err("gscaler stop timeout");
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -636,17 +635,23 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	int ret = 0;
 
-	ret = gsc_pipeline_s_stream(gsc, false);
-	if (ret)
-		return ret;
-
 	if (ctx->out_path == GSC_FIMD) {
-		gsc_hw_enable_control(gsc, false);
-		ret = gsc_wait_stop(gsc);
-		if (ret < 0)
+		ret = gsc_pipeline_s_stream(gsc, false);
+		if (ret)
 			return ret;
 	}
+
+	gsc_hw_enable_control(gsc, false);
+	ret = gsc_wait_stop(gsc);
+	if (ret < 0)
+		return ret;
 	gsc_hw_set_input_buf_mask_all(gsc);
+
+	if (ctx->out_path == GSC_MIXER) {
+		ret = gsc_pipeline_s_stream(gsc, false);
+		if (ret)
+			return ret;
+	}
 
 	/* TODO: Add gscaler clock off function */
 	ret = gsc_out_video_s_stream(gsc, 0);
@@ -745,13 +750,13 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 	}
 
 	if (!test_and_set_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
+		gsc_pipeline_s_stream(gsc, true);
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
 		if (ret < 0) {
 			gsc_err("wait operation timeout");
 			return;
 		}
-		gsc_pipeline_s_stream(gsc, true);
 	}
 }
 
