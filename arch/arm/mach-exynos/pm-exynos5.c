@@ -370,8 +370,7 @@ static void exynos5_pm_resume(void)
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_GPIO_SYSMEM_OPTION);
 
 	/* Disable CPU_nIRQ[0:1] */
-	tmp = __raw_readl(S5P_VA_COMBINER_BASE + 0x54);
-	tmp |= ((0x1 << 8) | (0x1 << 0));
+	tmp = ((0x1 << 8) | (0x1 << 0));
 	__raw_writel(tmp, S5P_VA_COMBINER_BASE + 0x54);
 
 	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
