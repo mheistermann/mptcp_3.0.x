@@ -51,6 +51,9 @@
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
 #define VITHAR_DEFAULT_CLOCK 267000000
+
+static struct clk *clk_g3d = NULL;
+
 static int kbase_platform_power_clock_init(struct device *dev)
 {
 	int timeout;
@@ -76,8 +79,14 @@ static int kbase_platform_power_clock_init(struct device *dev)
 		timeout--;
 		udelay(100);
 	}
-
 	/* Turn on G3D clock */
+
+	clk_g3d = clk_get(dev, "g3d");
+	if(IS_ERR(clk_g3d)) {
+		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [clk_g3d]\n");
+		goto out;
+	}
+	clk_enable(clk_g3d);
 
 #ifdef CONFIG_VITHAR_HWVER_R0P0
 	kbdev->sclk_g3d = clk_get(dev, "aclk_400");
@@ -120,27 +129,15 @@ out:
 
 static int kbase_platform_clock_on(struct device *dev)
 {
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	(void) clk_enable(kbdev->sclk_g3d);
-
+	UNUSED(dev);
+	(void) clk_enable(clk_g3d);
 	return 0;
 }
 
 static int kbase_platform_clock_off(struct device *dev)
 {
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	(void)clk_disable(kbdev->sclk_g3d);
-
+	UNUSED(dev);
+	(void)clk_disable(clk_g3d);
 	return 0;
 }
 
@@ -330,9 +327,9 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 
 	if(cmd == 1) {
 	    /* Waiting for clock is stable */
-	    do {
-		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
-	    } while (tmp & 0x1000000);
+		do {
+			tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
+		} while (tmp & 0x1000000);
 	}
 	else if(cmd == 2) {
 	    /* Do we need to check */

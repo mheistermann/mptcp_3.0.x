@@ -107,6 +107,7 @@ static void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 {
 	static int _freq = -1;
 	unsigned long rate = 0;
+	unsigned long tmp = 0;
 
 	if(kbdev->sclk_g3d == 0)
 		return;
@@ -149,6 +150,11 @@ static void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 
 	_freq = freq;
 	clk_set_rate(kbdev->sclk_g3d, rate);
+
+	/* Waiting for clock is stable */
+	do {
+		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
+	} while (tmp & 0x1000000);
 
 #if MALI_DVFS_DEBUG
 	printk("dvfs_set_clock %dMhz\n", freq);
