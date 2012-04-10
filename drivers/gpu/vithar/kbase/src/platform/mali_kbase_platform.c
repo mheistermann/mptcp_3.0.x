@@ -50,7 +50,7 @@
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
-#define VITHAR_DEFAULT_CLOCK 267000000
+#define VITHAR_DEFAULT_CLOCK 533000000
 
 static struct clk *clk_g3d = NULL;
 
@@ -293,40 +293,28 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	unsigned int cmd = 0;
 	kbdev = dev_get_drvdata(dev);
 
-	if (!kbdev)
-		return -ENODEV;
+        if (!kbdev)
+                return -ENODEV;
 
-	if(!kbdev->sclk_g3d)
-		return -ENODEV;
+        if(!kbdev->sclk_g3d)
+                return -ENODEV;
 
-	if (sysfs_streq("533", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 533000000);
-	} else if (sysfs_streq("400", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 400000000);
-	} else if (sysfs_streq("266", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 267000000);
-	} else if (sysfs_streq("200", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 200000000);
-	} else if (sysfs_streq("160", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 160000000);
-	} else if (sysfs_streq("133", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 134000000);
-	} else if (sysfs_streq("100", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 100000000);
-	} else if (sysfs_streq("50", buf)) {
-	    cmd = 1;
-	    clk_set_rate(kbdev->sclk_g3d, 50000000);
-	} else {
-	    dev_err(dev, "set_clock: invalid value\n");
-	    return -ENOENT;
-	}
+        if (sysfs_streq("533", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 1250000 );
+                kbase_platform_dvfs_set_clock(kbdev, 533);
+        } else if (sysfs_streq("266", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 937500 );
+                kbase_platform_dvfs_set_clock(kbdev, 266);
+        } else if (sysfs_streq("133", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 812500 );
+                kbase_platform_dvfs_set_clock(kbdev, 133);
+        } else {
+                dev_err(dev, "set_clock: invalid value\n");
+                return -ENOENT;
+        }
 
 	if(cmd == 1) {
 	    /* Waiting for clock is stable */
@@ -637,33 +625,6 @@ static ssize_t show_vol(struct device *dev, struct device_attribute *attr, char 
 	return ret;
 }
 
-static ssize_t set_vol(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	if (sysfs_streq("950000", buf)) {
-	    kbase_platform_set_voltage(dev, 950000);
-	} else if (sysfs_streq("1000000", buf)) {
-	    kbase_platform_set_voltage(dev, 1000000);
-	} else if (sysfs_streq("1050000", buf)) {
-	    kbase_platform_set_voltage(dev, 1050000);
-	} else if (sysfs_streq("1100000", buf)) {
-	    kbase_platform_set_voltage(dev, 1100000);
-	} else if (sysfs_streq("1150000", buf)) {
-	    kbase_platform_set_voltage(dev, 1150000);
-	} else if (sysfs_streq("1200000", buf)) {
-	    kbase_platform_set_voltage(dev, 1200000);
-	} else {
-	    printk("invalid voltage\n");
-	}
-
-	return count;
-}
-
 static int get_clkout_cmu_top(int *val)
 {
     *val = __raw_readl(EXYNOS5_CLKOUT_CMU_TOP);
@@ -793,7 +754,7 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 		kbase_platform_get_default_voltage(dev, &vol);
 		if(vol != 0)
 			kbase_platform_set_voltage(dev, vol);
-		clk_set_rate(kbdev->sclk_g3d, VITHAR_DEFAULT_CLOCK);
+		kbase_platform_dvfs_set_clock(kbdev,VITHAR_DEFAULT_CLOCK / 1000000);
 	} else if (sysfs_streq("on", buf)) {
 		if(kbdev->pm.metrics.timer_active == MALI_TRUE )
 			return count;
@@ -824,7 +785,7 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 DEVICE_ATTR(clock, S_IRUGO|S_IWUSR, show_clock, set_clock);
 DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
 DEVICE_ATTR(dtlb, S_IRUGO|S_IWUSR, show_dtlb, set_dtlb);
-DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, set_vol);
+DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, NULL);
 DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
 

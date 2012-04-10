@@ -35,6 +35,8 @@ int kbase_platform_regulator_enable(struct device *dev);
 int kbase_platform_get_default_voltage(struct device *dev, int *vol);
 int kbase_platform_get_voltage(struct device *dev, int *vol);
 int kbase_platform_set_voltage(struct device *dev, int vol);
+void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq);
+
 
 #ifdef CONFIG_VITHAR_DVFS
 int kbase_platform_dvfs_init(struct device *dev, int step);

@@ -102,65 +102,6 @@ static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 #endif
 };
 
-static void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
-{
-	static int _freq = -1;
-	unsigned long rate = 0;
-	unsigned long tmp = 0;
-
-	if(kbdev->sclk_g3d == 0)
-		return;
-
-	if (freq == _freq)
-		return;
-
-	switch(freq)
-	{
-	case 533:
-		rate = 533000000;
-		break;
-	case 466:
-		rate = 467000000;
-		break;
-	case 400:
-		rate = 400000000;
-		break;
-	case 266:
-		rate = 267000000;
-		break;
-	case 200:
-		rate = 200000000;
-		break;
-	case 160:
-		rate = 160000000;
-		break;
-	case 133:
-		rate = 134000000;
-		break;
-	case 100:
-		rate = 100000000;
-		break;
-	case 50:
-		rate = 50000000;
-		break;
-	default:
-		return;
-	}
-
-	_freq = freq;
-	clk_set_rate(kbdev->sclk_g3d, rate);
-
-	/* Waiting for clock is stable */
-	do {
-		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
-	} while (tmp & 0x1000000);
-
-#if MALI_DVFS_DEBUG
-	printk("dvfs_set_clock %dMhz\n", freq);
-#endif
-	return;
-}
-
 static void kbase_platform_dvfs_set_vol(int vol)
 {
 	static int _vol = -1;
@@ -409,5 +350,64 @@ int kbase_platform_set_voltage(struct device *dev, int vol)
     }
 #endif
     return 0;
+}
+
+void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
+{
+	static int _freq = -1;
+	unsigned long rate = 0;
+	unsigned long tmp = 0;
+
+	if(kbdev->sclk_g3d == 0)
+		return;
+
+	if (freq == _freq)
+		return;
+
+	switch(freq)
+	{
+	case 533:
+		rate = 533000000;
+		break;
+	case 466:
+		rate = 467000000;
+		break;
+	case 400:
+		rate = 400000000;
+		break;
+	case 266:
+		rate = 267000000;
+		break;
+	case 200:
+		rate = 200000000;
+		break;
+	case 160:
+		rate = 160000000;
+		break;
+	case 133:
+		rate = 134000000;
+		break;
+	case 100:
+		rate = 100000000;
+		break;
+	case 50:
+		rate = 50000000;
+		break;
+	default:
+		return;
+	}
+
+	_freq = freq;
+	clk_set_rate(kbdev->sclk_g3d, rate);
+
+	/* Waiting for clock is stable */
+	do {
+		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
+	} while (tmp & 0x1000000);
+
+#if MALI_DVFS_DEBUG
+	printk("dvfs_set_clock %dMhz\n", freq);
+#endif
+	return;
 }
 
