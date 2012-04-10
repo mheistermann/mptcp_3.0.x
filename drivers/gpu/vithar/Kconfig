@@ -21,7 +21,7 @@ config VITHAR_RT_PM
 config VITHAR_DVFS
 	bool "Enable DVFS"
 	depends on VITHAR
-	default n
+	default y
 	help
 	  Choose this option to enable DVFS on vithar DDK.
 
