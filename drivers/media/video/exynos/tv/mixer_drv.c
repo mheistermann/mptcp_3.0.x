@@ -1077,7 +1077,7 @@ static int mxr_link_setup(struct media_entity *entity,
 	int gsc_num = 0;
 
 	/* difficult to get dev ptr */
-	printk(KERN_DEBUG "%s start\n", __func__);
+	printk(KERN_DEBUG "%s %s\n", __func__, flags ? "start" : "stop");
 
 	if (flags & MEDIA_LNK_FL_ENABLED) {
 		sub_mxr->use = 1;
