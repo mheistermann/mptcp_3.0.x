@@ -46,10 +46,16 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
-#define MIF_MAX_THRESHOLD	20
-#define INT_MAX_THRESHOLD	20
-#define MIF_IDLE_THRESHOLD	4
-#define INT_IDLE_THRESHOLD	4
+#define MIF_MAX_THRESHOLD	13
+#define INT_MAX_THRESHOLD	8
+#define MIF_IDLE_THRESHOLD	3
+#define INT_IDLE_THRESHOLD	2
+
+#ifdef CONFIG_S5P_DP
+#define MIF_LOCK_LCD		300000
+#else
+#define MIF_LOCK_LCD		100000
+#endif
 
 #define INT_RBB		6	/* +300mV */
 
@@ -593,6 +599,9 @@ static void exynos5250_monitor(struct busfreq_data *data,
 		load_average[PPMU_MIF] = ddr_l_load_average;
 	}
 
+	load[PPMU_INT] = right0_load;
+	load_average[PPMU_INT] = right0_load_average;
+
 	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
 		if (load[i] >= max_threshold[i]) {
 			freq[i] = data->max_freq[i];
@@ -638,7 +647,7 @@ static void busfreq_late_resume(struct early_suspend *h)
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
 	/* Request min 300MHz */
-	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], 300000);
+	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], MIF_LOCK_LCD);
 }
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
@@ -833,7 +842,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
 
 	/* Request min 300MHz */
-	dev_lock(dev, dev, 300000);
+	dev_lock(dev, dev, MIF_LOCK_LCD);
 
 	register_early_suspend(&data->busfreq_early_suspend_handler);
 
