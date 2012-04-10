@@ -1825,11 +1825,14 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 		break;
 	/* SuperSpeed */
 	case 4:
-	default:
 		udc->gadget.speed = USB_SPEED_SUPER;
 		mps0 = EP0_SS_MPS;
 		mps = EP_SS_MPS;
 		break;
+
+	default:
+		dev_err(udc->dev, "Connection speed is unknown (%d)\n", speed);
+		return;
 	}
 
 	/* Suspend the inactive Phy */
