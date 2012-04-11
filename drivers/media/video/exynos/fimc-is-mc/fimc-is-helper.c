@@ -2005,20 +2005,11 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	}
 
 	if (dev->back.dis_on) {
-		if (crop_width <= DEFAULT_CAPTURE_STILL_CROP_WIDTH
-			&& crop_height <=  DEFAULT_CAPTURE_STILL_CROP_HEIGHT) {
-			dis_width = (crop_width * 100) / 125;
-			dis_height = (crop_height * 100) / 125;
-
-		} else {
-			crop_width = back_width * 125 / 100;
-			crop_height = back_height * 125 / 100;
-			dis_width = back_width;
-			dis_height = back_height;
-		}
+		dis_width = back_width * 125 / 100;
+		dis_height = back_height * 125 / 100;
 	} else {
-			dis_width = crop_width;
-			dis_height = crop_height;
+		dis_width = back_width;
+		dis_height = back_height;
 	}
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
@@ -2064,16 +2055,16 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_WIDTH(dev,
-		front_width);
+		dis_width);
 	IS_SCALERC_SET_PARAM_OUTPUT_CROP_CROP_HEIGHT(dev,
-		front_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OUTPUT_CROP);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		crop_width);
+		dis_width);
 	IS_SCALERC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		crop_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
@@ -2081,7 +2072,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		front_width);
 	IS_SCALERC_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
 		front_height);
-	if((front_width != crop_width) || (front_height != crop_height))
+	if((front_width != dis_width) || (front_height != dis_height))
 		IS_SCALERC_SET_PARAM_DMA_OUTPUT_OUTPATH(dev,
 			2);  /* unscaled image */
 	else
@@ -2092,72 +2083,72 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 
 	/* ODC */
 	IS_ODC_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		crop_width);
+		dis_width);
 	IS_ODC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		crop_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_ODC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		crop_width);
+		dis_width);
 	IS_ODC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		crop_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* DIS */
 	IS_DIS_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		crop_width);
+		dis_width);
 	IS_DIS_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		crop_height);
+		dis_height);
 	IS_SET_PARAM_BIT(dev, PARAM_DIS_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_DIS_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_DIS_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SET_PARAM_BIT(dev, PARAM_DIS_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* 3DNR */
 	IS_TDNR_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_TDNR_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_TDNR_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_TDNR_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_TDNR_SET_PARAM_DMA_OUTPUT_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_TDNR_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SET_PARAM_BIT(dev, PARAM_TDNR_DMA_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	/* ScalerP */
 	IS_SCALERP_SET_PARAM_OTF_INPUT_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_SCALERP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERP_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERP_SET_PARAM_INPUT_CROP_IN_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_WIDTH(dev,
-		dis_width);
+		back_width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_HEIGHT(dev,
-		dis_height);
+		back_height);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width);
 	IS_SCALERP_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
