@@ -25,6 +25,7 @@
 
 static struct samsung_asv *exynos_asv;
 unsigned int exynos_result_of_asv;
+bool exynos_lot_id;
 
 static int __init exynos4_asv_init(void)
 {

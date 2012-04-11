@@ -385,9 +385,14 @@ static void exynos5250_set_bus_volt(void)
 		exynos5_busfreq_table_mif[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
-	for (i = LV_0; i < LV_INT_END; i++)
-		exynos5_busfreq_table_int[i].volt =
-			exynos5_int_volt[asv_group_index][i];
+	for (i = LV_0; i < LV_INT_END; i++) {
+		if (!exynos_lot_id)
+			exynos5_busfreq_table_int[i].volt =
+				exynos5_int_volt[asv_group_index][i];
+		else
+			exynos5_busfreq_table_int[i].volt = 1025000;
+	}
+
 	return;
 }
 

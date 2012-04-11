@@ -122,8 +122,10 @@ static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
 
-	if (!exynos5250_check_lot_id())
+	if (!exynos5250_check_lot_id()) {
+		exynos_lot_id = true;
 		asv_info->ids_result -= 15;
+	}
 
 	if (soc_is_exynos5250()) {
 		for (i = 0; i < ARRAY_SIZE(exynos5250_limit); i++) {
@@ -158,6 +160,7 @@ int exynos5250_asv_init(struct samsung_asv *asv_info)
 	int exynos_cal_asv;
 
 	exynos_result_of_asv = 0;
+	exynos_lot_id = false;
 
 	pr_info("EXYNOS5250: Adaptive Support Voltage init\n");
 
