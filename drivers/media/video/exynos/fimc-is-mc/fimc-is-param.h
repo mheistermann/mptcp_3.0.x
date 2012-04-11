@@ -2000,6 +2000,8 @@ struct is_debug_frame_descriptor {
 };
 
 #define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30 * 20)	/* 600 frame */
+#define MAX_VERSION_DISPLAY_BUF		(32)
+
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
@@ -2011,18 +2013,23 @@ struct is_share_region {
 
 	u32	af_position;
 	u32	af_status;
-	u32  af_scene_type;
+	u32  	af_scene_type;
 
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
-	u32  frame_descp_max_idx;
+	u32  	frame_descp_max_idx;
 
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
 
-	u32 chip_id;
-	u32 chip_rev_no;
+	u32 	chip_id;
+	u32 	chip_rev_no;
+	u8	ispfw_version_no[MAX_VERSION_DISPLAY_BUF];
+	u8	ispfw_version_date[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_version_no[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_revsion_no[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_version_date[MAX_VERSION_DISPLAY_BUF];
 };
 
 struct is_debug_control {

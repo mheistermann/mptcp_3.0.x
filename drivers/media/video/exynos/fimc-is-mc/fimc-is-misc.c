@@ -209,7 +209,7 @@
 
 /* Interrupt mask. */
 #define S5PCSIS_INTMSK					(0x10)
-#define S5PCSIS_INTMSK_EN_ALL				(0xf000103f)
+#define S5PCSIS_INTMSK_EN_ALL				(0xfc00103f)
 #define S5PCSIS_INTSRC					(0x14)
 
 /* Pixel resolution */
