@@ -503,8 +503,9 @@ static int hdmi_runtime_resume(struct device *dev)
 	dev_dbg(dev, "%s\n", __func__);
 
 	hdmi_resource_poweron(&hdev->res);
-
+	hdmi_sw_reset(hdev);
 	hdmi_phy_sw_reset(hdev);
+
 	ret = v4l2_subdev_call(hdev->phy_sd, core, s_power, 1);
 	if (ret) {
 		dev_err(dev, "failed to turn on hdmiphy\n");
