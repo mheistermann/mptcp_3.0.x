@@ -271,7 +271,7 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 266,133Mhz");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 266, 160, 100Mhz");
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -302,14 +302,26 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
                 cmd = 1;
                 kbase_platform_set_voltage( dev, 1250000 );
                 kbase_platform_dvfs_set_clock(kbdev, 533);
+        } else if (sysfs_streq("450", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 1150000 );
+                kbase_platform_dvfs_set_clock(kbdev, 450);
+        } else if (sysfs_streq("400", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 1100000 );
+                kbase_platform_dvfs_set_clock(kbdev, 400);
         } else if (sysfs_streq("266", buf)) {
                 cmd = 1;
-                kbase_platform_set_voltage( dev, 937500 );
+                kbase_platform_set_voltage( dev, 937500);
                 kbase_platform_dvfs_set_clock(kbdev, 266);
-        } else if (sysfs_streq("133", buf)) {
+        } else if (sysfs_streq("160", buf)) {
                 cmd = 1;
-                kbase_platform_set_voltage( dev, 812500 );
-                kbase_platform_dvfs_set_clock(kbdev, 133);
+                kbase_platform_set_voltage( dev, 937500 );
+                kbase_platform_dvfs_set_clock(kbdev, 160);
+        } else if (sysfs_streq("100", buf)) {
+                cmd = 1;
+                kbase_platform_set_voltage( dev, 937500 );
+                kbase_platform_dvfs_set_clock(kbdev, 100);
         } else {
                 dev_err(dev, "set_clock: invalid value\n");
                 return -ENOENT;
