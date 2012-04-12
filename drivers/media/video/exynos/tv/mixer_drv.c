@@ -14,6 +14,7 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/device.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -23,6 +24,8 @@
 #include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/videodev2_exynos_media.h>
+#include <mach/busfreq_exynos5.h>
+#include <mach/dev.h>
 
 #include <mach/videonode-exynos5.h>
 #include <media/exynos_mc.h>
@@ -107,6 +110,10 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
 	/* If pipeline is started from Gscaler input video device,
 	 * TV basic configuration must be set before running mixer */
+
+	/* for bus freq lock */
+	mdev->bus_dev = dev_get("exynos-busfreq");
+
 	if (mdev->mxr_data_from == FROM_GSC_SD) {
 		mxr_dbg(mdev, "%s: from gscaler\n", __func__);
 		local = 0;
@@ -163,6 +170,9 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 
 		mxr_dbg(mdev, "cookie of current output = (%d)\n",
 			to_output(mdev)->cookie);
+
+		/* Request min 200MHz */
+		dev_lock(mdev->bus_dev, mdev->dev, INT_LOCK_TV);
 
 #if defined(CONFIG_CPU_EXYNOS4210)
 		if (to_output(mdev)->cookie == 0)
@@ -256,6 +266,8 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		hdmi_sd = media_entity_to_v4l2_subdev(pad->entity);
 
 		mxr_reg_streamoff(mdev);
+		dev_unlock(mdev->bus_dev, mdev->dev);
+
 		/* vsync applies Mixer setup */
 		ret = mxr_reg_wait4vsync(mdev);
 		if (ret) {
