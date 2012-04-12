@@ -19,10 +19,8 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <mach/videonode.h>
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 #include <mach/dev.h>
-#endif
 #endif
 #include <media/exynos_mc.h>
 #include <linux/cma.h>
@@ -1847,12 +1845,10 @@ static int fimc_is_probe(struct platform_device *pdev)
 		goto p_err3;
 	}
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	isp->bus_dev = dev_get("exynos-busfreq");
 	mutex_init(&isp->busfreq_lock);
 	isp->busfreq_num = 0;
-#endif
 #endif
 
 	/*init gpio : should be moved to stream_on */

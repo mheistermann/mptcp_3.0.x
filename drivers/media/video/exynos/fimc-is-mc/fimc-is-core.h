@@ -117,11 +117,9 @@
 
 #define is_af_use(dev)				((dev->af.use_af) ? 1 : 0)
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
-#define FIMC_IS_FREQ_MIF		(500)
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+#define FIMC_IS_FREQ_MIF		(800)
 #define FIMC_IS_FREQ_INT		(267)
-#endif
 #endif
 
 #define err(fmt, args...) \
@@ -468,12 +466,10 @@ struct fimc_is_dev {
 	struct is_fd_result_header		fd_header;
 
 	/* Shared parameter region */
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	struct device				*bus_dev;
 	struct mutex				busfreq_lock;
 	int					busfreq_num;
-#endif
 #endif
 	atomic_t				p_region_num;
 	unsigned long				p_region_index1;

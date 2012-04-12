@@ -19,10 +19,8 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <mach/videonode.h>
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 #include <mach/dev.h>
-#endif
 #endif
 #include <media/exynos_mc.h>
 #include <linux/cma.h>
@@ -169,8 +167,7 @@ static int fimc_is_scalerc_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	mutex_lock(&isp->busfreq_lock);
 	isp->busfreq_num++;
 	if (isp->busfreq_num == 1) {
@@ -180,7 +177,6 @@ static int fimc_is_scalerc_video_open(struct file *file)
 			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
 	}
 	mutex_unlock(&isp->busfreq_lock);
-#endif
 #endif
 
 	dbg("%s\n", __func__);
@@ -251,8 +247,7 @@ static int fimc_is_scalerc_video_close(struct file *file)
 		mutex_unlock(&isp->lock);
 	}
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	mutex_lock(&isp->busfreq_lock);
 	if (isp->busfreq_num == 1) {
 		dev_unlock(isp->bus_dev, &isp->pdev->dev);
@@ -262,7 +257,6 @@ static int fimc_is_scalerc_video_close(struct file *file)
 	if (isp->busfreq_num < 0)
 		isp->busfreq_num = 0;
 	mutex_unlock(&isp->busfreq_lock);
-#endif
 #endif
 
 	return 0;
@@ -881,8 +875,7 @@ static int fimc_is_scalerp_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	mutex_lock(&isp->busfreq_lock);
 	isp->busfreq_num++;
 	if (isp->busfreq_num == 1) {
@@ -892,7 +885,6 @@ static int fimc_is_scalerp_video_open(struct file *file)
 			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
 	}
 	mutex_unlock(&isp->busfreq_lock);
-#endif
 #endif
 
 	dbg("%s\n", __func__);
@@ -964,8 +956,7 @@ static int fimc_is_scalerp_video_close(struct file *file)
 		mutex_unlock(&isp->lock);
 	}
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	mutex_lock(&isp->busfreq_lock);
 	if (isp->busfreq_num == 1) {
 		dev_unlock(isp->bus_dev, &isp->pdev->dev);
@@ -975,7 +966,6 @@ static int fimc_is_scalerp_video_close(struct file *file)
 	if (isp->busfreq_num < 0)
 		isp->busfreq_num = 0;
 	mutex_unlock(&isp->busfreq_lock);
-#endif
 #endif
 
 	return 0;
@@ -2160,8 +2150,7 @@ static int fimc_is_3dnr_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-#ifdef CONFIG_BUSFREQ_OPP
-#ifdef CONFIG_CPU_EXYNOS5250
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 	mutex_lock(&isp->busfreq_lock);
 	isp->busfreq_num++;
 	if (isp->busfreq_num == 1) {
@@ -2171,7 +2160,6 @@ static int fimc_is_3dnr_video_open(struct file *file)
 			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
 	}
 	mutex_unlock(&isp->busfreq_lock);
-#endif
 #endif
 
 	dbg("%s\n", __func__);
