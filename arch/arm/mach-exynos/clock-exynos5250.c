@@ -1444,6 +1444,30 @@ static struct clk exynos5_i2cs_clocks[] = {
 		.parent		= &exynos5_clk_aclk_66.clk,
 		.enable		= exynos5_clk_ip_peric_ctrl,
 		.ctrlbit	= (1 << 14),
+	}, {
+		.name		= "i2c",
+		.devname	= "exynos5-hsi2c.0",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 28)
+	}, {
+		.name		= "i2c",
+		.devname	= "exynos5-hsi2c.1",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 29)
+	}, {
+		.name		= "i2c",
+		.devname	= "exynos5-hsi2c.2",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 30)
+	}, {
+		.name		= "i2c",
+		.devname	= "exynos5-hsi2c.3",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 31)
 	}
 };
 
