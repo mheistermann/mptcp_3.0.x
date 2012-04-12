@@ -14,7 +14,9 @@
 #define __ASM_ARCH_BUSFREQ_H __FILE__
 
 #include <linux/notifier.h>
+#if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
+#endif
 
 #include <mach/ppmu.h>
 
@@ -58,7 +60,9 @@ struct busfreq_data {
 	struct notifier_block exynos_buspm_notifier;
 	struct notifier_block exynos_reboot_notifier;
 	struct notifier_block exynos_request_notifier;
+#if defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend busfreq_early_suspend_handler;
+#endif
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	void (*monitor) (struct busfreq_data *data, struct opp **mif_opp,

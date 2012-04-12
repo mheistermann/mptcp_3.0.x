@@ -638,6 +638,7 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	*int_opp = opp[PPMU_INT];
 }
 
+#if defined(CONFIG_HAS_EARLYSUSPEND)
 static void busfreq_early_suspend(struct early_suspend *h)
 {
 	unsigned long freq;
@@ -654,6 +655,7 @@ static void busfreq_late_resume(struct early_suspend *h)
 	/* Request min 300MHz */
 	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], MIF_LOCK_LCD);
 }
+#endif
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
@@ -843,13 +845,14 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		return -ENODEV;
 	}
 
-	data->busfreq_early_suspend_handler.suspend = &busfreq_early_suspend;
-	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
-
 	/* Request min 300MHz */
 	dev_lock(dev, dev, MIF_LOCK_LCD);
 
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+	data->busfreq_early_suspend_handler.suspend = &busfreq_early_suspend;
+	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
 	register_early_suspend(&data->busfreq_early_suspend_handler);
+#endif
 
 	tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
 	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
