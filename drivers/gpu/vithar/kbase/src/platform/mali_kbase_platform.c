@@ -80,7 +80,6 @@ static int kbase_platform_power_clock_init(struct device *dev)
 		udelay(100);
 	}
 	/* Turn on G3D clock */
-
 	clk_g3d = clk_get(dev, "g3d");
 	if(IS_ERR(clk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [clk_g3d]\n");
@@ -861,7 +860,7 @@ int kbase_platform_init(struct device *dev)
 	kbase_device_runtime_init(dev);
 #endif
 #ifdef CONFIG_VITHAR_DVFS
-	kbase_platform_dvfs_init(dev, 3);
+	kbase_platform_dvfs_init(dev);
 #endif
 
 	return 0;

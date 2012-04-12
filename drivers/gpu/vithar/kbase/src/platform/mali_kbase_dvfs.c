@@ -57,8 +57,8 @@ static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
 #endif
 #endif
 
-#ifdef CONFIG_VITHAR_DVFS
 
+#ifdef CONFIG_VITHAR_DVFS
 typedef struct _mali_dvfs_info{
 	unsigned int voltage;
 	unsigned int clock;
@@ -83,17 +83,13 @@ osk_spinlock mali_dvfs_spinlock;
 static mali_dvfs_status mali_dvfs_status_current;
 static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
-#if (MALI_DVFS_STEP == 5)
-	{900000, 100, 0, 25},
-	{950000, 160, 20, 40},
-	{1000000, 200, 35, 65},
-	{1050000, 266, 55, 85},
-	{1150000, 400, 70, 100}
-#elif (MALI_DVFS_STEP == 4)
-	{900000, 100, 0, 25},
-	{950000, 160, 20, 40},
-	{1000000, 200, 35, 65},
-	{1050000, 266, 55, 100},
+#if (MALI_DVFS_STEP == 6)
+	{937500/*750000*/, 100, 0, 40},
+	{937500/*81250*/, 160, 30, 60},
+	{937500, 266, 50, 70},
+	{1100000, 400, 60, 80},
+	{1150000, 450, 70, 90},
+	{1250000, 533, 80, 100}
 #elif (MALI_DVFS_STEP == 2)
 	{937500, 266, 0, 55},
 	{1250000, 533, 45, 100}
@@ -114,13 +110,11 @@ static void kbase_platform_dvfs_set_vol(int vol)
 	{
 	case 1250000:
 	case 1150000:
-	case 1050000:
+	case 1100000:
 	case 1000000:
-	case 950000:
 	case 937500:
-	case 900000:
 	case 812500:
-	case 800000:
+	case 750000:
 		kbase_platform_set_voltage(NULL, vol);
 		break;
 	default:
@@ -212,7 +206,7 @@ int kbase_platform_dvfs_get_control_status(void)
 	return mali_dvfs_control;
 }
 
-int kbase_platform_dvfs_init(struct device *dev, int step)
+int kbase_platform_dvfs_init(struct device *dev)
 {
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
@@ -229,7 +223,7 @@ int kbase_platform_dvfs_init(struct device *dev, int step)
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.kbdev = kbdev;
 	mali_dvfs_status_current.utilisation = 100;
-	mali_dvfs_status_current.step = step;
+	mali_dvfs_status_current.step = MALI_DVFS_STEP-1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
 	return MALI_TRUE;
@@ -354,9 +348,24 @@ int kbase_platform_set_voltage(struct device *dev, int vol)
 
 void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 {
+	static struct clk * mout_gpll = NULL;
+	static struct clk * fin_gpll = NULL;
+	static struct clk * fout_gpll = NULL;
 	static int _freq = -1;
-	unsigned long rate = 0;
+	static unsigned long gpll_rate_prev = 0;
+	unsigned long gpll_rate = 0, aclk_400_rate = 0;
 	unsigned long tmp = 0;
+
+	if (!kbdev)
+		panic("oops");
+
+	if (mout_gpll==NULL) {
+		mout_gpll = clk_get(kbdev->osdev.dev, "mout_gpll");
+		fin_gpll = clk_get(kbdev->osdev.dev, "ext_xtal");
+		fout_gpll = clk_get(kbdev->osdev.dev, "fout_gpll");
+		if(IS_ERR(mout_gpll) || IS_ERR(fin_gpll) || IS_ERR(fout_gpll))
+			panic("clk_get ERROR");
+	}
 
 	if(kbdev->sclk_g3d == 0)
 		return;
@@ -367,38 +376,49 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	switch(freq)
 	{
 	case 533:
-		rate = 533000000;
+		gpll_rate = 533000000;
+		aclk_400_rate = 533000000;
 		break;
-	case 466:
-		rate = 467000000;
+	case 450:
+		gpll_rate = 450000000;
+		aclk_400_rate = 450000000;
 		break;
 	case 400:
-		rate = 400000000;
+		gpll_rate = 800000000;
+		aclk_400_rate = 400000000;
 		break;
 	case 266:
-		rate = 267000000;
-		break;
-	case 200:
-		rate = 200000000;
+		gpll_rate = 800000000;
+		aclk_400_rate = 267000000;
 		break;
 	case 160:
-		rate = 160000000;
-		break;
-	case 133:
-		rate = 134000000;
+		gpll_rate = 800000000;
+		aclk_400_rate = 160000000;
 		break;
 	case 100:
-		rate = 100000000;
-		break;
-	case 50:
-		rate = 50000000;
+		gpll_rate = 800000000;
+		aclk_400_rate = 100000000;
 		break;
 	default:
 		return;
 	}
 
+	/* if changed the GPLL rate, set rate for GPLL and wait for lock time */
+	if( gpll_rate != gpll_rate_prev) {
+		/*for stable clock input.*/
+		clk_set_rate(kbdev->sclk_g3d, 100000000);
+		clk_set_parent(mout_gpll, fin_gpll);
+
+		/*change gpll*/
+		clk_set_rate( fout_gpll, gpll_rate );
+
+		/*restore parent*/
+		clk_set_parent(mout_gpll, fout_gpll);
+		gpll_rate_prev = gpll_rate;
+	}
+
 	_freq = freq;
-	clk_set_rate(kbdev->sclk_g3d, rate);
+	clk_set_rate(kbdev->sclk_g3d, aclk_400_rate);
 
 	/* Waiting for clock is stable */
 	do {
@@ -406,7 +426,8 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	} while (tmp & 0x1000000);
 
 #if MALI_DVFS_DEBUG
-	printk("dvfs_set_clock %dMhz\n", freq);
+	printk("aclk400 %u[%d]\n", (unsigned int)clk_get_rate(kbdev->sclk_g3d),mali_dvfs_status_current.utilisation);
+	printk("dvfs_set_clock GPLL : %d, ACLK_400 : %dMhz\n", freq);
 #endif
 	return;
 }

@@ -24,7 +24,7 @@
 #define MALI_DVFS_DEBUG 0
 #define MALI_DVFS_START_MAX_STEP 1
 
-#define	MALI_DVFS_STEP 2
+#define	MALI_DVFS_STEP 6
 
 #define MALI_DVFS_KEEP_STAY_CNT 10
 
@@ -39,7 +39,7 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq);
 
 
 #ifdef CONFIG_VITHAR_DVFS
-int kbase_platform_dvfs_init(struct device *dev, int step);
+int kbase_platform_dvfs_init(struct device *dev);
 void kbase_platform_dvfs_term(void);
 int kbase_platform_dvfs_event(kbase_device *kbdev, u32 utilisation);
 int kbase_platform_dvfs_get_control_status(void);
