@@ -503,6 +503,12 @@ static int __maybe_unused exynos5_enter_lowpower(struct cpuidle_device *dev,
 		BUG_ON(!dev->safe_state);
 		new_state = dev->safe_state;
 	}
+
+	if (__raw_readl(EXYNOS5_ISP_STATUS) & 0x7) {
+		BUG_ON(!dev->safe_state);
+		new_state = dev->safe_state;
+	}
+
 	dev->last_state = new_state;
 
 	if (new_state == &dev->states[0])
