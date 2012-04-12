@@ -104,6 +104,12 @@ static struct sleep_save exynos5_clock_save[] = {
 #endif
 };
 
+static struct sleep_save exynos5_gpll_save[] = {
+	SAVE_ITEM(EXYNOS5_GPLL_LOCK),
+	SAVE_ITEM(EXYNOS5_GPLL_CON0),
+	SAVE_ITEM(EXYNOS5_GPLL_CON1),
+};
+
 static struct sleep_save exynos5250_clock_save_rev0[] = {
 	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GPS),
 };
@@ -2421,6 +2427,7 @@ static u32 exynos5_gpll_div[][6] = {
 	{667000000, 7, 389, 1, 0, 0},  /* for 333MHz, 222MHz, 166MHz */
 	{600000000, 4, 200, 1, 0, 0},  /* for 300MHz, 200MHz, 150MHz */
 	{533000000, 12, 533, 1, 0, 0}, /* for 533MHz, 266MHz, 133MHz */
+	{450000000, 12, 450, 1, 0, 0}, /* for 450 Hz */
 	{400000000, 3, 100, 1, 0, 0},
 	{333000000, 4, 222, 2, 0, 0},
 	{200000000, 3, 100, 2, 0, 0},
@@ -2495,11 +2502,24 @@ static int exynos5_clock_suspend(void)
 		s3c_pm_do_save(exynos5250_clock_save_rev0,
 				ARRAY_SIZE(exynos5250_clock_save_rev0));
 
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		s3c_pm_do_save(exynos5_gpll_save, ARRAY_SIZE(exynos5_gpll_save));
 	return 0;
 }
 
 static void exynos5_clock_resume(void)
 {
+	unsigned int tmp = 0;
+
+	if (samsung_rev() >= EXYNOS5250_REV_1_0)
+		s3c_pm_do_restore_core(exynos5_gpll_save, ARRAY_SIZE(exynos5_gpll_save));
+
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		do {
+			tmp = __raw_readl(EXYNOS5_GPLL_CON0);
+		} while (!(tmp & (0x1 << EXYNOS5_GPLLCON0_LOCKED_SHIFT)));
+	}
+
 	if (samsung_rev() < EXYNOS5250_REV_1_0)
 		s3c_pm_do_restore_core(exynos5250_clock_save_rev0,
 					ARRAY_SIZE(exynos5250_clock_save_rev0));
