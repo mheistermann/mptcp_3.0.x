@@ -565,11 +565,11 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 		else
 			min_h = 16;
 	} else {
-		if (is_yuv420(f->fmt->pixelformat) ||
-		    is_yuv422(f->fmt->pixelformat))
-			mod_x = ffs(variant->pix_align->target_w) - 1;
+		mod_x = ffs(variant->pix_align->target_w) - 1;
 		if (is_yuv420(f->fmt->pixelformat))
 			mod_y = ffs(variant->pix_align->target_h) - 1;
+		else
+			mod_y = ffs(variant->pix_align->target_h) - 2;
 		if (ctx->gsc_ctrls.rotate->val == 90 ||
 		    ctx->gsc_ctrls.rotate->val == 270) {
 			max_w = f->f_height;
