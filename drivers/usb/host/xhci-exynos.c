@@ -537,7 +537,7 @@ static int __devinit exynos_xhci_probe(struct platform_device *pdev)
 	xhci = hcd_to_xhci(hcd);
 	xhci->shared_hcd = usb_create_shared_hcd(&exynos_xhci_hc_driver,
 				&pdev->dev, dev_name(&pdev->dev), hcd);
-	if (!hcd) {
+	if (!xhci->shared_hcd) {
 		dev_err(&pdev->dev, "Unable to create HCD\n");
 		err = -ENOMEM;
 		goto dealloc_usb2_hcd;
