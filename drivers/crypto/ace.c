@@ -92,6 +92,8 @@ static void s5p_ace_bc_task(unsigned long data);
 static int count_clk;
 static int count_clk_delta;
 
+static int count_use_sw;
+
 #if defined(ACE_DEBUG_HEARTBEAT) || defined(ACE_DEBUG_WATCHDOG)
 #define ACE_HEARTBEAT_MS		10000
 #define ACE_WATCHDOG_MS			500
@@ -914,15 +916,9 @@ static int s5p_ace_handle_lock_req(struct s5p_ace_device *dev,
 	else
 		ret = crypto_ablkcipher_decrypt(req);
 
-	if (!test_and_set_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags)) {
-		sctx->req = req;
-		dev->ctx_bc = sctx;
-		tasklet_schedule(&dev->task_bc);
-	} else {
-		req->base.tfm = sctx->origin_tfm;
-		req->base.complete(&req->base, ret);
-		s5p_ace_clock_gating(ACE_CLOCK_OFF);
-	}
+	sctx->req = req;
+	dev->ctx_bc = sctx;
+	tasklet_schedule(&dev->task_bc);
 
 	return ret;
 }
@@ -970,10 +966,8 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 #endif
 	rctx = ablkcipher_request_ctx(req);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
-		clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW))
 		return s5p_ace_handle_lock_req(dev, sctx, req, rctx->mode);
-	}
 
 	/* assign new request to device */
 	sctx->req = req;
@@ -2217,6 +2211,7 @@ int ace_s5p_get_sync_lock(void)
 {
 	unsigned long timeout;
 	int get_lock_bc = 0, get_lock_hash = 0;
+	unsigned long flags;
 
 	timeout = jiffies + msecs_to_jiffies(10);
 	while (time_before(jiffies, timeout)) {
@@ -2237,11 +2232,27 @@ int ace_s5p_get_sync_lock(void)
 	}
 
 	/* set lock flag */
-	if (get_lock_bc && get_lock_hash)
+	if (get_lock_bc && get_lock_hash) {
+		spin_lock_irqsave(&s5p_ace_dev.lock, flags);
+		count_use_sw++;
+		spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
 		set_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	}
 
-	if (get_lock_bc)
+	if (get_lock_bc) {
+#ifdef CONFIG_ACE_BC_ASYNC
+		if (s5p_ace_dev.queue_bc.qlen > 0) {
+			s5p_ace_clock_gating(ACE_CLOCK_ON);
+			s5p_ace_dev.rc_depth_bc = 0;
+			s5p_ace_aes_handle_req(&s5p_ace_dev);
+		} else {
+			clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+		}
+#else
 		clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+#endif
+	}
+
 	if (get_lock_hash)
 		clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 
@@ -2255,11 +2266,16 @@ int ace_s5p_get_sync_lock(void)
 
 int ace_s5p_release_sync_lock(void)
 {
-	/* clear lock flag */
-	if (!test_and_clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags))
-		return -ENOLCK;
+	unsigned long flags;
 
-	clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	spin_lock_irqsave(&s5p_ace_dev.lock, flags);
+	count_use_sw--;
+	spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
+
+	/* clear lock flag */
+	if (!count_use_sw)
+		clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
 	return 0;
@@ -2418,6 +2434,8 @@ static int __devinit s5p_ace_probe(struct platform_device *pdev)
 	secmem_ftn.lock = &ace_s5p_get_sync_lock;
 	secmem_ftn.release = &ace_s5p_release_sync_lock;
 	secmem_crypto_register(&secmem_ftn);
+
+	count_use_sw = 0;
 
 	printk(KERN_NOTICE "ACE driver is initialized\n");
 
