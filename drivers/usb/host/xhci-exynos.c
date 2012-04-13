@@ -56,29 +56,22 @@ static inline void __bic32(void __iomem *ptr, u32 val)
 	writel(readl(ptr) & ~val, ptr);
 }
 
-static u32 exynos_xhci_change_mode(struct usb_hcd *hcd, bool host)
+static void exynos_xhci_change_mode(struct usb_hcd *hcd, bool host)
 {
 	u32 gctl;
 
-	gctl = readl(hcd->regs + EXYNOS_USB3_GCTL);
-	gctl &= ~(EXYNOS_USB3_GCTL_PrtCapDir_MASK |
-		EXYNOS_USB3_GCTL_FRMSCLDWN_MASK |
-		EXYNOS_USB3_GCTL_RAMClkSel_MASK);
-	gctl |= (EXYNOS_USB3_GCTL_FRMSCLDWN(0x1e85) | /* Power Down Scale */
-		EXYNOS_USB3_GCTL_RAMClkSel(0x2) | /* Ram Clock Select */
-		EXYNOS_USB3_GCTL_DisScramble);
+	__bic32(hcd->regs + EXYNOS_USB3_GCTL,
+			    EXYNOS_USB3_GCTL_PrtCapDir_MASK);
 
 	if (host)
-		gctl |= EXYNOS_USB3_GCTL_PrtCapDir(0x1);/* 0x1 : Host */
+		__orr32(hcd->regs + EXYNOS_USB3_GCTL,
+				    EXYNOS_USB3_GCTL_PrtCapDir(0x1));
 	else
-		gctl |= EXYNOS_USB3_GCTL_PrtCapDir(0x2);/* 0x2 : Device */
+		__orr32(hcd->regs + EXYNOS_USB3_GCTL,
+				    EXYNOS_USB3_GCTL_PrtCapDir(0x2));
 
-	writel(gctl, hcd->regs + EXYNOS_USB3_GCTL);
-
-	printk(KERN_INFO "Change xHCI %s mode %x\n",
+	dev_dbg(hcd->self.controller, "Change USBDRD %s mode (%x)\n",
 		host ? "host" : "device", gctl);
-
-	return gctl;
 }
 
 static void exynos_xhci_phy_set(struct platform_device *pdev)
@@ -86,6 +79,10 @@ static void exynos_xhci_phy_set(struct platform_device *pdev)
 	struct exynos_usb3_drd_pdata *pdata = pdev->dev.platform_data;
 	struct exynos_xhci_hcd *exynos_xhci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = exynos_xhci->hcd;
+	u32 gctl;
+	struct clk *sclk_usbdrd30;
+	u32 susp_clk_freq;
+
 	/* The reset values:
 	 *	GUSB2PHYCFG(0)	= 0x00002400
 	 *	GUSB3PIPECTL(0)	= 0x00260002
@@ -131,8 +128,30 @@ static void exynos_xhci_phy_set(struct platform_device *pdev)
 	writel(EXYNOS_USB3_GSBUSCFG1_BREQLIMIT(0x3),
 		hcd->regs + EXYNOS_USB3_GSBUSCFG1);
 
-	writel(0x0, hcd->regs + EXYNOS_USB3_GTXTHRCFG);
-	writel(0x0, hcd->regs + EXYNOS_USB3_GRXTHRCFG);
+	sclk_usbdrd30 = clk_get(&pdev->dev, "sclk_usbdrd30");
+	if (IS_ERR(sclk_usbdrd30)) {
+		dev_err(&pdev->dev, "Failed to get sclk_usbdrd30 clock\n");
+		return ;
+	}
+
+	susp_clk_freq = clk_get_rate(sclk_usbdrd30);
+	/* suspend clk should be set between 32 kHz and 125 MHz */
+	if (susp_clk_freq < 32000 || susp_clk_freq > 125000000) {
+		dev_err(hcd->self.controller, "Failed susp_clk_freq range %d\n",
+			susp_clk_freq);
+		return ;
+	}
+
+	/* Power Down Scale = suspend_clk_freq / 16kHz */
+	gctl = readl(hcd->regs + EXYNOS_USB3_GCTL);
+	gctl &= ~(EXYNOS_USB3_GCTL_PwrDnScale_MASK |
+		EXYNOS_USB3_GCTL_DisScramble |
+		EXYNOS_USB3_GCTL_RAMClkSel_MASK);
+	gctl |= (EXYNOS_USB3_GCTL_PwrDnScale(susp_clk_freq/16000) |
+		EXYNOS_USB3_GCTL_RAMClkSel(0x1) | /* Ram Clock Select */
+		EXYNOS_USB3_GCTL_U2RSTECN);
+
+	writel(gctl, hcd->regs + EXYNOS_USB3_GCTL);
 }
 
 static void exynos_xhci_phy_unset(struct platform_device *pdev)
