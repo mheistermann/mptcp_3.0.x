@@ -179,7 +179,8 @@ static int hdmi_set_infoframe(struct hdmi_device *hdev)
 
 static int hdmi_set_packets(struct hdmi_device *hdev)
 {
-	hdmi_reg_set_acr(hdev);
+	if (!hdev->dvi_mode)
+		hdmi_reg_set_acr(hdev);
 	return 0;
 }
 
@@ -229,7 +230,7 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	hdmi_reg_spdif_audio_init(hdev);
 #endif
 	/* enbale HDMI audio */
-	if (hdev->audio_enable)
+	if (hdev->audio_enable && !hdev->dvi_mode)
 		hdmi_audio_enable(hdev, 1);
 
 	hdmi_set_dvi_mode(hdev);
@@ -367,13 +368,23 @@ int hdmi_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	spin_lock_irqsave(&hdev->hpd_lock, flags);
 
-	if (!pm_runtime_suspended(hdev->dev) && !hdev->hpd_user_checked)
-		ctrl->value = hdmi_hpd_status(hdev);
-	else
-		ctrl->value = atomic_read(&hdev->hpd_state);
+	switch (ctrl->id) {
+	case V4L2_CID_TV_GET_DVI_MODE:
+		ctrl->value = hdev->dvi_mode;
+		break;
+	case V4L2_CID_TV_HPD_STATUS:
+		if (!pm_runtime_suspended(hdev->dev) && !hdev->hpd_user_checked)
+			ctrl->value = hdmi_hpd_status(hdev);
+		else
+			ctrl->value = atomic_read(&hdev->hpd_state);
 
-	dev_dbg(dev, "HDMI cable is %s\n", ctrl->value ?
-			"connected" : "disconnected");
+		dev_dbg(dev, "HDMI cable is %s\n", ctrl->value ?
+				"connected" : "disconnected");
+		break;
+	default:
+		dev_err(dev, "invalid control id\n");
+		return -EINVAL;
+	}
 
 	spin_unlock_irqrestore(&hdev->hpd_lock, flags);
 	return 0;
