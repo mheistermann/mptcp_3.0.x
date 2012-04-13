@@ -142,7 +142,7 @@ static int kbase_platform_clock_off(struct device *dev)
 
 static inline int kbase_platform_is_power_on(void)
 {
-    return ((__raw_readl(EXYNOS5_G3D_STATUS) & 0x7) == 0x7) ? 1 : 0;
+	return ((__raw_readl(EXYNOS5_G3D_STATUS) & 0x7) == 0x7) ? 1 : 0;
 }
 
 static int kbase_platform_power_on(struct device *dev)
@@ -292,49 +292,49 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	unsigned int cmd = 0;
 	kbdev = dev_get_drvdata(dev);
 
-        if (!kbdev)
-                return -ENODEV;
+	if (!kbdev)
+		return -ENODEV;
 
-        if(!kbdev->sclk_g3d)
-                return -ENODEV;
+	if(!kbdev->sclk_g3d)
+		return -ENODEV;
 
-        if (sysfs_streq("533", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 1250000 );
-                kbase_platform_dvfs_set_clock(kbdev, 533);
-        } else if (sysfs_streq("450", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 1150000 );
-                kbase_platform_dvfs_set_clock(kbdev, 450);
-        } else if (sysfs_streq("400", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 1100000 );
-                kbase_platform_dvfs_set_clock(kbdev, 400);
-        } else if (sysfs_streq("266", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 937500);
-                kbase_platform_dvfs_set_clock(kbdev, 266);
-        } else if (sysfs_streq("160", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 937500 );
-                kbase_platform_dvfs_set_clock(kbdev, 160);
-        } else if (sysfs_streq("100", buf)) {
-                cmd = 1;
-                kbase_platform_set_voltage( dev, 937500 );
-                kbase_platform_dvfs_set_clock(kbdev, 100);
-        } else {
-                dev_err(dev, "set_clock: invalid value\n");
-                return -ENOENT;
-        }
+	if (sysfs_streq("533", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 1250000 );
+		kbase_platform_dvfs_set_clock(kbdev, 533);
+	} else if (sysfs_streq("450", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 1150000 );
+		kbase_platform_dvfs_set_clock(kbdev, 450);
+	} else if (sysfs_streq("400", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 1100000 );
+		kbase_platform_dvfs_set_clock(kbdev, 400);
+	} else if (sysfs_streq("266", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 937500);
+		kbase_platform_dvfs_set_clock(kbdev, 266);
+	} else if (sysfs_streq("160", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 937500 );
+		kbase_platform_dvfs_set_clock(kbdev, 160);
+	} else if (sysfs_streq("100", buf)) {
+		cmd = 1;
+		kbase_platform_set_voltage( dev, 937500 );
+		kbase_platform_dvfs_set_clock(kbdev, 100);
+	} else {
+		dev_err(dev, "set_clock: invalid value\n");
+		return -ENOENT;
+	}
 
 	if(cmd == 1) {
-	    /* Waiting for clock is stable */
+		/* Waiting for clock is stable */
 		do {
 			tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
 		} while (tmp & 0x1000000);
 	}
 	else if(cmd == 2) {
-	    /* Do we need to check */
+		/* Do we need to check */
 	}
 
 	return count;
@@ -352,7 +352,7 @@ static ssize_t show_fbdev(struct device *dev, struct device_attribute *attr, cha
 		return -ENODEV;
 
 	for(i = 0 ; i < num_registered_fb ; i++) {
-	    ret += snprintf(buf+ret, PAGE_SIZE-ret, "fb[%d] xres=%d, yres=%d, addr=0x%lx\n", i, registered_fb[i]->var.xres, registered_fb[i]->var.yres, registered_fb[i]->fix.smem_start);
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "fb[%d] xres=%d, yres=%d, addr=0x%lx\n", i, registered_fb[i]->var.xres, registered_fb[i]->var.yres, registered_fb[i]->fix.smem_start);
 	}
 
 	if (ret < PAGE_SIZE - 1)
@@ -392,23 +392,23 @@ static inline void asm_ramindex_mrc(u32 *DL1Data0, u32 *DL1Data1, u32 *DL1Data2,
 
 	if(DL1Data0)
 	{
-	    asm volatile("mrc p15, 0, %0, c15, c1, 0" : "=r" (val));
-	    *DL1Data0 = val;
+		asm volatile("mrc p15, 0, %0, c15, c1, 0" : "=r" (val));
+		*DL1Data0 = val;
 	}
 	if(DL1Data1)
 	{
-	    asm volatile("mrc p15, 0, %0, c15, c1, 1" : "=r" (val));
-	    *DL1Data1 = val;
+		asm volatile("mrc p15, 0, %0, c15, c1, 1" : "=r" (val));
+		*DL1Data1 = val;
 	}
 	if(DL1Data2)
 	{
-	    asm volatile("mrc p15, 0, %0, c15, c1, 2" : "=r" (val));
-	    *DL1Data2 = val;
+		asm volatile("mrc p15, 0, %0, c15, c1, 2" : "=r" (val));
+		*DL1Data2 = val;
 	}
 	if(DL1Data3)
 	{
-	    asm volatile("mrc p15, 0, %0, c15, c1, 3" : "=r" (val));
-	    *DL1Data3 = val;
+		asm volatile("mrc p15, 0, %0, c15, c1, 3" : "=r" (val));
+		*DL1Data3 = val;
 	}
 }
 
@@ -441,105 +441,105 @@ static ssize_t show_dtlb(struct device *dev, struct device_attribute *attr, char
 	/* L1-I tag RAM */
 	if(ramindex == L1_I_tag_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-I data RAM */
 	else if(ramindex == L1_I_data_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-I BTB RAM */
 	else if(ramindex == L1_I_BTB_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-I GHB RAM */
 	else if(ramindex == L1_I_GHB_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-I TLB RAM */
 	else if(ramindex == L1_I_TLB_RAM) 
 	{
-	    printk("L1-I TLB RAM\n");
-	    for(entries = 0 ; entries < 32 ; entries++)
-	    {
-		get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, NULL);
-		printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x DL1Data2=%08x\n", entries, DL1Data0, DL1Data1 & 0xffff, 0x0);
-	    }
+		printk("L1-I TLB RAM\n");
+		for(entries = 0 ; entries < 32 ; entries++)
+		{
+			get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, NULL);
+			printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x DL1Data2=%08x\n", entries, DL1Data0, DL1Data1 & 0xffff, 0x0);
+		}
 	}
 	/* L1-I indirect predictor RAM */
 	else if(ramindex == L1_I_indirect_predictor_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-D tag RAM */
 	else if(ramindex == L1_D_tag_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-D data RAM */
 	else if(ramindex == L1_D_data_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L1-D load TLB array */
 	else if(ramindex == L1_D_load_TLB_array)
 	{
-	    printk("L1-D load TLB array\n");
-	    for(entries = 0 ; entries < 32 ; entries++)
-	    {
-		get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
-		printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3 & 0x3f);
-	    }
+		printk("L1-D load TLB array\n");
+		for(entries = 0 ; entries < 32 ; entries++)
+		{
+			get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
+			printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3 & 0x3f);
+		}
 	}
 	/* L1-D store TLB array */
 	else if(ramindex == L1_D_store_TLB_array)
 	{
-	    printk("\nL1-D store TLB array\n");
-	    for(entries = 0 ; entries < 32 ; entries++)
-	    {
-		get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
-		printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3 & 0x3f);
-	    }
+		printk("\nL1-D store TLB array\n");
+		for(entries = 0 ; entries < 32 ; entries++)
+		{
+			get_tlb_array((((u8)ramindex) << 24) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
+			printk("entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3 & 0x3f);
+		}
 	}
 	/* L2 tag RAM */
 	else if(ramindex == L2_tag_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L2 data RAM */
 	else if(ramindex == L2_data_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L2 snoop tag RAM */
 	else if(ramindex == L2_snoop_tag_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L2 data ECC RAM */
 	else if(ramindex == L2_data_ECC_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L2 dirty RAM */
 	else if(ramindex == L2_dirty_RAM) 
 	{
-	    printk("Not implemented yet\n");
+		printk("Not implemented yet\n");
 	}
 	/* L2 TLB array */
 	else if(ramindex == L2_TLB_RAM)
 	{
-	    printk("\nL2 TLB array\n");
-	    for(ways = 0 ; ways < 4 ; ways++)
-	    {
-		for(entries = 0 ; entries < 512 ; entries++)
+		printk("\nL2 TLB array\n");
+		for(ways = 0 ; ways < 4 ; ways++)
 		{
-		    get_tlb_array((ramindex << 24) + (ways << 18) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
-		    printk("ways[%d]:entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", ways, entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3);
+			for(entries = 0 ; entries < 512 ; entries++)
+			{
+				get_tlb_array((ramindex << 24) + (ways << 18) + entries, &DL1Data0, &DL1Data1, &DL1Data2, &DL1Data3);
+				printk("ways[%d]:entries[%d], DL1Data0=%08x, DL1Data1=%08x, DL1Data2=%08x, DL1Data3=%08x\n", ways, entries, DL1Data0, DL1Data1, DL1Data2, DL1Data3);
+			}
 		}
-	    }
 	}
 	else {
 	}
@@ -566,45 +566,45 @@ static ssize_t set_dtlb(struct device *dev, struct device_attribute *attr, const
 		return -ENODEV;
 
 	if (sysfs_streq("L1_I_tag_RAM", buf)) {
-	    ramindex = L1_I_tag_RAM;
+		ramindex = L1_I_tag_RAM;
 	} else if (sysfs_streq("L1_I_data_RAM", buf)) {
-	    ramindex = L1_I_data_RAM;
+		ramindex = L1_I_data_RAM;
 	} else if (sysfs_streq("L1_I_BTB_RAM", buf)) {
-	    ramindex = L1_I_BTB_RAM;
+		ramindex = L1_I_BTB_RAM;
 	} else if (sysfs_streq("L1_I_GHB_RAM", buf)) {
-	    ramindex = L1_I_GHB_RAM;
+		ramindex = L1_I_GHB_RAM;
 	} else if (sysfs_streq("L1_I_TLB_RAM", buf)) {
-	    ramindex = L1_I_TLB_RAM;
+		ramindex = L1_I_TLB_RAM;
 	} else if (sysfs_streq("L1_I_indirect_predictor_RAM", buf)) {
-	    ramindex = L1_I_indirect_predictor_RAM;
+		ramindex = L1_I_indirect_predictor_RAM;
 	} else if (sysfs_streq("L1_D_tag_RAM", buf)) {
-	    ramindex = L1_D_tag_RAM;
+		ramindex = L1_D_tag_RAM;
 	} else if (sysfs_streq("L1_D_data_RAM", buf)) {
-	    ramindex = L1_D_data_RAM;
+		ramindex = L1_D_data_RAM;
 	} else if (sysfs_streq("L1_D_load_TLB_array", buf)) {
-	    ramindex = L1_D_load_TLB_array;
+		ramindex = L1_D_load_TLB_array;
 	} else if (sysfs_streq("L1_D_store_TLB_array", buf)) {
-	    ramindex = L1_D_store_TLB_array;
+		ramindex = L1_D_store_TLB_array;
 	} else if (sysfs_streq("L2_tag_RAM", buf)) {
-	    ramindex = L2_tag_RAM;
+		ramindex = L2_tag_RAM;
 	} else if (sysfs_streq("L2_data_RAM", buf)) {
-	    ramindex = L2_data_RAM;
+		ramindex = L2_data_RAM;
 	} else if (sysfs_streq("L2_snoop_tag_RAM", buf)) {
-	    ramindex = L2_snoop_tag_RAM;
+		ramindex = L2_snoop_tag_RAM;
 	} else if (sysfs_streq("L2_data_ECC_RAM", buf)) {
-	    ramindex = L2_data_ECC_RAM;
+		ramindex = L2_data_ECC_RAM;
 	} else if (sysfs_streq("L2_dirty_RAM", buf)) {
-	    ramindex = L2_dirty_RAM;
+		ramindex = L2_dirty_RAM;
 	} else if (sysfs_streq("L2_TLB_RAM", buf)) {
-	    ramindex = L2_TLB_RAM;
+		ramindex = L2_TLB_RAM;
 	} else {
-	    printk("Invalid value....\n\n");
-	    printk("Available options are one of below\n");
-	    printk("L1_I_tag_RAM, L1_I_data_RAM, L1_I_BTB_RAM\n");
-	    printk("L1_I_GHB_RAM, L1_I_TLB_RAM, L1_I_indirect_predictor_RAM\n");
-	    printk("L1_D_tag_RAM, L1_D_data_RAM, L1_D_load_TLB_array, L1_D_store_TLB_array\n");
-	    printk("L2_tag_RAM, L2_data_RAM, L2_snoop_tag_RAM, L2_data_ECC_RAM\n");
-	    printk("L2_dirty_RAM, L2_TLB_RAM\n");
+		printk("Invalid value....\n\n");
+		printk("Available options are one of below\n");
+		printk("L1_I_tag_RAM, L1_I_data_RAM, L1_I_BTB_RAM\n");
+		printk("L1_I_GHB_RAM, L1_I_TLB_RAM, L1_I_indirect_predictor_RAM\n");
+		printk("L1_D_tag_RAM, L1_D_data_RAM, L1_D_load_TLB_array, L1_D_store_TLB_array\n");
+		printk("L2_tag_RAM, L2_data_RAM, L2_snoop_tag_RAM, L2_data_ECC_RAM\n");
+		printk("L2_dirty_RAM, L2_TLB_RAM\n");
 	}
 
 	return count;
@@ -638,21 +638,21 @@ static ssize_t show_vol(struct device *dev, struct device_attribute *attr, char 
 
 static int get_clkout_cmu_top(int *val)
 {
-    *val = __raw_readl(EXYNOS5_CLKOUT_CMU_TOP);
-    if((*val & 0x1f) == 0xB) /* CLKOUT is ACLK_400 in CLKOUT_CMU_TOP */
-	return 1;
-    else
-	return 0;
+	*val = __raw_readl(EXYNOS5_CLKOUT_CMU_TOP);
+	if((*val & 0x1f) == 0xB) /* CLKOUT is ACLK_400 in CLKOUT_CMU_TOP */
+		return 1;
+	else
+		return 0;
 }
 
 static void set_clkout_for_3d(void)
 {
-    int tmp;
+	int tmp;
 
-    tmp = 0x0;
-    tmp |= 0x1000B; // ACLK_400 selected
-    tmp |= 9 << 8; // divided by (9 + 1)
-    __raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
+	tmp = 0x0;
+	tmp |= 0x1000B; // ACLK_400 selected
+	tmp |= 9 << 8; // divided by (9 + 1)
+	__raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
 
 #ifdef PMU_XCLKOUT_SET
 	exynos5_pmu_xclkout_set(1, XCLKOUT_CMU_TOP);
@@ -675,9 +675,9 @@ static ssize_t show_clkout(struct device *dev, struct device_attribute *attr, ch
 		return -ENODEV;
 
 	if(get_clkout_cmu_top(&val))
-	   ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is g3d divided by 10, CLKOUT_CMU_TOP=0x%x", val);
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is g3d divided by 10, CLKOUT_CMU_TOP=0x%x", val);
 	else
-	   ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is not g3d, CLKOUT_CMU_TOP=0x%x", val);
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is not g3d, CLKOUT_CMU_TOP=0x%x", val);
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -700,9 +700,9 @@ static ssize_t set_clkout(struct device *dev, struct device_attribute *attr, con
 		return -ENODEV;
 
 	if (sysfs_streq("3d", buf)) {
-	    set_clkout_for_3d();
+		set_clkout_for_3d();
 	} else {
-	    printk("invalid val (only 3d is accepted\n");
+		printk("invalid val (only 3d is accepted\n");
 	}
 
 	return count;
@@ -789,6 +789,88 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 	return count;
 }
 
+static ssize_t show_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+#ifdef CONFIG_VITHAR_DVFS
+	unsigned int locked_level = -1;
+#endif
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+	locked_level = mali_get_dvfs_upper_locked_freq();
+	if( locked_level > 0 )
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Upper Lock Level = %dMhz", locked_level );
+	else
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Upper Lock Level");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, 100, If you want to unlock : 533");
+
+#else
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not setting the Upper Lock level.");
+#endif
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+#if (MALI_DVFS_STEP == 6)
+	if (sysfs_streq("533", buf)) {
+		mali_dvfs_freq_unlock();
+	} else if (sysfs_streq("450", buf)) {
+		mali_dvfs_freq_lock(4);
+	} else if (sysfs_streq("400", buf)) {
+		mali_dvfs_freq_lock(3);
+	} else if (sysfs_streq("266", buf)) {
+		mali_dvfs_freq_lock(2);
+	} else if (sysfs_streq("160", buf)) {
+		mali_dvfs_freq_lock(1);
+	} else if (sysfs_streq("100", buf)) {
+		mali_dvfs_freq_lock(0);
+	} else {
+		dev_err(dev, "set_clock: invalid value\n");
+		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533\n");
+		return -ENOENT;
+	}
+#elif (MALI_DVFS_STEP == 2)
+	if (sysfs_streq("533", buf)) {
+		mali_dvfs_freq_unlock();
+	} else if (sysfs_streq("266", buf)) {
+		mali_dvfs_freq_lock(0);
+	} else {
+		dev_err(dev, "set_clock: invalid value\n");
+		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533\n");
+		return -ENOENT;
+	}
+#endif
+#else // CONFIG_VITHAR_DVFS
+	printk("G3D DVFS is disabled. You can not setting the Upper Lock level.\n");
+#endif
+
+	return count;
+}
+
 /** The sysfs file @c clock, fbdev.
  *
  * This is used for obtaining information about the vithar operating clock & framebuffer address,
@@ -799,6 +881,8 @@ DEVICE_ATTR(dtlb, S_IRUGO|S_IWUSR, show_dtlb, set_dtlb);
 DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, NULL);
 DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
+DEVICE_ATTR(dvfs_lock, S_IRUGO|S_IWUSR, show_lock_dvfs, set_lock_dvfs);
+
 
 static int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -838,6 +922,13 @@ static int kbase_platform_create_sysfs_file(struct device *dev)
 		goto out;
 	}
 
+
+	if (device_create_file(dev, &dev_attr_dvfs_lock))
+	{
+		dev_err(dev, "Couldn't create sysfs file [dvfs_lock]\n");
+		goto out;
+	}
+
 	return 0;
 out:
 	return -ENOENT;
@@ -851,6 +942,7 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_vol);
 	device_remove_file(dev, &dev_attr_clkout);
 	device_remove_file(dev, &dev_attr_dvfs);
+	device_remove_file(dev, &dev_attr_dvfs_lock);
 }
 
 int kbase_platform_init(struct device *dev)
