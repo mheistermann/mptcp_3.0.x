@@ -1537,8 +1537,8 @@ struct gsc_pix_max gsc_v_max = {
 	.org_scaler_input_h	= 3344,
 	.real_rot_dis_w		= 4800,
 	.real_rot_dis_h		= 3344,
-	.real_rot_en_w		= 2047,
-	.real_rot_en_h		= 2047,
+	.real_rot_en_w		= 2048,
+	.real_rot_en_h		= 2048,
 	.target_rot_dis_w	= 4800,
 	.target_rot_dis_h	= 3344,
 	.target_rot_en_w	= 2016,
@@ -1557,12 +1557,12 @@ struct gsc_pix_min gsc_v_min[2] = {
 		.target_rot_en_h	= 16,
 	},
 	[1] = {
-		.org_w			= 16,
-		.org_h			= 8,
-		.real_w			= 16,
-		.real_h			= 16,
-		.target_rot_dis_w	= 16,
-		.target_rot_dis_h	= 8,
+		.org_w			= 64,
+		.org_h			= 32,
+		.real_w			= 64,
+		.real_h			= 32,
+		.target_rot_dis_w	= 32,
+		.target_rot_dis_h	= 16,
 		.target_rot_en_w	= 16,
 		.target_rot_en_h	= 8,
 	},
@@ -1572,20 +1572,20 @@ struct gsc_pix_align gsc_v_align[2] = {
 	[0] = {
 		.org_h			= 16,
 		.org_w			= 16, /* yuv420 : 16, others : 8 */
-		.offset_h		= 2,  /* yuv420/422 : 2, others : 1 */
+		.offset_w		= 2,  /* yuv420/422 : 2, others : 1 */
 		.real_w			= 2, /* yuv420/422 : 4~16, others : 2~8 */
 		.real_h			= 2, /* yuv420 : 4~16, others : 1 */
 		.target_w		= 2,  /* yuv420/422 : 2, others : 1 */
-		.target_h		= 2,  /* yuv420 : 2, others : 1 */
+		.target_h		= 2,  /* yuv420/422 : 2, others : 1 */
 	},
 	[1] = {
 		.org_h			= 16,
 		.org_w			= 16, /* yuv420 : 16, others : 8 */
-		.offset_h		= 2,  /* yuv420/422 : 2, others : 1 */
+		.offset_w		= 2,  /* yuv420/422 : 2, others : 1 */
 		.real_w			= 1,  /* yuv420/422 : 2~8, others : 1~4 */
 		.real_h			= 1,  /* yuv420 : 2~8, others : 1~4 */
 		.target_w		= 2,  /* yuv420/422 : 2, others : 1 */
-		.target_h		= 2,  /* yuv420 : 2, others : 1 */
+		.target_h		= 2,  /* yuv420/422 : 2, others : 1 */
 	},
 };
 

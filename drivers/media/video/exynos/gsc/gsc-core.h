@@ -447,7 +447,7 @@ struct gsc_pix_min {
 struct gsc_pix_align {
 	u16 org_h;
 	u16 org_w;
-	u16 offset_h;
+	u16 offset_w;
 	u16 real_w;
 	u16 real_h;
 	u16 target_w;
