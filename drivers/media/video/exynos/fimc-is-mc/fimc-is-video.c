@@ -1034,7 +1034,6 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 	struct fimc_is_dev *isp = video_drvdata(file);
 	struct v4l2_pix_format_mplane *pix;
 	struct fimc_is_fmt *frame;
-	int ret;
 
 	dbg("%s\n", __func__);
 
@@ -1056,61 +1055,6 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 	dbg("width : %d\n", pix->width);
 	dbg("height : %d\n", pix->height);
 
-#ifdef ALIGN_ASPECT_RATIO_ENABLE
-	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-		clear_bit(IS_ST_STREAM_OFF, &isp->state);
-		fimc_is_hw_set_stream(isp, 0); /*stream off */
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_STREAM_OFF, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			if (!ret)
-				err("s_power off failed!!\n");
-			return -EBUSY;
-		}
-	}
-
-	/* size change */
-	fimc_is_hw_change_size(isp);
-
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-	fimc_is_hw_set_param(isp);
-
-	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-		clear_bit(IS_ST_RUN, &isp->state);
-		set_bit(IS_ST_CHANGE_MODE, &isp->state);
-		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
-		ret = wait_event_timeout(isp->irq_queue,
-				test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
-				(3*HZ)/*FIMC_IS_SHUTDOWN_TIMEOUT*/);
-
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"Mode change timeout:%s\n", __func__);
-			return -EBUSY;
-		}
-
-		clear_bit(IS_ST_STREAM_ON, &isp->state);
-		fimc_is_hw_set_stream(isp, 1);
-
-		ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_STREAM_ON, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"stream on wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		clear_bit(IS_ST_STREAM_ON, &isp->state);
-	}
-#endif
 	return 0;
 }
 
@@ -1634,7 +1578,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_IS_CAMERA_METERING:
 		ret = fimc_is_v4l2_isp_metering(isp, ctrl->value);
 		break;
-	/* Only valid at SPOT Mode */
+	/* Ony valid at SPOT Mode */
 	case V4L2_CID_IS_CAMERA_METERING_POSITION_X:
 		IS_ISP_SET_PARAM_METERING_WIN_POS_X(isp, ctrl->value);
 		break;
