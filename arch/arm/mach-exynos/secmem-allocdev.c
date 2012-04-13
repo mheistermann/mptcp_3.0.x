@@ -145,6 +145,8 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		printk(KERN_DEBUG "%s: physical addr from kernel space = %lu\n",
 				__func__, fd_info.phys);
+
+		ion_free(client, data.handle);
 		ion_client_destroy(client);
 
 		if (copy_to_user((void __user *)arg, &fd_info, sizeof(fd_info)))
