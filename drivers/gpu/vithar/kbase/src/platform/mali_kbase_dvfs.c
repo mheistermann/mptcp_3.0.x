@@ -57,7 +57,6 @@ static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
 #endif
 #endif
 
-
 #ifdef CONFIG_VITHAR_DVFS
 typedef struct _mali_dvfs_info{
 	unsigned int voltage;
@@ -72,6 +71,10 @@ typedef struct _mali_dvfs_status_type{
 	int utilisation;
 	int keepcnt;
 	uint noutilcnt;
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+	int upper_lock;
+	int under_lock;
+#endif
 }mali_dvfs_status;
 
 static struct workqueue_struct *mali_dvfs_wq = 0;
@@ -98,7 +101,7 @@ static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 #endif
 };
 
-static void kbase_platform_dvfs_set_vol(int vol)
+static void kbase_platform_dvfs_set_vol(unsigned int vol)
 {
 	static int _vol = -1;
 
@@ -129,6 +132,56 @@ static void kbase_platform_dvfs_set_vol(int vol)
 	return;
 }
 
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+int mali_dvfs_freq_lock(int level)
+{
+    osk_spinlock_lock(&mali_dvfs_spinlock);
+    mali_dvfs_status_current.upper_lock = level;
+    osk_spinlock_unlock(&mali_dvfs_spinlock);
+    return 0;
+}
+void mali_dvfs_freq_unlock(void)
+{
+    osk_spinlock_lock(&mali_dvfs_spinlock);
+    mali_dvfs_status_current.upper_lock = -1;
+    osk_spinlock_unlock(&mali_dvfs_spinlock);
+}
+
+int mali_dvfs_freq_under_lock(int level)
+{
+    osk_spinlock_lock(&mali_dvfs_spinlock);
+    mali_dvfs_status_current.under_lock = level;
+    osk_spinlock_unlock(&mali_dvfs_spinlock);
+    return 0;
+}
+void mali_dvfs_freq_under_unlock(void)
+{
+    osk_spinlock_lock(&mali_dvfs_spinlock);
+    mali_dvfs_status_current.under_lock = -1;
+    osk_spinlock_unlock(&mali_dvfs_spinlock);
+}
+#endif
+
+void kbase_platform_dvfs_set_level(int level)
+{
+    static int level_prev=-1;
+
+    if (level == level_prev)
+	return;
+
+    if (WARN_ON(level >= MALI_DVFS_STEP))
+	panic("invalid level");
+
+    if (level > level_prev) {
+	kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
+	kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+    }else{
+	kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+	kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
+    }
+    level_prev = level;
+}
+
 static void mali_dvfs_event_proc(struct work_struct *w)
 {
 	mali_dvfs_status dvfs_status;
@@ -150,8 +203,6 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
 		dvfs_status.step++;
 		dvfs_status.keepcnt=0;
-		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[dvfs_status.step].voltage);
-		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[dvfs_status.step].clock);
 	}else if ((dvfs_status.step>0) &&
 			(dvfs_status.utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
 		dvfs_status.keepcnt++;
@@ -160,12 +211,25 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 			OSK_ASSERT(dvfs_status.step > 0);
 			dvfs_status.step--;
 			dvfs_status.keepcnt=0;
-			kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[dvfs_status.step].clock);
-			kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[dvfs_status.step].voltage);
 		}
 	}else{
 		dvfs_status.keepcnt=0;
 	}
+
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+	if ((dvfs_status.upper_lock > 0)&&(dvfs_status.step > dvfs_status.upper_lock)) {
+	    dvfs_status.step = dvfs_status.upper_lock;
+	    if ((dvfs_status.under_lock > 0)&&(dvfs_status.under_lock > dvfs_status.upper_lock)) {
+		dvfs_status.under_lock = dvfs_status.upper_lock;
+	    }
+	}
+	if (dvfs_status.under_lock > 0) {
+	    if (dvfs_status.step < dvfs_status.under_lock)
+		dvfs_status.step = dvfs_status.under_lock;
+	}
+#endif
+
+	kbase_platform_dvfs_set_level(dvfs_status.step);
 
 #if MALI_DVFS_START_MAX_STEP
 	if (dvfs_status.utilisation == 0) {
@@ -224,6 +288,10 @@ int kbase_platform_dvfs_init(struct device *dev)
 	mali_dvfs_status_current.kbdev = kbdev;
 	mali_dvfs_status_current.utilisation = 100;
 	mali_dvfs_status_current.step = MALI_DVFS_STEP-1;
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+	mali_dvfs_status_current.upper_lock = -1;
+	mali_dvfs_status_current.under_lock = -1;
+#endif
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
 	return MALI_TRUE;

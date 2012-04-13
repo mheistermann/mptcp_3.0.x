@@ -28,6 +28,8 @@
 
 #define MALI_DVFS_KEEP_STAY_CNT 10
 
+#define CONFIG_VITHAR_FREQ_LOCK
+
 struct regulator *kbase_platform_get_regulator(void);
 int kbase_platform_regulator_init(struct device *dev);
 int kbase_platform_regulator_disable(struct device *dev);
