@@ -255,6 +255,9 @@ static void exynos5_gpio_set_pd_reg(void)
 		if (!target_chip)
 			continue;
 
+		if (!target_chip->pm)
+			continue;
+
 		/* Keep the previous state in LPA mode */
 		s5p_gpio_set_pd_cfg(gpio_nr, 0x3);
 
