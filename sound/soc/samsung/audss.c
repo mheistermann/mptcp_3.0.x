@@ -51,9 +51,6 @@ static char *rclksrc[] = {
 	[1] = "i2sclk",
 };
 
-/* Lock for cross i/f checks */
-static DEFINE_SPINLOCK(lock);
-
 static void audss_pm_runtime_ctl(bool enabled)
 {
 	if (!audss.pd_ctl_enable)
@@ -168,14 +165,10 @@ void audss_reg_restore(void)
 
 void audss_clk_enable(bool enable)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&lock, flags);
-
 	if (audss.clk_enabled == enable) {
 		pr_debug("%s: Already set audss clk %d\n",
 				__func__, audss.clk_enabled);
-		goto exit_func;
+		return;
 	}
 
 	if (enable) {
@@ -195,9 +188,6 @@ void audss_clk_enable(bool enable)
 	}
 
 	audss.clk_enabled = enable;
-
-exit_func:
-	spin_unlock_irqrestore(&lock, flags);
 
 	return;
 }
