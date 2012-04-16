@@ -37,7 +37,6 @@
 #include <mach/map.h>
 #include <plat/cpu.h>
 
-#include "../srp-types.h"
 #include "srp_alp.h"
 #include "srp_alp_reg.h"
 #include "srp_alp_fw.h"
@@ -51,11 +50,6 @@ static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
 static DECLARE_WAIT_QUEUE_HEAD(read_wq);
 static DECLARE_WAIT_QUEUE_HEAD(decinfo_wq);
-
-int srp_get_status(int cmd)
-{
-	return (cmd == IS_RUNNING) ? srp.is_running : srp.is_opened;
-}
 
 inline bool srp_fw_use_memcpy(void)
 {

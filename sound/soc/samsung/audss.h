@@ -12,15 +12,6 @@
 
 #ifndef __SND_SOC_SAMSUNG_AUDSS_H
 #define __SND_SOC_SAMSUNG_AUDSS_H
-enum {
-	AUDSS_ACTIVE,
-	AUDSS_INACTIVE,
-};
-
-enum {
-	AUDSS_REG_SAVE,
-	AUDSS_REG_RESTORE,
-};
 
 enum {
 	BUSCLK,

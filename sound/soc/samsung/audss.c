@@ -170,45 +170,32 @@ void audss_clk_enable(bool enable)
 {
 	unsigned long flags;
 
-	pr_debug("%s: state %d\n", __func__, enable);
 	spin_lock_irqsave(&lock, flags);
 
-	if (enable) {
-		if (audss.clk_enabled) {
-			pr_debug("%s: Already enabled audss clk %d\n",
-					__func__, audss.clk_enabled);
-			goto exit_func;
-		}
+	if (audss.clk_enabled == enable) {
+		pr_debug("%s: Already set audss clk %d\n",
+				__func__, audss.clk_enabled);
+		goto exit_func;
+	}
 
+	if (enable) {
 		audss_pm_runtime_ctl(true);
 		audss_reg_restore();
 		clk_enable(audss.srp_clk);
 		clk_enable(audss.bus_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_enable(audss.i2s_clk);
-
-		audss.clk_enabled = true;
 	} else {
-		if (!audss.clk_enabled) {
-			pr_debug("%s: Already disabled audss clk %d\n",
-					__func__, audss.clk_enabled);
-			goto exit_func;
-		}
-
 		clk_disable(audss.bus_clk);
 		clk_disable(audss.srp_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_disable(audss.i2s_clk);
 		audss_reg_save();
 		audss_pm_runtime_ctl(false);
-
-		audss.clk_enabled = false;
 	}
 
-	pr_debug("%s: SRC[0x%x], DIV[0x%x], GATE[0x%x]\n", __func__,
-						readl(S5P_CLKSRC_AUDSS),
-						readl(S5P_CLKDIV_AUDSS),
-						readl(S5P_CLKGATE_AUDSS));
+	audss.clk_enabled = enable;
+
 exit_func:
 	spin_unlock_irqrestore(&lock, flags);
 
@@ -342,7 +329,6 @@ int samsung_audss_init(struct platform_device *pdev)
 		pr_err("%s:failed to init audss clock\n", __func__);
 
 	return ret;
-
 }
 
 void samsung_audss_exit(void)
