@@ -1066,51 +1066,69 @@ static struct miscdevice srp_miscdev = {
 };
 
 #ifdef CONFIG_PM
-static int srp_suspend(struct platform_device *pdev, pm_message_t state)
+void srp_prepare_suspend(void)
 {
 	unsigned long i;
 
+	if (srp.decoding_started && !srp.pm_suspended) {
+		/* IBUF/OBUF Save */
+		if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
+			/* EVT0 : Work around code */
+			for (i = 0; i < srp.ibuf_size * 2; i += 4)
+				writel(readl(srp.ibuf0 + i), srp.sp_data.ibuf + i);
+			for (i = 0; i < srp.obuf_size * 2; i += 4)
+				writel(readl(srp.obuf0 + i), srp.sp_data.obuf + i);
+		} else {
+			memcpy(srp.sp_data.ibuf, srp.ibuf0, IBUF_SIZE * 2);
+			memcpy(srp.sp_data.obuf, srp.obuf0, OBUF_SIZE * 2);
+		}
+
+		/* Request Suspend mode */
+		srp_request_intr_mode(SUSPEND);
+
+		if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
+			/* EVT0 : Work around code */
+			for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
+				writel(readl(srp.dmem + i), srp.fw_info.data + i);
+		} else
+			memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
+
+		memcpy(srp.sp_data.commbox, srp.commbox, COMMBOX_SIZE);
+		srp.pm_suspended = true;
+	}
+}
+
+static int srp_suspend(struct platform_device *pdev, pm_message_t state)
+{
 	srp_info("Suspend\n");
 
 	srp.audss_clk_enable(true);
 
-	if (srp.is_opened) {
-		if (srp.decoding_started && !srp.pm_suspended) {
-
-			/* IBUF/OBUF Save */
-			if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
-				/* EVT0 : Work around code */
-				for (i = 0; i < srp.ibuf_size * 2; i += 4)
-					writel(readl(srp.ibuf0 + i), srp.sp_data.ibuf + i);
-
-				for (i = 0; i < srp.obuf_size * 2; i += 4)
-					writel(readl(srp.obuf0 + i), srp.sp_data.obuf + i);
-			} else {
-				memcpy(srp.sp_data.ibuf, srp.ibuf0, IBUF_SIZE * 2);
-				memcpy(srp.sp_data.obuf, srp.obuf0, OBUF_SIZE * 2);
-			}
-
-			/* Request Suspend mode */
-			srp_request_intr_mode(SUSPEND);
-
-			if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
-				/* EVT0 : Work around code */
-				for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
-					writel(readl(srp.dmem + i), srp.fw_info.data + i);
-			} else
-				memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
-
-			memcpy(srp.sp_data.commbox, srp.commbox, COMMBOX_SIZE);
-			srp.pm_suspended = true;
-		}
-	} else if (soc_is_exynos5250()) {
-		/* Request Suspend mode */
+	if (srp.is_opened)
+		srp_prepare_suspend();
+	else if (soc_is_exynos5250())
 		srp_request_intr_mode(SUSPEND);
-	}
 
 	srp.audss_clk_enable(false);
 
 	return 0;
+}
+
+void srp_post_resume(void)
+{
+	if (srp.decoding_started && srp.pm_suspended) {
+		srp_fw_download();
+
+		memcpy(srp.commbox, srp.sp_data.commbox, COMMBOX_SIZE);
+		memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
+		memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
+
+		/* RESET */
+		writel(0x0, srp.commbox + SRP_CONT);
+		srp_request_intr_mode(RESUME);
+
+		srp.pm_resumed = true;
+	}
 }
 
 static int srp_resume(struct platform_device *pdev)
@@ -1125,18 +1143,8 @@ static int srp_resume(struct platform_device *pdev)
 			srp_flush_ibuf();
 			srp_flush_obuf();
 			srp_reset();
-		} else if (srp.decoding_started && srp.pm_suspended) {
-			srp_fw_download();
-
-			memcpy(srp.commbox, srp.sp_data.commbox, COMMBOX_SIZE);
-			memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
-			memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
-
-			/* RESET */
-			writel(0x0, srp.commbox + SRP_CONT);
-			srp_request_intr_mode(RESUME);
-
-			srp.pm_resumed = true;
+		} else {
+			srp_post_resume();
 		}
 	} else if (soc_is_exynos5250()) {
 			srp_fw_download();

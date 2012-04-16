@@ -211,4 +211,6 @@ enum {
 	RESET,
 };
 
+extern void srp_prepare_suspend(void);
+extern void srp_post_resume(void);
 #endif /* __SRP_ALP_H */

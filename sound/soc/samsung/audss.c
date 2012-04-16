@@ -26,6 +26,7 @@
 #include <mach/regs-audss.h>
 
 #include "audss.h"
+#include "srp_alp/srp_alp.h"
 
 static struct audss_runtime_data {
 	struct platform_device *pdev;
@@ -178,7 +179,13 @@ void audss_clk_enable(bool enable)
 		clk_enable(audss.bus_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_enable(audss.i2s_clk);
+
+		if (soc_is_exynos5250() && audss.pd_ctl_enable)
+			srp_post_resume();
 	} else {
+		if (soc_is_exynos5250() && audss.pd_ctl_enable)
+			srp_prepare_suspend();
+
 		clk_disable(audss.bus_clk);
 		clk_disable(audss.srp_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
