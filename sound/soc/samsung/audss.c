@@ -304,7 +304,7 @@ int samsung_audss_init(struct platform_device *pdev)
 
 	pr_info("%s\n", banner);
 
-#if defined(CONFIG_PM_RUNTIME) && defined(CONFIG_SND_SAMSUNG_RUNTIME_PM)
+#ifdef CONFIG_PM_RUNTIME
 	audss.pdev = pdev;
 	audss.pd_ctl_enable = soc_is_exynos5250() ? true : false;
 

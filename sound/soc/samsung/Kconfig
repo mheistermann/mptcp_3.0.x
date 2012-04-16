@@ -69,6 +69,13 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 	help
 		Say Y if you want to add support for SoC audio on the SMDKs.
 
+config SND_SAMSUNG_RUNTIME_PM
+	tristate "Runtime PM support for Audio subsystem"
+	depends on SND_SAMSUNG_I2S && MACH_SMDK5250 && !SND_SAMSUNG_ALP
+	default y
+	help
+	  Say Y if you want to support Runtime PM for Audio subsystem.
+
 choice
 	prompt "Samsung I2S Audio type"
 	depends on SND_SAMSUNG_I2S && (ARCH_EXYNOS4 || ARCH_S5PV210 || ARCH_EXYNOS5)
