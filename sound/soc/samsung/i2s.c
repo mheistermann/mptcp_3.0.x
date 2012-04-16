@@ -130,7 +130,7 @@ static inline bool tx_active(struct i2s_dai *i2s)
 {
 	u32 active;
 
-	if (!i2s)
+	if (!i2s || !i2s->addr)
 		return false;
 
 	active = readl(i2s->addr + I2SCON);
@@ -162,7 +162,7 @@ static inline bool rx_active(struct i2s_dai *i2s)
 {
 	u32 active;
 
-	if (!i2s)
+	if (!i2s || !i2s->addr)
 		return false;
 
 	active = readl(i2s->addr + I2SCON) & CON_RXDMA_ACTIVE;
