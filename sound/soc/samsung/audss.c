@@ -52,10 +52,13 @@ static DEFINE_SPINLOCK(lock);
 
 static int audss_clk_div_init(struct clk *src_clk)
 {
-	u32 clk_div = readl(S5P_CLKDIV_AUDSS);
 	u32 src_clk_rate = 0;
-	u32 bus_div = 0;
-	u32 i2s_div = 0;
+	u64 srp_rate = 0;
+	u64 bus_rate = 0;
+	u64 i2s_rate = 0;
+	u32 srp_div = 1;
+	u32 bus_div = 2;
+	u32 i2s_div = 2;
 	u32 ret = -1;
 
 	src_clk_rate = clk_get_rate(src_clk);
@@ -66,39 +69,33 @@ static int audss_clk_div_init(struct clk *src_clk)
 	}
 
 	pr_debug("%s: SRC Clock Rate[%d]\n", __func__, src_clk_rate);
-	switch (src_clk_rate) {
-	case 192000000:
-	case 180633605:
-	case 180000000:
-		bus_div = 4;
-		i2s_div = !strcmp(audss.rclksrc, "i2sclk") ? 4 : 16;
-		break;
 
-	case 96000000:
-		bus_div = 2;
-		i2s_div = !strcmp(audss.rclksrc, "i2sclk") ? 2 : 16;
-		break;
-
-	default:
-		pr_err("%s: Not supported src clk rate\n", __func__);
+	if (src_clk_rate > 100000000) {
+		srp_div <<= 1;
+		bus_div <<= 1;
+		i2s_div <<= 1;
 	}
 
-	clk_div &= ~(S5P_AUDSS_CLKDIV_RP_MASK
-		| S5P_AUDSS_CLKDIV_BUSCLK_MASK
-		| S5P_AUDSS_CLKDIV_I2SCLK_MASK);
+	if (!strcmp(audss.rclksrc, "busclk"))
+		i2s_div = 16;			/* Use max div */
 
-	if (bus_div)
-		clk_div |= (bus_div - 1) << S5P_AUDSS_CLKDIV_BUSCLK_SHIFT;
+	srp_rate = src_clk_rate >> (srp_div - 1);
+	bus_rate = src_clk_rate >> (bus_div - 1);
+	i2s_rate = src_clk_rate >> (i2s_div - 1);
 
-	if (i2s_div)
-		clk_div |= (i2s_div - 1) << S5P_AUDSS_CLKDIV_I2SCLK_SHIFT;
+	if (srp_rate != src_clk_rate)
+		clk_set_rate(audss.dout_srp, srp_rate);
 
-	writel(clk_div, S5P_CLKDIV_AUDSS);
+	if (bus_rate != src_clk_rate)
+		clk_set_rate(audss.bus_clk, bus_rate);
 
-	pr_debug("%s: BUSCLK[%ld], I2SCLK[%ld]\n", __func__,
-						clk_get_rate(audss.bus_clk),
-						clk_get_rate(audss.i2s_clk));
-	pr_debug("%s: CLKDIV[0x%x]\n", __func__, readl(S5P_CLKDIV_AUDSS));
+	if (i2s_rate != src_clk_rate)
+		clk_set_rate(audss.i2s_clk, i2s_rate);
+
+	pr_info("%s: CLKDIV[0x%x]\n", __func__, readl(S5P_CLKDIV_AUDSS));
+	pr_info("%s: SRPCLK[%ld]\n", __func__, clk_get_rate(audss.srp_clk));
+	pr_info("%s: BUSCLK[%ld]\n", __func__, clk_get_rate(audss.bus_clk));
+	pr_info("%s: I2SCLK[%ld]\n", __func__, clk_get_rate(audss.i2s_clk));
 
 	return 0;
 }
