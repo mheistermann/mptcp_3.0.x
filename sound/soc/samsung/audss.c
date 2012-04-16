@@ -97,6 +97,13 @@ static int audss_clk_div_init(struct clk *src_clk)
 	pr_info("%s: BUSCLK[%ld]\n", __func__, clk_get_rate(audss.bus_clk));
 	pr_info("%s: I2SCLK[%ld]\n", __func__, clk_get_rate(audss.i2s_clk));
 
+	clk_disable(audss.srp_clk);
+	clk_disable(audss.bus_clk);
+	if (!strcmp(audss.rclksrc, "i2sclk"))
+		clk_disable(audss.i2s_clk);
+
+	pr_info("%s: CLKGATE[0x%x]\n", __func__, readl(S5P_CLKGATE_AUDSS));
+
 	return 0;
 }
 
@@ -237,6 +244,11 @@ static __devinit int audss_init(void)
 
 	audss.reg_saved = false;
 	audss.clk_enabled = false;
+
+	clk_enable(audss.srp_clk);
+	clk_enable(audss.bus_clk);
+	if (!strcmp(audss.rclksrc, "i2sclk"))
+		clk_enable(audss.i2s_clk);
 
 	ret = audss_clk_div_init(audss.mout_audss);
 	if (ret < 0) {
