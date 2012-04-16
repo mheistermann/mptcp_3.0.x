@@ -1066,20 +1066,17 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 		return -ENXIO;
 	}
 
-	/* If this is probe on secondary */
-	if (i2s->pdev->id == SAMSUNG_I2S_SECOFF)
-		goto probe_exit;
+	if (is_secondary(i2s))
+                i2s->cclk = clk_get(&(i2s->pri_dai)->pdev->dev, "iis");
+	else
+		i2s->cclk = clk_get(&i2s->pdev->dev, "iis");
 
-	i2s->cclk = clk_get(&i2s->pdev->dev, "iis");
 	if (IS_ERR(i2s->cclk)) {
 		pr_err("%s: failed to get cclk\n", __func__);
 		return PTR_ERR(i2s->cclk);
 	}
 
 	i2s_clk_enable(i2s, true);
-
-	if (other)
-		other->addr = i2s->addr;
 
 	if (i2s->quirks & QUIRK_NEED_RSTCLR)
 		writel(CON_RSTCLR, i2s->addr + I2SCON);
@@ -1091,10 +1088,11 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	i2s->rfs = 0;
 	i2s->bfs = 0;
 	i2s_txctrl(i2s, 0);
-	i2s_rxctrl(i2s, 0);
 	i2s_fifo(i2s, FIC_TXFLUSH);
-	i2s_fifo(other, FIC_TXFLUSH);
-	i2s_fifo(i2s, FIC_RXFLUSH);
+	if (!is_secondary(i2s)) {
+		i2s_rxctrl(i2s, 0);
+		i2s_fifo(i2s, FIC_RXFLUSH);
+	}
 
 	/* Gate CDCLK by default */
 	if (!is_opened(other))
@@ -1106,7 +1104,6 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	i2s_clk_enable(i2s, false);
 
-probe_exit:
 	return 0;
 }
 
