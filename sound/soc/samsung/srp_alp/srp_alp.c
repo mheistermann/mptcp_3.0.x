@@ -422,12 +422,12 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 
 	srp.audss_clk_enable(true);
 
-	if (!srp.initialized) {
+	if (srp.initialized) {
 		srp_set_default_fw();
 		srp_flush_ibuf();
 		srp_flush_obuf();
 		srp_reset();
-		srp.initialized = true;
+		srp.initialized = false;
 	}
 
 	if (srp.obuf_fill_done[srp.obuf_ready]
@@ -570,7 +570,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case SRP_INIT:
-		srp.initialized = false;
+		srp.initialized = true;
 		srp_debug("SRP_INIT\n");
 		break;
 
