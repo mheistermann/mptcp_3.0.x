@@ -14,18 +14,21 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/pm_runtime.h>
 
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
 #include <plat/audio.h>
 #include <plat/clock.h>
+#include <plat/cpu.h>
 #include <mach/map.h>
 #include <mach/regs-audss.h>
 
 #include "audss.h"
 
 static struct audss_runtime_data {
+	struct platform_device *pdev;
 	struct clk *mout_audss;
 	struct clk *dout_srp;
 	struct clk *srp_clk;
@@ -40,6 +43,7 @@ static struct audss_runtime_data {
 
 	bool	clk_enabled;
 	bool	reg_saved;
+	bool	pd_ctl_enable;
 } audss;
 
 static char *rclksrc[] = {
@@ -49,6 +53,15 @@ static char *rclksrc[] = {
 
 /* Lock for cross i/f checks */
 static DEFINE_SPINLOCK(lock);
+
+static void audss_pm_runtime_ctl(bool enabled)
+{
+	if (!audss.pd_ctl_enable)
+		return;
+
+	enabled ? pm_runtime_get_sync(&audss.pdev->dev)
+		: pm_runtime_put_sync(&audss.pdev->dev);
+}
 
 static int audss_clk_div_init(struct clk *src_clk)
 {
@@ -155,6 +168,7 @@ void audss_clk_enable(bool enable)
 			goto exit_func;
 		}
 
+		audss_pm_runtime_ctl(true);
 		audss_reg_restore();
 		clk_enable(audss.srp_clk);
 		clk_enable(audss.bus_clk);
@@ -174,6 +188,7 @@ void audss_clk_enable(bool enable)
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_disable(audss.i2s_clk);
 		audss_reg_save();
+		audss_pm_runtime_ctl(false);
 
 		audss.clk_enabled = false;
 	}
@@ -244,6 +259,7 @@ static __devinit int audss_init(void)
 
 	audss.reg_saved = false;
 	audss.clk_enabled = false;
+	audss_pm_runtime_ctl(true);
 
 	clk_enable(audss.srp_clk);
 	clk_enable(audss.bus_clk);
@@ -256,7 +272,12 @@ static __devinit int audss_init(void)
 		goto err5;
 	}
 
+#ifndef CONFIG_SND_SAMSUNG_RUNTIME_PM
+	audss.pd_ctl_enable = false;
+#endif
+
 	audss_reg_save();
+	audss_pm_runtime_ctl(false);
 
 	return ret;
 err5:
@@ -294,6 +315,16 @@ static int __init samsung_audss_init(void)
 
 	pr_info("%s\n", banner);
 
+#if defined(CONFIG_PM_RUNTIME) && defined(CONFIG_SND_SAMSUNG_RUNTIME_PM)
+	audss.pdev = pdev;
+	audss.pd_ctl_enable = soc_is_exynos5250() ? true : false;
+
+	if (audss.pd_ctl_enable) {
+		pr_info("%s: Enabled runtime PM for audss\n", __func__);
+		pm_runtime_enable(&audss.pdev->dev);
+	}
+#endif
+
 	ret = audss_init();
 	if (ret < 0)
 		pr_err("%s:failed to init audss clock\n", __func__);
@@ -306,6 +337,14 @@ module_init(samsung_audss_init);
 static void __exit samsung_audss_exit(void)
 {
 	audss_deinit();
+
+#ifdef CONFIG_PM_RUNTIME
+	if (audss.pd_ctl_enable) {
+		pr_info("%s: Disabled runtime PM for audio subsystem\n", __func__);
+		pm_runtime_disable(&audss.pdev->dev);
+		audss.pd_ctl_enable = false;
+	}
+#endif
 }
 module_exit(samsung_audss_exit);
 
