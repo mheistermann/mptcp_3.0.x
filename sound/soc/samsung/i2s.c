@@ -19,6 +19,7 @@
 #include <sound/pcm_params.h>
 
 #include <plat/audio.h>
+#include <plat/cpu.h>
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
@@ -32,6 +33,8 @@
 struct i2s_dai {
 	/* Platform device for this DAI */
 	struct platform_device *pdev;
+	/* Platform data for gpio configuration */
+	struct s3c_audio_pdata *i2s_pdata;
 	/* IOREMAP'd SFRs */
 	void __iomem	*addr;
 	/* Physical base address of SFRs */
@@ -751,6 +754,7 @@ static void i2s_clk_enable(struct i2s_dai *i2s, bool on)
 static int i2s_startup(struct snd_pcm_substream *substream,
 	  struct snd_soc_dai *dai)
 {
+	struct platform_device *gpio_dev = NULL;
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
 	unsigned long flags;
@@ -772,6 +776,14 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 
 	if (!is_opened(other) && !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
+
+		if (soc_is_exynos5250()) {
+			gpio_dev = is_secondary(i2s) ?
+				   i2s->pri_dai->pdev : i2s->pdev;
+
+			i2s->i2s_pdata->cfg_gpio(gpio_dev);
+			writel(CON_RSTCLR, i2s->addr + I2SCON);
+		}
 
 		if (i2s->reg_saved)
 			i2s_reg_restore(dai);
@@ -1057,6 +1069,7 @@ static int i2s_resume(struct snd_soc_dai *dai)
 
 static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 {
+	struct platform_device *gpio_dev = NULL;
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
 
@@ -1077,6 +1090,11 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	}
 
 	i2s_clk_enable(i2s, true);
+
+	gpio_dev = is_secondary(i2s) ?
+		   i2s->pri_dai->pdev : i2s->pdev;
+
+	i2s->i2s_pdata->cfg_gpio(gpio_dev);
 
 	if (i2s->quirks & QUIRK_NEED_RSTCLR)
 		writel(CON_RSTCLR, i2s->addr + I2SCON);
@@ -1260,6 +1278,7 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 	pri_dai->dma_capture.dma_size = 4;
 	pri_dai->base = regs_base;
 	pri_dai->quirks = quirks;
+	pri_dai->i2s_pdata = i2s_pdata;
 	if (pdev->id == 0) {
 		pri_dai->audss_clk_enable = audss_clk_enable;
 		pri_dai->audss_suspend = audss_suspend;
@@ -1285,6 +1304,7 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->dma_playback.dma_size = 4;
 		sec_dai->base = regs_base;
 		sec_dai->quirks = quirks;
+		sec_dai->i2s_pdata = i2s_pdata;
 
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
@@ -1302,12 +1322,6 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 			ret = -EINVAL;
 			goto err3;
 		}
-	}
-
-	if (i2s_pdata->cfg_gpio && i2s_pdata->cfg_gpio(pdev)) {
-		dev_err(&pdev->dev, "Unable to configure gpio\n");
-		ret = -EINVAL;
-		goto err3;
 	}
 
 	snd_soc_register_dai(&pri_dai->pdev->dev, &pri_dai->i2s_dai_drv);
