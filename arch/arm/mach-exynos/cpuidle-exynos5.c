@@ -307,13 +307,7 @@ static struct sleep_save exynos5_lpa_save[] = {
 	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_FSYS),
 	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC0),
 	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC1),
-	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_ISP),
-	SAVE_ITEM(EXYNOS5_CLKDIV_ISP0),
-	SAVE_ITEM(EXYNOS5_CLKDIV_ISP1),
-	SAVE_ITEM(EXYNOS5_CLKDIV_ISP2),
 	SAVE_ITEM(EXYNOS5_CLKSRC_TOP3),
-	SAVE_ITEM(EXYNOS5_CLKGATE_ISP0),
-	SAVE_ITEM(EXYNOS5_CLKGATE_ISP1),
 };
 
 static struct sleep_save exynos5_set_clksrc[] = {
@@ -324,7 +318,6 @@ static struct sleep_save exynos5_set_clksrc[] = {
 	{ .reg = EXYNOS5_CLKSRC_MASK_FSYS		, .val = 0xffffffff, },
 	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC0		, .val = 0xffffffff, },
 	{ .reg = EXYNOS5_CLKSRC_MASK_PERIC1		, .val = 0xffffffff, },
-	{ .reg = EXYNOS5_CLKSRC_MASK_ISP		, .val = 0xffffffff, },
 };
 
 static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
