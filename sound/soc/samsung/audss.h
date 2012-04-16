@@ -19,6 +19,7 @@ enum {
 };
 
 void audss_clk_enable(bool enable);
+bool audss_clken_stat(void);
 void audss_suspend(void);
 void audss_resume(void);
 

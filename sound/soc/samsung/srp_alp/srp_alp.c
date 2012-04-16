@@ -259,7 +259,8 @@ static void srp_commbox_deinit(void)
 {
 	unsigned int reg = 0;
 
-	srp.audss_clk_enable(true);
+	if (!srp.audss_clken_stat())
+		srp.audss_clk_enable(true);
 
 	srp_wait_for_pending();
 	srp.decoding_started = 0;
@@ -420,7 +421,8 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 
 	srp_debug("Write(%d bytes)\n", size);
 
-	srp.audss_clk_enable(true);
+	if (!srp.audss_clken_stat())
+		srp.audss_clk_enable(true);
 
 	if (srp.initialized) {
 		srp_set_default_fw();
@@ -1102,14 +1104,16 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	srp_info("Suspend\n");
 
-	srp.audss_clk_enable(true);
+	if (!srp.audss_clken_stat())
+		srp.audss_clk_enable(true);
 
 	if (srp.is_opened)
 		srp_prepare_suspend();
 	else if (soc_is_exynos5250())
 		srp_request_intr_mode(SUSPEND);
 
-	srp.audss_clk_enable(false);
+	if (srp.audss_clken_stat())
+		srp.audss_clk_enable(false);
 
 	return 0;
 }
@@ -1135,7 +1139,8 @@ static int srp_resume(struct platform_device *pdev)
 {
 	srp_info("Resume\n");
 
-	srp.audss_clk_enable(true);
+	if (!srp.audss_clken_stat())
+		srp.audss_clk_enable(true);
 
 	if (srp.is_opened) {
 		if (!srp.decoding_started) {
@@ -1153,7 +1158,8 @@ static int srp_resume(struct platform_device *pdev)
 			srp_request_intr_mode(RESUME);
 	}
 
-	srp.audss_clk_enable(false);
+	if (srp.audss_clken_stat())
+		srp.audss_clk_enable(false);
 
 	return 0;
 }
@@ -1226,6 +1232,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	srp.first_init = 0;
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
+	srp.audss_clken_stat = audss_clken_stat;
 
 	return 0;
 

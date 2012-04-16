@@ -54,6 +54,11 @@ static char *rclksrc[] = {
 
 static DEFINE_MUTEX(audss_mutex);
 
+bool audss_clken_stat(void)
+{
+	return audss.clk_enabled;
+}
+
 static void audss_pm_runtime_ctl(bool enabled)
 {
 	if (!audss.pd_ctl_enable)

@@ -196,6 +196,7 @@ struct srp_info {
 
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
+	bool	(*audss_clken_stat)(void);
 };
 
 /* SRP Pending On/Off status */
