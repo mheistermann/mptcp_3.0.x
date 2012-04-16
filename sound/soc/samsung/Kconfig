@@ -71,7 +71,7 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 
 config SND_SAMSUNG_RUNTIME_PM
 	tristate "Runtime PM support for Audio subsystem"
-	depends on SND_SAMSUNG_I2S && MACH_SMDK5250 && !SND_SAMSUNG_ALP
+	depends on SND_SAMSUNG_I2S && MACH_SMDK5250
 	default y
 	help
 	  Say Y if you want to support Runtime PM for Audio subsystem.
