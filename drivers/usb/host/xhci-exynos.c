@@ -528,9 +528,9 @@ void usb_hcd_exynos_remove(struct platform_device *pdev)
 	}
 	usb_put_hcd(hcd);
 
-	kfree(exynos_xhci);
 	clk_disable(exynos_xhci->clk);
 	clk_put(exynos_xhci->clk);
+	kfree(exynos_xhci);
 }
 
 static int __devinit exynos_xhci_probe(struct platform_device *pdev)
@@ -579,7 +579,6 @@ static int __devinit exynos_xhci_probe(struct platform_device *pdev)
 put_usb3_hcd:
 	usb_put_hcd(xhci->shared_hcd);
 dealloc_usb2_hcd:
-	usb_remove_hcd(hcd);
 	usb_hcd_exynos_remove(pdev);
 
 	return err;
@@ -596,7 +595,6 @@ static int __devexit exynos_xhci_remove(struct platform_device *pdev)
 		usb_remove_hcd(xhci->shared_hcd);
 		usb_put_hcd(xhci->shared_hcd);
 	}
-	usb_remove_hcd(hcd);
 
 	usb_hcd_exynos_remove(pdev);
 	kfree(xhci);
