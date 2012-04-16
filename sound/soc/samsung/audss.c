@@ -65,6 +65,7 @@ static void audss_pm_runtime_ctl(bool enabled)
 
 static int audss_clk_div_init(struct clk *src_clk)
 {
+	struct clk *fout_epll;
 	u32 src_clk_rate = 0;
 	u64 srp_rate = 0;
 	u64 bus_rate = 0;
@@ -73,6 +74,15 @@ static int audss_clk_div_init(struct clk *src_clk)
 	u32 bus_div = 2;
 	u32 i2s_div = 2;
 	u32 ret = -1;
+
+	fout_epll = clk_get(NULL, "fout_epll");
+	if (IS_ERR(fout_epll)) {
+		pr_err("%s: failed to get fout_epll\n", __func__);
+		return ret;
+	}
+	clk_set_parent(audss.mout_audss, fout_epll);
+
+	pr_debug("%s: CLKSRC[0x%x]\n", __func__, readl(S5P_CLKSRC_AUDSS));
 
 	src_clk_rate = clk_get_rate(src_clk);
 	if (!src_clk_rate) {
@@ -116,6 +126,8 @@ static int audss_clk_div_init(struct clk *src_clk)
 		clk_disable(audss.i2s_clk);
 
 	pr_info("%s: CLKGATE[0x%x]\n", __func__, readl(S5P_CLKGATE_AUDSS));
+
+	clk_put(fout_epll);
 
 	return 0;
 }
