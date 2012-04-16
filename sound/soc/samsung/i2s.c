@@ -1022,9 +1022,12 @@ i2s_delay(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 static int i2s_suspend(struct snd_soc_dai *dai)
 {
 	struct i2s_dai *i2s = to_info(dai);
+	int id = i2s->pdev->id;
 
 	if (!i2s->reg_saved) {
-		i2s->audss_suspend();
+		if ((id == 0) || (id == SAMSUNG_I2S_SECOFF))
+			i2s->audss_suspend();
+
 		i2s_reg_save(dai);
 		i2s->reg_saved_by_pm = true;
 	}
@@ -1035,11 +1038,14 @@ static int i2s_suspend(struct snd_soc_dai *dai)
 static int i2s_resume(struct snd_soc_dai *dai)
 {
 	struct i2s_dai *i2s = to_info(dai);
+	int id = i2s->pdev->id;
 
 	if (i2s->reg_saved && i2s->reg_saved_by_pm) {
 		i2s_reg_restore(dai);
 		i2s->reg_saved_by_pm = false;
-		i2s->audss_resume();
+
+		if ((id == 0) || (id == SAMSUNG_I2S_SECOFF))
+			i2s->audss_resume();
 	}
 
 	return 0;
