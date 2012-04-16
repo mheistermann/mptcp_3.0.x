@@ -215,7 +215,7 @@ void audss_resume(void)
 		audss_reg_restore();
 }
 
-static __devinit int audss_init(void)
+static int audss_init(void)
 {
 	int ret = 0;
 
@@ -294,7 +294,7 @@ err1:
 	return ret;
 }
 
-static __devexit int audss_deinit(void)
+static int audss_deinit(void)
 {
 	clk_put(audss.i2s_clk);
 	clk_put(audss.bus_clk);
@@ -309,7 +309,7 @@ static __devexit int audss_deinit(void)
 
 static char banner[] __initdata = "Samsung Audio Subsystem Driver, (c) 2011 Samsung Electronics";
 
-static int __init samsung_audss_init(void)
+int samsung_audss_init(struct platform_device *pdev)
 {
 	int ret = 0;
 
@@ -332,9 +332,8 @@ static int __init samsung_audss_init(void)
 	return ret;
 
 }
-module_init(samsung_audss_init);
 
-static void __exit samsung_audss_exit(void)
+void samsung_audss_exit(void)
 {
 	audss_deinit();
 
@@ -346,7 +345,6 @@ static void __exit samsung_audss_exit(void)
 	}
 #endif
 }
-module_exit(samsung_audss_exit);
 
 /* Module information */
 MODULE_AUTHOR("Lakkyung Jung, <lakkyung.jung@samsung.com>");

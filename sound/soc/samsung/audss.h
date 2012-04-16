@@ -30,4 +30,7 @@ enum {
 void audss_clk_enable(bool enable);
 void audss_suspend(void);
 void audss_resume(void);
+
+extern int samsung_audss_init(struct platform_device *pdev);
+extern void samsung_audss_exit(void);
 #endif /* __SND_SOC_SAMSUNG_AUDSS_H */

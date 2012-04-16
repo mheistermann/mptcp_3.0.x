@@ -1295,6 +1295,15 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (pdev->id == 0) {
+		ret = samsung_audss_init(pdev);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Can't initialized audss\n");
+			ret = -EINVAL;
+			goto err3;
+		}
+	}
+
 	if (i2s_pdata->cfg_gpio && i2s_pdata->cfg_gpio(pdev)) {
 		dev_err(&pdev->dev, "Unable to configure gpio\n");
 		ret = -EINVAL;
@@ -1335,6 +1344,9 @@ static __devexit int samsung_i2s_remove(struct platform_device *pdev)
 	i2s->sec_dai = NULL;
 
 	kfree(i2s);
+
+	if (pdev->id == 0)
+		samsung_audss_exit();
 
 	snd_soc_unregister_dai(&pdev->dev);
 
