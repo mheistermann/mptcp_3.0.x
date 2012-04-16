@@ -28,7 +28,7 @@
 #include "dma.h"
 #include "idma.h"
 #include "i2s.h"
-#include "srp-types.h"
+#include "srp_ulp/srp.h"
 
 struct i2s_dai {
 	/* Platform device for this DAI */
