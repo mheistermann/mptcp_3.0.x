@@ -52,6 +52,8 @@ static char *rclksrc[] = {
 	[1] = "i2sclk",
 };
 
+static DEFINE_MUTEX(audss_mutex);
+
 static void audss_pm_runtime_ctl(bool enabled)
 {
 	if (!audss.pd_ctl_enable)
@@ -166,9 +168,12 @@ void audss_reg_restore(void)
 
 void audss_clk_enable(bool enable)
 {
+	mutex_lock(&audss_mutex);
+
 	if (audss.clk_enabled == enable) {
 		pr_debug("%s: Already set audss clk %d\n",
 				__func__, audss.clk_enabled);
+		mutex_unlock(&audss_mutex);
 		return;
 	}
 
@@ -195,7 +200,7 @@ void audss_clk_enable(bool enable)
 	}
 
 	audss.clk_enabled = enable;
-
+	mutex_unlock(&audss_mutex);
 	return;
 }
 
