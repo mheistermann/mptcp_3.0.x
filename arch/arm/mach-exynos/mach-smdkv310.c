@@ -11,7 +11,7 @@
 #include <linux/serial_core.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
-#include <linux/gpio_event.h>
+#include <linux/gpio_keys.h>
 #include <linux/lcd.h>
 #include <linux/mmc/host.h>
 #include <linux/platform_device.h>
@@ -1480,48 +1480,26 @@ static struct platform_device m5mols_fixed_voltage = {
 };
 #endif
 
-static struct gpio_event_direct_entry smdkv310_keypad_key_map[] = {
+struct gpio_keys_button smdkv310_button[] = {
 	{
-		.gpio   = EXYNOS4_GPX0(0),
-		.code   = KEY_POWER,
+		.code = KEY_POWER,
+		.gpio = EXYNOS4_GPX0(0),
+		.active_low = 1,
+		.wakeup = 1,
 	}
 };
 
-static struct gpio_event_input_info smdkv310_keypad_key_info = {
-	.info.func              = gpio_event_input_func,
-	.info.no_suspend        = true,
-	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
-	.type                   = EV_KEY,
-	.keymap                 = smdkv310_keypad_key_map,
-	.keymap_size            = ARRAY_SIZE(smdkv310_keypad_key_map)
+struct gpio_keys_platform_data smdkv310_gpiokeys_platform_data = {
+	smdkv310_button,
+	ARRAY_SIZE(smdkv310_button),
 };
 
-static struct gpio_event_info *smdkv310_input_info[] = {
-	&smdkv310_keypad_key_info.info,
-};
-
-static struct gpio_event_platform_data smdkv310_input_data = {
-	.names  = {
-		"smdkv310-keypad",
-		NULL,
-	},
-	.info           = smdkv310_input_info,
-	.info_count     = ARRAY_SIZE(smdkv310_input_info),
-};
-
-static struct platform_device smdkv310_input_device = {
-	.name   = GPIO_EVENT_DEV_NAME,
-	.id     = 0,
-	.dev    = {
-		.platform_data = &smdkv310_input_data,
+static struct platform_device smdkv310_gpio_keys = {
+	.name	= "gpio-keys",
+	.dev	= {
+		.platform_data = &smdkv310_gpiokeys_platform_data,
 	},
 };
-
-#ifdef CONFIG_WAKEUP_ASSIST
-static struct platform_device wakeup_assist_device = {
-	.name   = "wakeup_assist",
-};
-#endif
 
 static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
 	REGULATOR_SUPPLY("AVDD2", "1-001a"),
@@ -1851,10 +1829,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&s5p_device_hpd,
 #endif
 	&smdkv310_smsc911x,
-	&smdkv310_input_device,
-#ifdef CONFIG_WAKEUP_ASSIST
-	&wakeup_assist_device,
-#endif
+	&smdkv310_gpio_keys,
 #ifdef CONFIG_VIDEO_FIMC
 	&s3c_device_fimc0,
 	&s3c_device_fimc1,
