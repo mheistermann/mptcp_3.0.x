@@ -154,7 +154,7 @@ static void gsc_m2m_device_run(void *priv)
 		goto put_device;
 	}
 
-	if (gsc->vb2->use_sysmmu)
+	if (gsc->use_sysmmu)
 		gsc_set_prefbuf(gsc, ctx->s_frame);
 
 	if (ctx->state & GSC_PARAMS) {
@@ -403,7 +403,7 @@ static int gsc_m2m_reqbufs(struct file *file, void *fh,
 			gsc_ctx_state_lock_clear(GSC_DST_FMT, ctx);
 	}
 
-	update_use_sysmmu(gsc->vb2, ctx->gsc_ctrls.use_sysmmu);
+	update_use_sysmmu(gsc, ctx->gsc_ctrls.use_sysmmu);
 	frame = ctx_get_frame(ctx, reqbufs->type);
 	frame->cacheable = ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);

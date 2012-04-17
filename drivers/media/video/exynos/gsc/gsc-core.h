@@ -493,7 +493,6 @@ struct gsc_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
-	bool use_sysmmu;
 };
 
 struct gsc_pipeline {
@@ -547,6 +546,7 @@ struct gsc_dev {
 	struct exynos_md		*mdev[2];
 	struct gsc_pipeline		pipeline;
 	struct exynos_entity_data	md_data;
+	bool 				use_sysmmu;
 };
 
 /**
@@ -770,11 +770,10 @@ static inline void update_ctrl_value(struct v4l2_ctrl *ctrl, s32 value)
 	ctrl->cur.val = ctrl->val = value;
 }
 
-static inline void update_use_sysmmu(const struct gsc_vb2 *vb2,
+static inline void update_use_sysmmu(struct gsc_dev *gsc,
 				     struct v4l2_ctrl *ctrl)
 {
-	bool *use_sysmmu = (bool *)&vb2->use_sysmmu;
-	*use_sysmmu = ctrl->cur.val;
+	gsc->use_sysmmu = ctrl->cur.val;
 }
 
 void gsc_hw_set_sw_reset(struct gsc_dev *dev);

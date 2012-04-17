@@ -434,7 +434,7 @@ static int gsc_output_reqbufs(struct file *file, void *priv,
 					 out->ctx);
 
 	frame = ctx_get_frame(out->ctx, reqbufs->type);
-	update_use_sysmmu(gsc->vb2, out->ctx->gsc_ctrls.use_sysmmu);
+	update_use_sysmmu(gsc, out->ctx->gsc_ctrls.use_sysmmu);
 	frame->cacheable = out->ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);
 	ret = vb2_reqbufs(&out->vbq, reqbufs);

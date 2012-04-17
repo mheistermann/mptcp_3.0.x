@@ -1088,7 +1088,7 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 	gsc_dbg("num_planes= %d, nr_comp= %d, pix_size= %d",
 		frame->fmt->num_planes, frame->fmt->nr_comp, pix_size);
 
-	if (!gsc->vb2->use_sysmmu) {
+	if (!gsc->use_sysmmu) {
 		WARN_ON(vb2_ion_phys_address(
 			vb2_plane_cookie(vb, 0),
 			&addr->y) != 0);
@@ -1116,7 +1116,7 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 		}
 	} else {
 		if (frame->fmt->num_planes >= 2) {
-			if (!gsc->vb2->use_sysmmu) {
+			if (!gsc->use_sysmmu) {
 				WARN_ON(vb2_ion_phys_address(
 					vb2_plane_cookie(vb, 1),
 					&addr->cb) != 0);
@@ -1125,7 +1125,7 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 		}
 
 		if (frame->fmt->num_planes == 3) {
-			if (!gsc->vb2->use_sysmmu) {
+			if (!gsc->use_sysmmu) {
 				WARN_ON(vb2_ion_phys_address(
 					vb2_plane_cookie(vb, 2),
 					&addr->cr) != 0);
@@ -1248,14 +1248,14 @@ void gsc_clock_gating(struct gsc_dev *gsc, enum gsc_clk_status status)
 		clk_cnt = atomic_inc_return(&gsc->clk_cnt);
 		if (clk_cnt == 1) {
 			clk_enable(gsc->clock);
-			if (gsc->vb2->use_sysmmu)
+			if (gsc->use_sysmmu)
 				gsc->vb2->resume(gsc->alloc_ctx);
 			set_bit(ST_PWR_ON, &gsc->state);
 		}
 	} else if (status == GSC_CLK_OFF) {
 		clk_cnt = atomic_dec_return(&gsc->clk_cnt);
 		if (clk_cnt == 0) {
-			if (gsc->vb2->use_sysmmu)
+			if (gsc->use_sysmmu)
 				gsc->vb2->suspend(gsc->alloc_ctx);
 			clk_disable(gsc->clock);
 			clear_bit(ST_PWR_ON, &gsc->state);
