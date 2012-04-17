@@ -121,8 +121,6 @@ obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSIM)	+= setup-mipidsim.o
 obj-$(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
 
-obj-$(CONFIG_WAKEUP_ASSIST)		+= wakeup_assist.o
-
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
 obj-$(CONFIG_EXYNOS_C2C)		+= setup-c2c.o
 obj-$(CONFIG_EXYNOS_THERMAL)		+= tmu-exynos.o
