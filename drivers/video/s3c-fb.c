@@ -574,6 +574,9 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	dev_dbg(sfb->dev, "setting framebuffer parameters\n");
 
+	if (pm_runtime_suspended(sfb->dev))
+		return 0;
+
 	shadow_protect_win(win, 1);
 
 	switch (var->bits_per_pixel) {
@@ -941,6 +944,13 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 
 	dev_dbg(sfb->dev, "Window[%d] : blank mode %d\n", index, blank_mode);
 
+	if (pm_runtime_suspended(sfb->dev)) {
+		if (index != sfb->pdata->default_win)
+			return 1;
+		else
+			return 0;
+	}
+
 	wincon = readl(sfb->regs + sfb->variant.wincon + (index * 4));
 
 	switch (blank_mode) {
@@ -1022,6 +1032,9 @@ static int s3c_fb_pan_display(struct fb_var_screeninfo *var,
 	struct s3c_fb *sfb	= win->parent;
 	void __iomem *buf	= sfb->regs + win->index * 8;
 	unsigned int start_boff, end_boff;
+
+	if (pm_runtime_suspended(sfb->dev))
+		return 0;
 
 	/* Offset in bytes to the start of the displayed area */
 	start_boff = var->yoffset * info->fix.line_length;
@@ -1332,6 +1345,9 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		struct s3c_fb_user_chroma user_chroma;
 		struct s3c_fb_user_ion_client user_ion_client;
 	} p;
+
+	if (pm_runtime_suspended(sfb->dev))
+		return 0;
 
 	switch (cmd) {
 	case FBIO_WAITFORVSYNC:
