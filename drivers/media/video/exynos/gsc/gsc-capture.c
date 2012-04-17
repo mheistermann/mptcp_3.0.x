@@ -123,10 +123,7 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 				return ret;
 			ret = v4l2_subdev_call(p->flite, video, s_stream, 0);
 		}
-
 		ret = v4l2_subdev_call(p->sd_gsc, video, s_stream, 0);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return ret;
 	}
 
 	return ret == -ENOIOCTLCMD ? 0 : ret;
