@@ -785,7 +785,7 @@ void gsc_hw_set_h_coef(struct gsc_ctx *ctx)
 {
 	struct gsc_scaler *sc = &ctx->scaler;
 	struct gsc_dev *dev = ctx->gsc_dev;
-	int i, j, k, sc_ratio = 0;
+	int i, j, k, sc_ratio;
 
 	if (sc->main_hratio <= GSC_SC_UP_MAX_RATIO)
 		sc_ratio = 0;
