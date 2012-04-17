@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <media/v4l2-ioctl.h>
 #include <plat/sysmmu.h>
+#include <mach/dev.h>
 
 #include "gsc-core.h"
 #define GSC_CLOCK_GATE_NAME		"gscl"
@@ -834,6 +835,8 @@ static int gsc_g_ctrl(struct v4l2_ctrl *ctrl)
 static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct gsc_ctx *ctx = ctrl_to_ctx(ctrl);
+	struct gsc_dev *gsc = ctx->gsc_dev;
+	struct device *dev = &gsc->pdev->dev;
 	int ret;
 
 	switch (ctrl->id) {
@@ -872,7 +875,16 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_USE_SYSMMU:
 		update_ctrl_value(ctx->gsc_ctrls.use_sysmmu, ctrl->val);
 		break;
-
+#ifdef CONFIG_BUSFREQ_OPP
+	case V4L2_CID_BUSFREQ_LOCK:
+		/* lock bus frequency */
+		dev_lock(gsc->bus_dev, dev, (unsigned long)ctrl->val);
+		break;
+	case V4L2_CID_BUSFREQ_UNLOCK:
+		/* unlock bus frequency */
+		dev_unlock(dev, dev);
+		break;
+#endif
 	default:
 		ret = gsc_s_ctrl_to_mxr(ctrl);
 		if (ret) {
@@ -1001,6 +1013,29 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.max = DEFAULT_USE_SYSMMU,
 		.def = DEFAULT_USE_SYSMMU,
 	},
+#ifdef CONFIG_BUSFREQ_OPP
+	{
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_BUSFREQ_LOCK,
+		.name = "lock bus frequency",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = GSC_MAX_FREQ,
+		.def = 0,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_BUSFREQ_UNLOCK,
+		.name = "unlock bus frequency",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = GSC_MAX_FREQ,
+		.def = 0,
+	},
+#endif
 };
 
 int gsc_ctrls_create(struct gsc_ctx *ctx)
@@ -1049,6 +1084,12 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 	ctx->gsc_ctrls.use_sysmmu = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[12], NULL);
 
+#ifdef CONFIG_BUSFREQ_OPP
+	ctx->gsc_ctrls.bus_freq = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[13], NULL);
+	ctx->gsc_ctrls.bus_freq = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[14], NULL);
+#endif
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
 	if (ctx->ctrl_handler.error) {
@@ -1430,6 +1471,10 @@ static int gsc_probe(struct platform_device *pdev)
 	}
 	gsc_pm_runtime_enable(&pdev->dev);
 
+#ifdef CONFIG_BUSFREQ_OPP
+	/* To lock bus frequency in OPP mode */
+	gsc->bus_dev = dev_get(EXYNOS_BUSFREQ_NAME);
+#endif
 	gsc_info("gsc-%d registered successfully", gsc->id);
 
 	return 0;

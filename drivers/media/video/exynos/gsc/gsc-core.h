@@ -87,7 +87,7 @@ extern int gsc_dbg;
 #define DEFAULT_CSC_EQ			1
 #define DEFAULT_CSC_RANGE		1
 #define DEFAULT_USE_SYSMMU		1
-
+#define GSC_MAX_FREQ			800267
 #define GSC_LAST_DEV_ID			3
 #define GSC_PAD_SINK			0
 #define GSC_PAD_SOURCE			1
@@ -109,6 +109,10 @@ extern int gsc_dbg;
 #define GSC_SC_DOWN_RATIO_4_8		131072
 #define GSC_SC_DOWN_RATIO_3_8		174762
 #define GSC_SC_DOWN_RATIO_2_8		262144
+
+#ifdef CONFIG_BUSFREQ_OPP
+#define EXYNOS_BUSFREQ_NAME	"exynos-busfreq"
+#endif
 
 enum gsc_dev_flags {
 	/* for global */
@@ -279,6 +283,7 @@ struct gsc_ctrls {
 	struct v4l2_ctrl	*csc_range;
 	struct v4l2_ctrl	*m2m_ctx_num;
 	struct v4l2_ctrl	*use_sysmmu;
+	struct v4l2_ctrl	*bus_freq;
 };
 
 /**
@@ -546,6 +551,9 @@ struct gsc_dev {
 	struct gsc_pipeline		pipeline;
 	struct exynos_entity_data	md_data;
 	bool 				use_sysmmu;
+#ifdef CONFIG_BUSFREQ_OPP
+	struct device			*bus_dev;
+#endif
 };
 
 /**
