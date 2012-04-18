@@ -129,7 +129,12 @@ static void gsc_m2m_device_run(void *priv)
 		return;
 
 	gsc = ctx->gsc_dev;
-	pm_runtime_get_sync(&gsc->pdev->dev);
+
+	if (in_irq())
+		pm_runtime_get(&gsc->pdev->dev);
+	else
+		pm_runtime_get_sync(&gsc->pdev->dev);
+
 	gsc_clock_gating(gsc, GSC_CLK_ON);
 
 	spin_lock_irqsave(&ctx->slock, flags);
