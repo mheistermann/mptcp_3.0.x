@@ -95,7 +95,7 @@ static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 	{1250000, 533, 80, 100}
 #elif (MALI_DVFS_STEP == 2)
 	{937500, 266, 0, 55},
-		{1250000, 533, 45, 100}
+	{1250000, 533, 45, 100}
 #else
 #error no table
 #endif
@@ -116,58 +116,6 @@ static void kbase_platform_dvfs_set_vol(unsigned int vol)
 	return;
 }
 
-#ifdef CONFIG_VITHAR_FREQ_LOCK
-int mali_get_dvfs_upper_locked_freq(void)
-{
-	unsigned int locked_level = -1;
-
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.upper_lock].clock;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-
-	return locked_level;
-}
-
-int mali_get_dvfs_under_locked_freq(void)
-{
-	unsigned int locked_level = -1;
-
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.under_lock].clock;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-
-	return locked_level;
-}
-
-
-int mali_dvfs_freq_lock(int level)
-{
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	mali_dvfs_status_current.upper_lock = level;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-	return 0;
-}
-void mali_dvfs_freq_unlock(void)
-{
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	mali_dvfs_status_current.upper_lock = -1;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-}
-
-int mali_dvfs_freq_under_lock(int level)
-{
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	mali_dvfs_status_current.under_lock = level;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-	return 0;
-}
-void mali_dvfs_freq_under_unlock(void)
-{
-	osk_spinlock_lock(&mali_dvfs_spinlock);
-	mali_dvfs_status_current.under_lock = -1;
-	osk_spinlock_unlock(&mali_dvfs_spinlock);
-}
-#endif
 
 void kbase_platform_dvfs_set_level(int level)
 {
@@ -224,7 +172,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 
 #ifdef CONFIG_VITHAR_FREQ_LOCK
-	if ((dvfs_status.upper_lock > 0)&&(dvfs_status.step > dvfs_status.upper_lock)) {
+	if ((dvfs_status.upper_lock >= 0)&&(dvfs_status.step > dvfs_status.upper_lock)) {
 		dvfs_status.step = dvfs_status.upper_lock;
 		if ((dvfs_status.under_lock > 0)&&(dvfs_status.under_lock > dvfs_status.upper_lock)) {
 			dvfs_status.under_lock = dvfs_status.upper_lock;
@@ -284,7 +232,7 @@ int kbase_platform_dvfs_init(struct device *dev)
 
 	/*default status
 	  add here with the right function to get initilization value.
-	  */
+	 */
 	if (!mali_dvfs_wq)
 		mali_dvfs_wq = create_singlethread_workqueue("mali_dvfs");
 
@@ -313,6 +261,70 @@ void kbase_platform_dvfs_term(void)
 }
 #endif
 
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+int mali_get_dvfs_upper_locked_freq(void)
+{
+	unsigned int locked_level = -1;
+
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.upper_lock].clock;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+	return locked_level;
+}
+
+int mali_get_dvfs_under_locked_freq(void)
+{
+	unsigned int locked_level = -1;
+
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.under_lock].clock;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+
+	return locked_level;
+}
+
+
+int mali_dvfs_freq_lock(int level)
+{
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	mali_dvfs_status_current.upper_lock = level;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+	return 0;
+}
+void mali_dvfs_freq_unlock(void)
+{
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	mali_dvfs_status_current.upper_lock = -1;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+}
+
+int mali_dvfs_freq_under_lock(int level)
+{
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	mali_dvfs_status_current.under_lock = level;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+	return 0;
+}
+void mali_dvfs_freq_under_unlock(void)
+{
+#ifdef CONFIG_VITHAR_DVFS
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	mali_dvfs_status_current.under_lock = -1;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+}
+#endif
 
 int kbase_platform_regulator_init(struct device *dev)
 {

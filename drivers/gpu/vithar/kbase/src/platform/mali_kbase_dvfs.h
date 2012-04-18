@@ -46,6 +46,7 @@ void kbase_platform_dvfs_term(void);
 int kbase_platform_dvfs_event(kbase_device *kbdev, u32 utilisation);
 int kbase_platform_dvfs_get_control_status(void);
 int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
+#endif
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 int mali_get_dvfs_upper_locked_freq(void);
 int mali_get_dvfs_under_locked_freq(void);
@@ -53,7 +54,6 @@ int mali_dvfs_freq_lock(int level);
 void mali_dvfs_freq_unlock(void);
 int mali_dvfs_freq_under_lock(int level);
 void mali_dvfs_freq_under_unlock(void);
-#endif
 #endif
 
 #endif /* _KBASE_DVFS_H_ */

@@ -43,7 +43,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/workqueue.h>
 
-#define RUNTIME_PM_DELAY_TIME 10
+#define RUNTIME_PM_DELAY_TIME 100
 static int allow_rp_control= 0;
 
 /** Suspend callback from the OS.
