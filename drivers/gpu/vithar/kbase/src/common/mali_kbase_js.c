@@ -931,6 +931,9 @@ mali_bool kbasep_js_add_job( kbase_context *kctx, kbase_jd_atom *atom )
 
 		OSK_PRINT_INFO(OSK_BASE_JM, "JS: Enqueue Context %p", kctx );
 
+		/* This context is becoming active */
+		kbase_pm_context_active(kctx->kbdev);
+
 		osk_mutex_lock( &js_devdata->queue_mutex );
 		kbasep_js_policy_enqueue_ctx( js_policy, kctx );
 		osk_mutex_unlock( &js_devdata->queue_mutex );
@@ -940,9 +943,6 @@ mali_bool kbasep_js_add_job( kbase_context *kctx, kbase_jd_atom *atom )
 
 		/* Fast-starting requires the jsctx_mutex to be dropped, because it works on multiple ctxs */
 		kbasep_js_runpool_attempt_fast_start_ctx( kbdev, kctx );
-
-		/* This context is becoming active */
-		kbase_pm_context_active(kctx->kbdev);
 
 		/* NOTE: Potentially, we can make the scheduling of the head context
 		 * happen in a work-queue if we need to wait for the PM to power
@@ -1716,10 +1716,6 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 	/*
 	 * Atomic transaction on the Context and Run Pool begins
 	 */
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_pm_context_active(kbdev);
-	kbase_pm_request_gpu_cycle_counter(kbdev);
-#endif
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 	osk_mutex_lock( &js_devdata->runpool_mutex );
 
@@ -1735,10 +1731,6 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 		kbasep_js_runpool_requeue_or_kill_ctx( kbdev, head_kctx );
 
 		osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
-#ifdef CONFIG_VITHAR_RT_PM
-		kbase_pm_release_gpu_cycle_counter(kbdev);
-		kbase_pm_context_idle(kbdev);
-#endif
 		return;
 	}
 
@@ -1802,10 +1794,6 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )
 	osk_mutex_unlock( &js_devdata->runpool_mutex );
 	osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 	/* Note: after this point, the context could potentially get scheduled out immediately */
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_pm_release_gpu_cycle_counter(kbdev);
-	kbase_pm_context_idle(kbdev);
-#endif
 }
 
 void kbasep_js_schedule_privileged_ctx( kbase_device *kbdev, kbase_context *kctx )
