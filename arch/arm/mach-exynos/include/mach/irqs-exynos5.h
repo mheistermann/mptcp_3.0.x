@@ -110,8 +110,14 @@
 #define IRQ_FIMC_LITE1		IRQ_SPI(126)
 #define IRQ_RP_TIMER		IRQ_SPI(127)
 
+#ifdef CONFIG_CPU_EXYNOS5410
+#define NR_SPIS			224
+#else
+#define NR_SPIS			128
+#endif
+
 #define MAX_IRQ_IN_COMBINER	8
-#define COMBINER_GROUP(x)	((x) * MAX_IRQ_IN_COMBINER + IRQ_SPI(128))
+#define COMBINER_GROUP(x)	((x) * MAX_IRQ_IN_COMBINER + IRQ_SPI(NR_SPIS))
 #define COMBINER_IRQ(x, y)	(COMBINER_GROUP(x) + y)
 
 #define IRQ_PMU			COMBINER_IRQ(1, 2)
