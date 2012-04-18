@@ -93,6 +93,12 @@ static int kbase_platform_power_clock_init(struct device *dev)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
 		goto out;
 	}
+
+	clk_set_rate(kbdev->sclk_g3d, VITHAR_DEFAULT_CLOCK);
+	if(IS_ERR(kbdev->sclk_g3d)) {
+		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_rate [sclk_g3d] = %d\n", VITHAR_DEFAULT_CLOCK);
+		goto out;
+	}
 #else
 	mpll = clk_get(dev, "mout_mpll_user");
 	if(IS_ERR(mpll)) {

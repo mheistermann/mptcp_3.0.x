@@ -87,10 +87,10 @@ static mali_dvfs_status mali_dvfs_status_current;
 static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
 #if (MALI_DVFS_STEP == 6)
-	{937500/*750000*/, 100, 0, 40},
-	{937500/*81250*/, 160, 30, 60},
-	{937500, 266, 50, 70},
-	{1100000, 400, 60, 80},
+	{912500, 100, 0, 40},
+	{925000, 160, 30, 60},
+	{1025000, 266, 50, 70},
+	{1125000, 400, 60, 80},
 	{1150000, 450, 70, 90},
 	{1250000, 533, 80, 100}
 #elif (MALI_DVFS_STEP == 2)
@@ -108,24 +108,8 @@ static void kbase_platform_dvfs_set_vol(unsigned int vol)
 	if (_vol == vol)
 		return;
 
-
-	switch(vol)
-	{
-		case 1250000:
-		case 1150000:
-		case 1100000:
-		case 1000000:
-		case 937500:
-		case 812500:
-		case 750000:
-			kbase_platform_set_voltage(NULL, vol);
-			break;
-		default:
-			return;
-	}
-
+	kbase_platform_set_voltage(NULL, vol);
 	_vol = vol;
-
 #if MALI_DVFS_DEBUG
 	printk("dvfs_set_vol %dmV\n", vol);
 #endif
