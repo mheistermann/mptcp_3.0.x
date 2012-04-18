@@ -2702,7 +2702,25 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos5_clk_dout_aclk_300_disp1.clk.name,
 				exynos5_clk_aclk_300_disp1.clk.name);
+
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl_mid1.clk,
+				&exynos5_clk_mout_cpll.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_aclk_300_gscl_mid1.clk.name,
+				exynos5_clk_mout_cpll.clk.name);
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl.clk,
+				&exynos5_clk_mout_aclk_300_gscl_mid1.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_aclk_300_gscl.clk.name,
+				exynos5_clk_mout_aclk_300_gscl_mid1.clk.name);
+		if (clk_set_parent(&exynos5_clk_aclk_300_gscl.clk,
+				&exynos5_clk_dout_aclk_300_gscl.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_aclk_300_gscl.clk.name,
+				exynos5_clk_dout_aclk_300_gscl.clk.name);
+
 		clk_set_rate(&exynos5_clk_dout_aclk_300_disp1.clk, 334000000);
+		clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 334000000);
 	} else {
 		if (clk_set_parent(&exynos5_clk_mout_aclk_300_disp1_mid.clk,
 				&exynos5_clk_mout_mpll_user.clk))
@@ -2719,7 +2737,25 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos5_clk_dout_aclk_300_disp1.clk.name,
 				exynos5_clk_aclk_300_disp1.clk.name);
+
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl_mid.clk,
+				&exynos5_clk_mout_mpll_user.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_mpll_user.clk.name,
+				exynos5_clk_mout_aclk_300_gscl_mid.clk.name);
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl.clk,
+				&exynos5_clk_mout_aclk_300_gscl_mid.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_aclk_300_gscl.clk.name,
+				exynos5_clk_mout_aclk_300_gscl_mid.clk.name);
+		if (clk_set_parent(&exynos5_clk_aclk_300_gscl.clk,
+				&exynos5_clk_dout_aclk_300_gscl.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_aclk_300_gscl.clk.name,
+				exynos5_clk_dout_aclk_300_gscl.clk.name);
+
 		clk_set_rate(&exynos5_clk_dout_aclk_300_disp1.clk, 267000000);
+		clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 267000000);
 	}
 
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_clksrcs); ptr++)
