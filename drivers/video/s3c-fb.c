@@ -221,6 +221,7 @@ struct s3c_fb_win {
 	int local;		/* use of local path gscaler to window in fimd */
 	struct media_pad pads[FIMD_PADS_NUM];	/* window's pad : 1 sink */
 	struct v4l2_subdev sd;		/* Take a window as a v4l2_subdevice */
+	int end_stream;
 #endif
 };
 
@@ -1125,6 +1126,40 @@ static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 
 	spin_lock(&sfb->slock);
 
+	if (sfb->windows[0]->end_stream) {
+		u32 data = 0;
+		struct s3c_fb_win *win = sfb->windows[0];
+		struct v4l2_subdev *sd = &win->sd;
+		struct v4l2_subdev *gsc_sd;
+		struct exynos_entity_data *md_data;
+		struct media_pad *pad;
+
+		pad = &sd->entity.pads[FIMD_PAD_SINK_FROM_GSCALER_SRC];
+		pad = media_entity_remote_source(pad);
+
+		if (pad) {
+			gsc_sd = media_entity_to_v4l2_subdev(
+					pad->entity);
+			md_data = (struct exynos_entity_data *)
+				gsc_sd->dev_priv;
+			md_data->media_ops->power_off(gsc_sd);
+		}
+
+		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
+
+		shadow_protect_win(win, 1);
+		data = readl(sfb->regs + SHADOWCON);
+		data &=  ~(SHADOWCON_CHx_ENABLE(win->index) | SHADOWCON_CHx_LOCAL_ENABLE(win->index));
+		writel(data, sfb->regs + SHADOWCON);
+
+		data = readl(sfb->regs + WINCON(win->index));
+		data &= ~WINCONx_ENLOCAL;
+		writel(data, sfb->regs + WINCON(win->index));
+		shadow_protect_win(win, 0);
+
+		sfb->windows[0]->end_stream = 0;
+	}
+
 	irq_sts_reg = readl(regs + VIDINTCON1);
 
 	if (irq_sts_reg & VIDINTCON1_INT_FRAME) {
@@ -2021,6 +2056,7 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 	u32 data = 0;
 	struct s3c_fb_win *win = v4l2_subdev_to_s3c_fb_win(sd);
 	struct s3c_fb *sfb = win->parent;
+	int ret;
 
 	if (enable) { /* Enable  1 channel  to a local path for a window in fimd1 */
 		/* The following sequence should be observed to enable a local path */
@@ -2039,22 +2075,14 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 
 		s3c_fb_blank(FB_BLANK_UNBLANK, win->fbinfo);
 
-	} else { /* Disable  1 channel  to a local path for a window in fimd1 */
-		/* The following sequence should be observed to disable a local path */
-		/* Enlocal channel Off --> Window Off --> Enlocal Off */
-		shadow_protect_win(win, 1);
-		data = readl(sfb->regs + SHADOWCON);
-		data &=  ~(SHADOWCON_CHx_ENABLE(win->index) | SHADOWCON_CHx_LOCAL_ENABLE(win->index));
-		writel(data, sfb->regs + SHADOWCON);
-		shadow_protect_win(win, 0);
-
-		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
-
-		shadow_protect_win(win, 1);
-		data = readl(sfb->regs + WINCON(win->index));
-		data &= ~WINCONx_ENLOCAL;
-		writel(data, sfb->regs + WINCON(win->index));
-		shadow_protect_win(win, 0);
+	} else {
+		sfb->windows[0]->end_stream = 1;
+		ret = s3c_fb_wait_for_vsync(sfb, 0);
+		if (ret) {
+			dev_err(sfb->dev, "wait timeout(writeback) : %s\n",
+				__func__);
+			return ret;
+		}
 	}
 
 	dev_dbg(sfb->dev, "Get the window via local path started/stopped : %d\n",

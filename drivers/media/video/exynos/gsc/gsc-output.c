@@ -45,6 +45,7 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 		gsc_disp_fifo_sw_reset(gsc);
 		gsc_pixelasync_sw_reset(gsc);
 	}
+
 	gsc_hw_enable_control(gsc, false);
 	ret = gsc_wait_stop(gsc);
 	if (ret < 0) {
@@ -67,6 +68,9 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 	}
 
 	gsc_hw_set_mixer();
+	gsc_pixelasync_reset_mask_all();
+	gsc_disp1blk_lo_reset_mask_all();
+
 	if (soc_is_exynos5250_rev1) {
 		gsc_hw_set_sw_reset(gsc);
 		ret = gsc_wait_reset(gsc);
@@ -640,15 +644,6 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 	if (ret)
 		return ret;
 
-	if (ctx->out_path == GSC_FIMD) {
-		gsc_hw_enable_control(gsc, false);
-		ret = gsc_wait_stop(gsc);
-		if (ret < 0)
-			return ret;
-	}
-	gsc_hw_set_input_buf_mask_all(gsc);
-
-	/* TODO: Add gscaler clock off function */
 	ret = gsc_out_video_s_stream(gsc, 0);
 	if (ret) {
 		gsc_err("G-Scaler video s_stream off failed");

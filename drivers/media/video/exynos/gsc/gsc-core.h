@@ -823,6 +823,8 @@ int gsc_wait_stop(struct gsc_dev *dev);
 
 void gsc_disp_fifo_sw_reset(struct gsc_dev *dev);
 void gsc_pixelasync_sw_reset(struct gsc_dev *dev);
+void gsc_pixelasync_reset_mask_all(void);
+void gsc_disp1blk_lo_reset_mask_all(void);
 
 
 #endif /* GSC_CORE_H_ */
