@@ -221,6 +221,9 @@ void __init exynos5_map_io(void)
 		else
 			iotable_init(exynos5250_rev_0_iodesc,
 				ARRAY_SIZE(exynos5250_rev_0_iodesc));
+	} else if (soc_is_exynos5410()) {
+		iotable_init(exynos5250_rev_1_iodesc,
+			ARRAY_SIZE(exynos5250_rev_1_iodesc));
 	}
 
 #ifdef CONFIG_S3C_DEV_HSMMC
