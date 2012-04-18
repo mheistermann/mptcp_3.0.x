@@ -719,6 +719,12 @@ config MACH_SMDK5250
 	select SAMSUNG_DEV_PWM
 	help
 	  Machine support for Samsung SMDK5250
+
+config MACH_SMDK5410
+	bool "SMDK5410 board"
+	select CPU_EXYNOS5410
+	help
+	  Machine support for Samsung FPGA5410
 endmenu
 
 menu "MMC/SD slot setup"
