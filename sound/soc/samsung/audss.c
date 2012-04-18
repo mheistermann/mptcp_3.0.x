@@ -315,7 +315,7 @@ static int audss_deinit(void)
 
 static char banner[] __initdata = "Samsung Audio Subsystem Driver, (c) 2011 Samsung Electronics";
 
-int samsung_audss_init(struct platform_device *pdev)
+int __init samsung_audss_init(struct platform_device *pdev)
 {
 	int ret = 0;
 
