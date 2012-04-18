@@ -28,7 +28,10 @@
 
 #define MALI_DVFS_KEEP_STAY_CNT 10
 
+#ifdef CONFIG_VITHAR_DVFS
 #define CONFIG_VITHAR_FREQ_LOCK
+#define MALI_DVFS_ASV_ENABLE
+#endif
 
 struct regulator *kbase_platform_get_regulator(void);
 int kbase_platform_regulator_init(struct device *dev);
@@ -38,7 +41,8 @@ int kbase_platform_get_default_voltage(struct device *dev, int *vol);
 int kbase_platform_get_voltage(struct device *dev, int *vol);
 int kbase_platform_set_voltage(struct device *dev, int vol);
 void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq);
-
+int kbase_platform_dvfs_sprint_avs_table(char *buf);
+int kbase_platform_dvfs_set(int enable);
 
 #ifdef CONFIG_VITHAR_DVFS
 int kbase_platform_dvfs_init(struct device *dev);

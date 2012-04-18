@@ -876,7 +876,32 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 
 	return count;
 }
+static ssize_t show_asv(struct device *dev, struct device_attribute *attr, char *buf)
+{
 
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	ret=kbase_platform_dvfs_sprint_avs_table(buf);
+
+	return ret;
+}
+static ssize_t set_asv(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (sysfs_streq("off", buf)) {
+		kbase_platform_dvfs_set(0);
+	} else if (sysfs_streq("on", buf)) {
+		kbase_platform_dvfs_set(1);
+	} else {
+		printk("invalid val -only [on, off] is accepted\n");
+	}
+	return count;
+}
 /** The sysfs file @c clock, fbdev.
  *
  * This is used for obtaining information about the vithar operating clock & framebuffer address,
@@ -888,7 +913,7 @@ DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, NULL);
 DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
 DEVICE_ATTR(dvfs_lock, S_IRUGO|S_IWUSR, show_lock_dvfs, set_lock_dvfs);
-
+DEVICE_ATTR(asv, S_IRUGO|S_IWUSR, show_asv, set_asv);
 
 static int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -934,7 +959,11 @@ static int kbase_platform_create_sysfs_file(struct device *dev)
 		dev_err(dev, "Couldn't create sysfs file [dvfs_lock]\n");
 		goto out;
 	}
-
+	if (device_create_file(dev, &dev_attr_asv))
+	{
+		dev_err(dev, "Couldn't create sysfs file [asv]\n");
+		goto out;
+	}
 	return 0;
 out:
 	return -ENOENT;
@@ -949,6 +978,7 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_clkout);
 	device_remove_file(dev, &dev_attr_dvfs);
 	device_remove_file(dev, &dev_attr_dvfs_lock);
+	device_remove_file(dev, &dev_attr_asv);
 }
 
 int kbase_platform_init(struct device *dev)

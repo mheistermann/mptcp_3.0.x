@@ -48,6 +48,15 @@
 
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
+
+#ifdef MALI_DVFS_ASV_ENABLE
+#define MALI_DVFS_ASV_GROUP_NUM 10
+#endif
+
+#ifdef MALI_DVFS_ASV_ENABLE
+#include <mach/asv.h>
+#endif
+
 #ifdef CONFIG_REGULATOR
 static struct regulator *g3d_regulator=NULL;
 #ifdef CONFIG_VITHAR_HWVER_R0P0
@@ -75,16 +84,64 @@ typedef struct _mali_dvfs_status_type{
 	int upper_lock;
 	int under_lock;
 #endif
+#ifdef MALI_DVFS_ASV_ENABLE
+	int asv_need_update;
+#endif
 }mali_dvfs_status;
 
 static struct workqueue_struct *mali_dvfs_wq = 0;
 int mali_dvfs_control=0;
 osk_spinlock mali_dvfs_spinlock;
 
+#ifdef MALI_DVFS_ASV_ENABLE
+#if (MALI_DVFS_STEP != 6)
+#error DVFS_ASV support only 6steps
+#endif
+static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DVFS_STEP]=
+{
+	/*  100Mh	160Mh	   266Mh	400Mh	450Mh	533Mh*/
+	{/*Group 1*/
+		912500, 925000, 1025000, 1100000, 1150000, 1225000,
+	},
+	{/*Group 2*/
+		900000, 900000, 1000000, 1087500, 1125000, 1200000,
+	},
+	{/*Group 3*/
+		912500, 925000, 1025000, 1100000, 1150000, 1225000,
+	},
+	{/*Group 4*/
+		900000, 900000, 1000000, 1087500, 1125000, 1200000,
+	},
+	{/*Group 5*/
+		912500, 925000, 1000000, 1125000, 1150000, 1250000,
+	},
+	{/*Group 6*/
+		900000, 912500, 987500, 1112500, 1150000, 1237500,
+	},
+	{/*Group 7*/
+		900000, 900000, 975000, 1100000, 1137500, 1225000,
+	},
+	{/*Group 8*/
+		900000, 900000, 975000, 1100000, 1137500, 1225000,
+	},
+	{/*Group 9*/
+		887500, 900000, 962500, 1087500, 1125000, 1212500,
+	},
+	{/*Group 10*/
+		887500, 900000, 962500, 1087500, 1125000, 1212500,
+	},
+};
+#endif
 
 /*dvfs status*/
 static mali_dvfs_status mali_dvfs_status_current;
+#ifdef MALI_DVFS_ASV_ENABLE
+static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
+	{ 912500, 925000, 1025000, 1125000, 1150000, 1250000};
+static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
+#else
 static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
+#endif
 {
 #if (MALI_DVFS_STEP == 6)
 	{912500, 100, 0, 40},
@@ -136,7 +193,32 @@ void kbase_platform_dvfs_set_level(int level)
 	}
 	level_prev = level;
 }
+#ifdef MALI_DVFS_ASV_ENABLE
+static int mali_dvfs_update_asv(int group)
+{
+	int i;
 
+	if (group == 0) return 1;
+
+	if (group == -1) {
+		for (i=0; i<MALI_DVFS_STEP; i++)
+		{
+			mali_dvfs_infotbl[i].voltage = mali_dvfs_vol_default[i];
+		}
+		printk("mali_dvfs_update_asv use default table\n");
+		return 1;
+	}
+	if (group > MALI_DVFS_ASV_GROUP_NUM) {
+		OSK_PRINT_ERROR(OSK_BASE_PM, "invalid asv group (%d)\n", group);
+		return 1;
+	}
+	for (i=0; i<MALI_DVFS_STEP; i++)
+	{
+		mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group-1][i];
+	}
+	return 0;
+}
+#endif
 static void mali_dvfs_event_proc(struct work_struct *w)
 {
 	mali_dvfs_status dvfs_status;
@@ -144,6 +226,16 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	dvfs_status = mali_dvfs_status_current;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
+
+#ifdef MALI_DVFS_ASV_ENABLE
+	if (dvfs_status.asv_need_update==1) {
+		if (mali_dvfs_update_asv(exynos_result_of_asv&0xf)==0)
+			dvfs_status.asv_need_update=0;
+	}else if (dvfs_status.asv_need_update==2) {
+		mali_dvfs_update_asv(-1);
+		dvfs_status.asv_need_update=0;
+	}
+#endif
 
 #if MALI_DVFS_START_MAX_STEP
 	/*If no input is for longtime, first step will be max step. */
@@ -246,6 +338,9 @@ int kbase_platform_dvfs_init(struct device *dev)
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	mali_dvfs_status_current.upper_lock = -1;
 	mali_dvfs_status_current.under_lock = -1;
+#endif
+#ifdef MALI_DVFS_ASV_ENABLE
+	mali_dvfs_status_current.asv_need_update=1;
 #endif
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
@@ -520,3 +615,34 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	return;
 }
 
+int kbase_platform_dvfs_sprint_avs_table(char *buf)
+{
+#ifdef MALI_DVFS_ASV_ENABLE
+	int i, cnt=0;
+	if (buf==NULL)
+		return 0;
+
+	cnt+=sprintf(buf,"asv group:%d\n",exynos_result_of_asv&0xf);
+	for (i=MALI_DVFS_STEP-1; i >= 0; i--) {
+		cnt+=sprintf(buf+cnt,"%dMhz:%d\n",
+				mali_dvfs_infotbl[i].clock, mali_dvfs_infotbl[i].voltage);
+	}
+	return cnt;
+#else
+	return 0;
+#endif
+}
+
+int kbase_platform_dvfs_set(int enable)
+{
+#ifdef MALI_DVFS_ASV_ENABLE
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	if (enable) {
+		mali_dvfs_status_current.asv_need_update=1;
+	}else{
+		mali_dvfs_status_current.asv_need_update=2;
+	}
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+	return 0;
+}
