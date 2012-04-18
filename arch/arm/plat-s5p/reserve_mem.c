@@ -130,6 +130,7 @@ void __init s5p_cma_region_reserve(struct cma_region *regions_normal,
 			aug_size = align_secure + size_region2 - size_secure;
 			if (aug_size > 0) {
 				reg->size += aug_size;
+				size_secure += aug_size;
 				pr_debug("S5P/CMA: "
 					"Augmented size of '%s' by %#x B.\n",
 					reg->name, aug_size);
