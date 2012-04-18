@@ -22,6 +22,7 @@
 #include <linux/videodev2.h>
 #include <linux/videodev2_exynos_media.h>
 #include <media/videobuf2-core.h>
+#include <mach/dev.h>
 
 #include "s5p_mfc_common.h"
 
@@ -1487,18 +1488,42 @@ static int vidioc_streamon(struct file *file, void *priv,
 			   enum v4l2_buf_type type)
 {
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
-	int ret = -EINVAL;
+#ifdef CONFIG_BUSFREQ_OPP
+	struct s5p_mfc_dev *dev = ctx->dev;
+#endif
+	int ret = 0;
 
 	mfc_debug_enter();
-	if (type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+
+	if (type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		ret = vb2_streamon(&ctx->vq_src, type);
-	else
+	} else if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+#ifdef CONFIG_BUSFREQ_OPP
+		if (ctx->img_width >= MFC_LOCK_THRD_HOR ||
+				ctx->img_height >= MFC_LOCK_THRD_VER) {
+			if (atomic_read(&dev->freq_lock) == 0) {
+				dev_lock(dev_get("exynos-busfreq"),
+						&dev->plat_dev->dev,
+						MFC_LOCK_FREQ);
+			}
+
+			atomic_inc(&dev->freq_lock);
+			ctx->freq_locked = true;
+		}
+#endif
 		ret = vb2_streamon(&ctx->vq_dst, type);
+	} else {
+		mfc_err("Unknown queue type\n");
+		return -EINVAL;
+	}
+
 	mfc_debug(2, "ctx->src_queue_cnt = %d ctx->state = %d "
 		  "ctx->dst_queue_cnt = %d ctx->dpb_count = %d\n",
 		  ctx->src_queue_cnt, ctx->state, ctx->dst_queue_cnt,
 		  ctx->dpb_count);
+
 	mfc_debug_leave();
+
 	return ret;
 }
 
@@ -1507,15 +1532,35 @@ static int vidioc_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
-	int ret;
+#ifdef CONFIG_BUSFREQ_OPP
+	struct s5p_mfc_dev *dev = ctx->dev;
+#endif
+	int ret = 0;
 
 	mfc_debug_enter();
-	ret = -EINVAL;
-	if (type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+
+	if (type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		ret = vb2_streamoff(&ctx->vq_src, type);
-	else
+	} else if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		ret = vb2_streamoff(&ctx->vq_dst, type);
+#ifdef CONFIG_BUSFREQ_OPP
+		if (ctx->freq_locked) {
+			atomic_dec(&dev->freq_lock);
+			ctx->freq_locked = false;
+
+			if (atomic_read(&dev->freq_lock) == 0) {
+				dev_unlock(dev_get("exynos-busfreq"),
+						&dev->plat_dev->dev);
+			}
+		}
+#endif
+	} else {
+		mfc_err("Unknown queue type\n");
+		return -EINVAL;
+	}
+
 	mfc_debug_leave();
+
 	return ret;
 }
 

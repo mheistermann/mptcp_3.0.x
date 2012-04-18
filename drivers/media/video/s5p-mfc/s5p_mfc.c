@@ -24,6 +24,7 @@
 #include <linux/videodev2_exynos_media.h>
 #include <linux/proc_fs.h>
 #include <mach/videonode.h>
+#include <mach/dev.h>
 #include <plat/cpu.h>
 #include <media/videobuf2-core.h>
 
@@ -1008,6 +1009,18 @@ static int s5p_mfc_release(struct file *file)
 
 	mfc_debug_enter();
 
+#ifdef CONFIG_BUSFREQ_OPP
+	if (ctx->freq_locked) {
+		atomic_dec(&dev->freq_lock);
+		ctx->freq_locked = false;
+
+		if (atomic_read(&dev->freq_lock) == 0) {
+			dev_unlock(dev_get("exynos-busfreq"),
+					&dev->plat_dev->dev);
+		}
+	}
+#endif
+
 	if (call_cop(ctx, cleanup_ctx_ctrls, ctx) < 0)
 		mfc_err("failed in init_buf_ctrls\n");
 
@@ -1321,6 +1334,10 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	init_timer(&dev->watchdog_timer);
 	dev->watchdog_timer.data = (unsigned long)dev;
 	dev->watchdog_timer.function = s5p_mfc_watchdog;
+
+#ifdef CONFIG_BUSFREQ_OPP
+	atomic_set(&dev->freq_lock, 0);
+#endif
 
 	dev->variant = (struct s5p_mfc_variant *)
 		platform_get_device_id(pdev)->driver_data;

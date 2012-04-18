@@ -61,6 +61,10 @@
 #define MFC_VER_MAJOR(ver)	((ver >> 4) & 0xF)
 #define MFC_VER_MINOR(ver)	(ver & 0xF)
 
+#define MFC_LOCK_THRD_HOR	1920
+#define MFC_LOCK_THRD_VER	1080
+#define MFC_LOCK_FREQ		100160
+
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
  */
@@ -276,6 +280,10 @@ struct s5p_mfc_dev {
 
 	struct work_struct work_struct;
 	struct workqueue_struct *irq_workqueue;
+
+#ifdef CONFIG_BUSFREQ_OPP
+	atomic_t freq_lock;
+#endif
 };
 
 /**
@@ -616,6 +624,10 @@ struct s5p_mfc_ctx {
 
 	/* for DRM */
 	int is_drm;
+
+#ifdef CONFIG_BUSFREQ_OPP
+	int freq_locked;
+#endif
 };
 
 #define fh_to_mfc_ctx(x)	\
