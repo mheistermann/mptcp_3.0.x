@@ -42,7 +42,7 @@
 #include "fimc-is-err.h"
 #include "fimc-is-misc.h"
 
-static struct fimc_is_fmt fimc_is_formats[] = {
+struct fimc_is_fmt fimc_is_formats[] = {
 	 {
 		.name		= "YUV 4:2:2 packed, YCbYCr",
 		.pixelformat	= V4L2_PIX_FMT_YUYV,
@@ -100,10 +100,8 @@ static struct fimc_is_fmt fimc_is_formats[] = {
 	},
 };
 
-
-static struct fimc_is_fmt *find_format(u32 *pixelformat,
-					u32 *mbus_code,
-					int index)
+struct fimc_is_fmt *fimc_is_find_format(u32 *pixelformat,
+	u32 *mbus_code, int index)
 {
 	struct fimc_is_fmt *fmt, *def_fmt = NULL;
 	unsigned int i;
@@ -124,7 +122,7 @@ static struct fimc_is_fmt *find_format(u32 *pixelformat,
 
 }
 
-static void set_plane_size(struct fimc_is_frame *frame, unsigned long sizes[])
+void fimc_is_set_plane_size(struct fimc_is_frame *frame, unsigned long sizes[])
 {
 	dbg(" ");
 	switch (frame->format.pixelformat) {
@@ -328,7 +326,7 @@ static int fimc_is_scalerc_video_set_format_mplane(struct file *file, void *fh,
 	dbg("%s\n", __func__);
 
 	pix = &format->fmt.pix_mp;
-	frame = find_format(&pix->pixelformat, NULL, 0);
+	frame = fimc_is_find_format(&pix->pixelformat, NULL, 0);
 
 	if (!frame)
 		return -EINVAL;
@@ -559,10 +557,8 @@ static int fimc_is_scalerc_queue_setup(struct vb2_queue *vq,
 	struct fimc_is_dev	*isp = video->dev;
 	int i;
 
-
-	*num_planes = isp->video[FIMC_IS_VIDEO_NUM_SCALERC].
-					frame.format.num_planes;
-	set_plane_size(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].frame, sizes);
+	*num_planes = video->frame.format.num_planes;
+	fimc_is_set_plane_size(&video->frame, sizes);
 
 	for (i = 0; i < *num_planes; i++)
 		allocators[i] =  isp->alloc_ctx;
@@ -1038,7 +1034,7 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 	dbg("%s\n", __func__);
 
 	pix = &format->fmt.pix_mp;
-	frame = find_format(&pix->pixelformat, NULL, 0);
+	frame = fimc_is_find_format(&pix->pixelformat, NULL, 0);
 
 	if (!frame)
 		return -EINVAL;
@@ -1163,16 +1159,28 @@ static int fimc_is_scalerp_video_streamon(struct file *file, void *priv,
 	struct fimc_is_dev *isp = video_drvdata(file);
 
 	dbg("%s\n", __func__);
+
+	/*TODO*/
+	/*fimc_is_bayer_video_ioctl_ops.vidioc_streamon(file, priv, type);*/
+
 	return vb2_streamon(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, type);
 }
 
 static int fimc_is_scalerp_video_streamoff(struct file *file, void *priv,
 						enum v4l2_buf_type type)
 {
+	struct fimc_is_video_dev *video = file->private_data;
 	struct fimc_is_dev *isp = video_drvdata(file);
+	int result;
 
 	dbg("%s\n", __func__);
-	return vb2_streamoff(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, type);
+
+	result = vb2_streamoff(&video->vbq, type);
+
+	/*TODO:*/
+	/*fimc_is_bayer_video_ioctl_ops.vidioc_streamoff(file, priv, type);*/
+
+	return result;
 }
 
 static int fimc_is_scalerp_video_enum_input(struct file *file, void *priv,
@@ -1225,6 +1233,17 @@ static int fimc_is_scalerp_video_s_input(struct file *file, void *priv,
 
 	dbg("sensor info : pos(%d) type(%d)\n", input, isp->sensor.sensor_type);
 
+
+	/*iky to do here*/
+	{
+		struct fimc_is_sensor_dev *sensor;
+		sensor = &isp->sensor;
+		sensor->flite_ch = sensor_info->flite_id;
+		if (sensor->flite_ch == FLITE_ID_A)
+			sensor->regs = (unsigned long)S5P_VA_FIMCLITE0;
+		else if (sensor->flite_ch == FLITE_ID_B)
+			sensor->regs = (unsigned long)S5P_VA_FIMCLITE1;
+	}
 
 	return 0;
 }
@@ -1656,12 +1675,8 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 #endif
 		break;
 	case V4L2_CID_CAMERA_ZOOM:
-#ifdef DZOOM_ENABLE
-		/* FW partially supported it */
+		/*iky to do here*/
 		ret = fimc_is_digital_zoom(isp, ctrl->value);
-#else
-		err("ERR(%s) disabled DZOOM\n", __func__);
-#endif
 		break;
 	case V4L2_CID_CAMERA_SET_DIS:
 #ifdef DIS_ENABLE
@@ -1728,10 +1743,8 @@ static int fimc_is_scalerp_queue_setup(struct vb2_queue *vq,
 	struct fimc_is_dev	*isp = video->dev;
 	int i;
 
-
-	*num_planes = isp->video[FIMC_IS_VIDEO_NUM_SCALERP].
-					frame.format.num_planes;
-	set_plane_size(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame, sizes);
+	*num_planes = video->frame.format.num_planes;
+	fimc_is_set_plane_size(&video->frame, sizes);
 
 	for (i = 0; i < *num_planes; i++)
 		allocators[i] =  isp->alloc_ctx;
@@ -1989,7 +2002,6 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 	struct fimc_is_video_dev *video = q->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
 	int ret;
-
 
 	clear_bit(IS_ST_STREAM_OFF, &isp->state);
 	fimc_is_hw_set_stream(isp, 0);
@@ -2249,7 +2261,7 @@ static int fimc_is_3dnr_video_set_format_mplane(struct file *file, void *fh,
 	dbg("%s\n", __func__);
 
 	pix = &format->fmt.pix_mp;
-	frame = find_format(&pix->pixelformat, NULL, 0);
+	frame = fimc_is_find_format(&pix->pixelformat, NULL, 0);
 
 	if (!frame)
 		return -EINVAL;
@@ -2473,13 +2485,12 @@ static int fimc_is_3dnr_queue_setup(struct vb2_queue *vq,
 			void *allocators[])
 {
 
-	struct fimc_is_video_dev *video = vq->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
+	struct fimc_is_video_dev *tdnr_video = vq->drv_priv;
+	struct fimc_is_dev	*isp = tdnr_video->dev;
 	int i;
 
-	*num_planes = isp->video[FIMC_IS_VIDEO_NUM_3DNR].
-			frame.format.num_planes;
-	set_plane_size(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].frame, sizes);
+	*num_planes = tdnr_video->frame.format.num_planes;
+	fimc_is_set_plane_size(&tdnr_video->frame, sizes);
 
 	for (i = 0; i < *num_planes; i++)
 		allocators[i] =  isp->alloc_ctx;
@@ -2776,638 +2787,5 @@ const struct vb2_ops fimc_is_3dnr_qops = {
 	.wait_finish		= fimc_is_3dnr_lock,
 	.start_streaming	= fimc_is_3dnr_start_streaming,
 	.stop_streaming	= fimc_is_3dnr_stop_streaming,
-};
-
-
-/*************************************************************************/
-/* video file opertation						 */
-/************************************************************************/
-
-static int fimc_is_bayer_video_open(struct file *file)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf = 0;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_ref_cnt = 0;
-
-	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
-		isp->sensor_num = 1;
-
-		fimc_is_load_fw(isp);
-
-		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-	}
-
-	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
-	fimc_is_fw_clear_irq1_all(isp);
-	return 0;
-
-}
-
-static int fimc_is_bayer_video_close(struct file *file)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-	int ret;
-
-	dbg("%s\n", __func__);
-	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq);
-
-	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)) {
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-		fimc_is_hw_subip_poweroff(isp);
-
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
-			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		mutex_unlock(&isp->lock);
-
-		if (!ret) {
-			err("wait timeout : %s\n", __func__);
-			ret = -EINVAL;
-		}
-
-		dbg("staop flite & mipi (pos:%d) (port:%d)\n",
-			isp->sensor.id_position,
-			isp->pdata->
-			sensor_info[isp->sensor.id_position]->flite_id);
-
-		stop_fimc_lite(isp->pdata->
-				sensor_info[isp->sensor.id_position]->flite_id);
-		stop_mipi_csi(isp->pdata->
-				sensor_info[isp->sensor.id_position]->csi_id);
-
-		fimc_is_hw_a5_power(isp, 0);
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
-	}
-	return 0;
-
-}
-
-static unsigned int fimc_is_bayer_video_poll(struct file *file,
-				      struct poll_table_struct *wait)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	return vb2_poll(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq, file, wait);
-
-}
-
-static int fimc_is_bayer_video_mmap(struct file *file,
-					struct vm_area_struct *vma)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	return vb2_mmap(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq, vma);
-
-}
-
-/*************************************************************************/
-/* video ioctl operation						*/
-/************************************************************************/
-
-static int fimc_is_bayer_video_querycap(struct file *file, void *fh,
-					struct v4l2_capability *cap)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	strncpy(cap->driver, isp->pdev->name, sizeof(cap->driver) - 1);
-
-	dbg("%s(devname : %s)\n", __func__, cap->driver);
-	strncpy(cap->card, isp->pdev->name, sizeof(cap->card) - 1);
-	cap->bus_info[0] = 0;
-	cap->version = KERNEL_VERSION(1, 0, 0);
-	cap->capabilities = V4L2_CAP_STREAMING
-				| V4L2_CAP_VIDEO_CAPTURE
-				| V4L2_CAP_VIDEO_CAPTURE_MPLANE;
-
-	return 0;
-}
-
-static int fimc_is_bayer_video_enum_fmt_mplane(struct file *file, void *priv,
-				    struct v4l2_fmtdesc *f)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_get_format_mplane(struct file *file, void *fh,
-						struct v4l2_format *format)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_set_format_mplane(struct file *file, void *fh,
-						struct v4l2_format *format)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-	struct v4l2_pix_format_mplane *pix;
-	struct fimc_is_fmt *frame;
-
-	dbg("%s\n", __func__);
-
-	pix = &format->fmt.pix_mp;
-	frame = find_format(&pix->pixelformat, NULL, 0);
-
-	if (!frame)
-		return -EINVAL;
-
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.format.pixelformat
-							= frame->pixelformat;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.format.mbus_code
-							= frame->mbus_code;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.format.num_planes
-							= frame->num_planes;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.width = pix->width;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.height = pix->height;
-	dbg("num_planes : %d\n", frame->num_planes);
-	dbg("width : %d\n", pix->width);
-	dbg("height : %d\n", pix->height);
-
-	return 0;
-}
-
-static int fimc_is_bayer_video_try_format_mplane(struct file *file, void *fh,
-						struct v4l2_format *format)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_cropcap(struct file *file, void *fh,
-						struct v4l2_cropcap *cropcap)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_get_crop(struct file *file, void *fh,
-						struct v4l2_crop *crop)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_set_crop(struct file *file, void *fh,
-						struct v4l2_crop *crop)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_reqbufs(struct file *file, void *priv,
-					struct v4l2_requestbuffers *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	ret = vb2_reqbufs(&video->vbq, buf);
-	if (!ret)
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf = buf->count;
-
-	if (buf->count == 0)
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_ref_cnt = 0;
-
-	dbg("%s(num_buf | %d)\n", __func__,
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf);
-
-	return ret;
-}
-
-static int fimc_is_bayer_video_querybuf(struct file *file, void *priv,
-						struct v4l2_buffer *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-
-	dbg("%s\n", __func__);
-	ret = vb2_querybuf(&video->vbq, buf);
-
-	return ret;
-}
-
-static int fimc_is_bayer_video_qbuf(struct file *file, void *priv,
-						struct v4l2_buffer *buf)
-{
-	int vb_ret;
-	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state)) {
-		video->buf_mask |= (1<<buf->index);
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask = video->buf_mask;
-
-		dbg("index(%d) mask(0x%08x)\n", buf->index, video->buf_mask);
-	} else {
-		dbg("index(%d)\n", buf->index);
-	}
-	vb_ret = vb2_qbuf(&video->vbq, buf);
-
-	return vb_ret;
-}
-
-static int fimc_is_bayer_video_dqbuf(struct file *file, void *priv,
-						struct v4l2_buffer *buf)
-{
-	int vb_ret;
-	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	vb_ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
-
-	video->buf_mask &= ~(1<<buf->index);
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask = video->buf_mask;
-
-	dbg("index(%d) mask(0x%08x)\n", buf->index, video->buf_mask);
-
-	return vb_ret;
-}
-
-static int fimc_is_bayer_video_streamon(struct file *file, void *priv,
-						enum v4l2_buf_type type)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	return vb2_streamon(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq, type);
-}
-
-static int fimc_is_bayer_video_streamoff(struct file *file, void *priv,
-						enum v4l2_buf_type type)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	dbg("%s\n", __func__);
-	return vb2_streamoff(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq, type);
-}
-
-static int fimc_is_bayer_video_enum_input(struct file *file, void *priv,
-						struct v4l2_input *input)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-	struct exynos5_fimc_is_sensor_info *sensor_info
-				= isp->pdata->sensor_info[input->index];
-
-	dbg("index(%d) sensor(%s)\n",
-		input->index, sensor_info->sensor_name);
-	dbg("pos(%d) sensor_id(%d)\n",
-		sensor_info->sensor_position, sensor_info->sensor_id);
-	dbg("csi_id(%d) flite_id(%d)\n",
-		sensor_info->csi_id, sensor_info->flite_id);
-	dbg("i2c_ch(%d)\n", sensor_info->i2c_channel);
-
-	if (input->index >= FIMC_IS_MAX_CAMIF_CLIENTS)
-		return -EINVAL;
-
-	input->type = V4L2_INPUT_TYPE_CAMERA;
-
-	strncpy(input->name, sensor_info->sensor_name,
-					FIMC_IS_MAX_SENSOR_NAME_LEN);
-	return 0;
-}
-
-static int fimc_is_bayer_video_g_input(struct file *file, void *priv,
-						unsigned int *input)
-{
-	dbg("%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_bayer_video_s_input(struct file *file, void *priv,
-						unsigned int input)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-	struct exynos5_fimc_is_sensor_info *sensor_info
-				= isp->pdata->sensor_info[input];
-
-	isp->sensor.id_position = input;
-	isp->sensor.sensor_type
-		= fimc_is_hw_get_sensor_type(sensor_info->sensor_id,
-						sensor_info->flite_id);
-
-	fimc_is_hw_set_default_size(isp, sensor_info->sensor_id);
-
-	dbg("sensor info : pos(%d) type(%d)\n", input, isp->sensor.sensor_type);
-
-
-	return 0;
-}
-
-const struct v4l2_file_operations fimc_is_bayer_video_fops = {
-	.owner		= THIS_MODULE,
-	.open		= fimc_is_bayer_video_open,
-	.release	= fimc_is_bayer_video_close,
-	.poll		= fimc_is_bayer_video_poll,
-	.unlocked_ioctl	= video_ioctl2,
-	.mmap		= fimc_is_bayer_video_mmap,
-};
-
-const struct v4l2_ioctl_ops fimc_is_bayer_video_ioctl_ops = {
-	.vidioc_querycap		= fimc_is_bayer_video_querycap,
-	.vidioc_enum_fmt_vid_cap_mplane	= fimc_is_bayer_video_enum_fmt_mplane,
-	.vidioc_g_fmt_vid_cap_mplane	= fimc_is_bayer_video_get_format_mplane,
-	.vidioc_s_fmt_vid_cap_mplane	= fimc_is_bayer_video_set_format_mplane,
-	.vidioc_try_fmt_vid_cap_mplane	= fimc_is_bayer_video_try_format_mplane,
-	.vidioc_cropcap			= fimc_is_bayer_video_cropcap,
-	.vidioc_g_crop			= fimc_is_bayer_video_get_crop,
-	.vidioc_s_crop			= fimc_is_bayer_video_set_crop,
-	.vidioc_reqbufs			= fimc_is_bayer_video_reqbufs,
-	.vidioc_querybuf		= fimc_is_bayer_video_querybuf,
-	.vidioc_qbuf			= fimc_is_bayer_video_qbuf,
-	.vidioc_dqbuf			= fimc_is_bayer_video_dqbuf,
-	.vidioc_streamon		= fimc_is_bayer_video_streamon,
-	.vidioc_streamoff		= fimc_is_bayer_video_streamoff,
-	.vidioc_enum_input		= fimc_is_bayer_video_enum_input,
-	.vidioc_g_input			= fimc_is_bayer_video_g_input,
-	.vidioc_s_input			= fimc_is_bayer_video_s_input,
-};
-
-static int fimc_is_bayer_queue_setup(struct vb2_queue *vq,
-			unsigned int *num_buffers,
-			unsigned int *num_planes,
-			unsigned long sizes[],
-			void *allocators[])
-{
-
-	struct fimc_is_video_dev *video = vq->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	int i;
-
-	*num_planes = isp->video[FIMC_IS_VIDEO_NUM_BAYER].
-					frame.format.num_planes;
-	set_plane_size(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame, sizes);
-
-	for (i = 0; i < *num_planes; i++)
-		allocators[i] =  isp->alloc_ctx;
-
-	dbg("(num_planes : %d)(size : %d)\n", (int)*num_planes, (int)sizes[0]);
-
-	return 0;
-}
-
-static int fimc_is_bayer_buffer_prepare(struct vb2_buffer *vb)
-{
-	dbg("--%s\n", __func__);
-	return 0;
-}
-
-static inline void fimc_is_bayer_lock(struct vb2_queue *vq)
-{
-	dbg("%s\n", __func__);
-}
-
-static inline void fimc_is_bayer_unlock(struct vb2_queue *vq)
-{
-	dbg("%s\n", __func__);
-}
-
-static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
-{
-	struct fimc_is_video_dev *video = q->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	int ret;
-	int i, j;
-	int buf_index;
-
-	dbg("%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
-
-	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED,
-						&isp->pipe_state)) {
-
-		dbg("IS_ST_CHANGE_MODE\n");
-		set_bit(IS_ST_CHANGE_MODE, &isp->state);
-		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_CHANGE_MODE_DONE,
-			&isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"Mode change timeout:%s\n", __func__);
-			return -EBUSY;
-		}
-
-		set_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
-	}
-
-	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED,
-			&isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-		dbg("IS Stream On\n");
-		fimc_is_hw_set_stream(isp, 1);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_STREAM_ON, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		clear_bit(IS_ST_STREAM_ON, &isp->state);
-
-		set_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-	}
-
-	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
-		/* buffer addr setting */
-		for (i = 0; i < isp->
-			video[FIMC_IS_VIDEO_NUM_BAYER].num_buf; i++)
-			for (j = 0; j < isp->video[FIMC_IS_VIDEO_NUM_BAYER].
-						frame.format.num_planes; j++) {
-				buf_index = i * isp->
-					video[FIMC_IS_VIDEO_NUM_BAYER].
-					frame.format.num_planes + j;
-
-				dbg("(%d)set buf(%d:%d) = 0x%08x\n",
-					buf_index, i, j,
-					isp->video[FIMC_IS_VIDEO_NUM_BAYER].
-					buf[i][j]);
-
-				isp->is_p_region->shared[116 + buf_index]
-				= isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf[i][j];
-		}
-
-		dbg("buf_num:%d buf_plane:%d shared[116] : 0x%p\n",
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf,
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.format.num_planes,
-		isp->mem.kvaddr_shared + 116 * sizeof(u32));
-
-		for (i = 0; i < isp->
-			video[FIMC_IS_VIDEO_NUM_BAYER].num_buf; i++)
-			isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask
-							|= (1 << i);
-
-		dbg("initial buffer mask : 0x%08x\n",
-			isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask);
-
-
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(isp,
-			DMA_OUTPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_MASK(isp,
-			isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_mask);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(isp,
-			isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(isp,
-			(u32)isp->mem.dvaddr_shared + 116 * sizeof(u32));
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(isp,
-			(u32)isp->mem.dvaddr_shared + 116 * sizeof(u32));
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_DMA_DONE(isp,
-			DMA_OUTPUT_NOTIFY_DMA_DONE_ENBABLE);
-
-		IS_SET_PARAM_BIT(isp, PARAM_ISP_DMA2_OUTPUT);
-		IS_INC_PARAM_NUM(isp);
-
-		fimc_is_mem_cache_clean((void *)isp->is_p_region,
-			IS_PARAM_SIZE);
-
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-		fimc_is_hw_set_param(isp);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-
-		set_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
-	}
-
-	return 0;
-}
-
-static int fimc_is_bayer_stop_streaming(struct vb2_queue *q)
-{
-	struct fimc_is_video_dev *video = q->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	int ret;
-
-
-	IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(isp,
-			DMA_OUTPUT_COMMAND_DISABLE);
-	IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(isp,
-		0);
-	IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(isp,
-		0);
-
-	IS_SET_PARAM_BIT(isp, PARAM_ISP_DMA2_OUTPUT);
-	IS_INC_PARAM_NUM(isp);
-
-	fimc_is_mem_cache_clean((void *)isp->is_p_region,
-		IS_PARAM_SIZE);
-
-	isp->scenario_id = ISS_PREVIEW_STILL;
-	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-	fimc_is_hw_set_param(isp);
-	mutex_lock(&isp->lock);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	mutex_unlock(&isp->lock);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
-	}
-
-
-	if (!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state)) {
-		clear_bit(IS_ST_STREAM_OFF, &isp->state);
-		fimc_is_hw_set_stream(isp, 0);
-		dbg("IS Stream Off");
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_STREAM_OFF, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-	}
-
-	clear_bit(IS_ST_RUN, &isp->state);
-	clear_bit(IS_ST_STREAM_ON, &isp->state);
-	clear_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state);
-	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
-
-
-	return 0;
-}
-
-static void fimc_is_bayer_buffer_queue(struct vb2_buffer *vb)
-{
-	struct fimc_is_video_dev *video = vb->vb2_queue->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	unsigned int i;
-
-	dbg("%s\n", __func__);
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].frame.format.num_planes
-							= vb->num_planes;
-
-	if (!test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state)) {
-		for (i = 0; i < vb->num_planes; i++) {
-			isp->video[FIMC_IS_VIDEO_NUM_BAYER].
-			buf[vb->v4l2_buf.index][i]
-				= isp->vb2->plane_addr(vb, i);
-
-			dbg("index(%d)(%d) deviceVaddr(0x%08x)\n",
-				vb->v4l2_buf.index, i,
-				isp->video[FIMC_IS_VIDEO_NUM_BAYER].
-				buf[vb->v4l2_buf.index][i]);
-		}
-
-		isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_ref_cnt++;
-
-		if (isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf
-			== isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_ref_cnt)
-			set_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED,
-						&isp->pipe_state);
-	}
-
-	if (!test_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state))
-		fimc_is_bayer_start_streaming(vb->vb2_queue);
-
-	return;
-}
-
-const struct vb2_ops fimc_is_bayer_qops = {
-	.queue_setup		= fimc_is_bayer_queue_setup,
-	.buf_prepare		= fimc_is_bayer_buffer_prepare,
-	.buf_queue		= fimc_is_bayer_buffer_queue,
-	.wait_prepare		= fimc_is_bayer_unlock,
-	.wait_finish		= fimc_is_bayer_lock,
-	.start_streaming	= fimc_is_bayer_start_streaming,
-	.stop_streaming	= fimc_is_bayer_stop_streaming,
 };
 

@@ -2072,7 +2072,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		front_width);
 	IS_SCALERC_SET_PARAM_DMA_OUTPUT_HEIGHT(dev,
 		front_height);
-	if((front_width != dis_width) || (front_height != dis_height))
+	if ((front_width != dis_width) || (front_height != dis_height))
 		IS_SCALERC_SET_PARAM_DMA_OUTPUT_OUTPATH(dev,
 			2);  /* unscaled image */
 	else

@@ -16,7 +16,6 @@
 #define FRAME_RATE_ENABLE	1
 /*#define ODC_ENABLE	1*/
 /*#define TDNR_ENABLE	1*/
-/*#define DZOOM_ENABLE	1*/
 /*#define DIS_ENABLE	1*/
 
 #include <linux/sched.h>
@@ -50,7 +49,7 @@
 #define FIMC_IS_VIDEO_SCALERP_NAME		"exynos5-fimc-is-scalerp"
 
 #define FIMC_IS_DEBUG_LEVEL			(3)
-/*#define FIMC_IS_A5_DEBUG_ON			(1)*/
+#define FIMC_IS_A5_DEBUG_ON			(1)
 
 #define MAX_I2H_ARG				(4)
 
@@ -125,11 +124,17 @@
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
+/*#define DEBUG*/
+
 #ifdef DEBUG
 #define dbg(fmt, args...) \
 	printk(KERN_DEBUG "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
+
+#define dbg_sensor(fmt, args...) \
+	printk("[SEN] " fmt "\n", ##args)
 #else
 #define dbg(fmt, args...)
+#define dbg_sensor(fmt, args...)
 #endif
 
 enum fimc_is_debug_device {
@@ -308,6 +313,12 @@ struct fimc_is_vb2 {
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
 };
 
+/*iky to do here*/
+struct fimc_is_sensor_shot {
+	struct list_head list;
+	u32 buf_num;
+};
+
 struct fimc_is_sensor_dev {
 	struct v4l2_subdev		sd;
 	struct media_pad		pads;
@@ -321,6 +332,15 @@ struct fimc_is_sensor_dev {
 	u32 offset_x;
 	u32 offset_y;
 	int framerate_update;
+
+	/*iky to do here*/
+	u32 flite_ch;
+	u32 regs;
+
+	struct list_head shot_free_head;
+	struct list_head shot_request_head;
+	u32 shot_free_cnt;
+	u32 shot_request_cnt;
 };
 
 struct fimc_is_front_dev {

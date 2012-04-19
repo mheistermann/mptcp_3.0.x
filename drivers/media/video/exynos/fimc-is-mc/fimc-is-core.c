@@ -31,6 +31,7 @@
 #include <linux/delay.h>
 #include <linux/scatterlist.h>
 #include <linux/videodev2_exynos_camera.h>
+#include <linux/vmalloc.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-helper.h"
@@ -312,38 +313,114 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 }
 #endif
 
+#define SDCARD_FW
+#define FIMC_IS_FW_SDCARD "/sdcard/ispfw_a5.bin"
+
 static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 {
 	int ret;
 	struct firmware *fw_blob;
+	u8 *buf = NULL;
+#ifdef SDCARD_FW
+	struct file *fp;
+	mm_segment_t old_fs;
+	long fsize, nread;
+	int fw_requested = 1;
 
-	ret = request_firmware((const struct firmware **)&fw_blob,
-				FIMC_IS_FW, &dev->pdev->dev);
-	if (ret) {
-		dev_err(&dev->pdev->dev,
-			"could not load firmware (err=%d)\n", ret);
-		return -EINVAL;
+	ret = 0;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	fp = filp_open(FIMC_IS_FW_SDCARD, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		dbg("failed to open %s\n", FIMC_IS_FW_SDCARD);
+		goto request_fw;
+	}
+	fw_requested = 0;
+	fsize = fp->f_path.dentry->d_inode->i_size;
+	dbg("start, file path %s, size %ld Bytes\n", FIMC_IS_FW_SDCARD, fsize);
+	buf = vmalloc(fsize);
+	if (!buf) {
+		err("failed to allocate memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+	nread = vfs_read(fp, (char __user *)buf, fsize, &fp->f_pos);
+	if (nread != fsize) {
+		err("failed to read firmware file, %ld Bytes\n", nread);
+		ret = -EIO;
+		goto out;
 	}
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
+	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
+		fsize + 1);
+	memcpy((void *)dev->fw.fw_info, (buf + fsize - 0x1F), 0x17);
+	memcpy((void *)dev->fw.fw_version, (buf + fsize - 0x7), 0x6);
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	if (dev->mem.bitproc_buf == 0) {
+		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
+	} else {
+		memcpy(dev->mem.kvaddr, (void *)buf, fsize);
+		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
+		/*memcpy((void *)dev->fw.fw_info, (buf + fsize - 0x1F), 0x17);
+		memcpy((void *)dev->fw.fw_version, (buf + fsize - 0x7), 0x6);*/
+	}
+#endif
+	dev->fw.state = 1;
+request_fw:
+	if (fw_requested) {
+		set_fs(old_fs);
+#endif
+		ret = request_firmware((const struct firmware **)&fw_blob,
+			FIMC_IS_FW, &dev->pdev->dev);
+		if (ret) {
+			dev_err(&dev->pdev->dev,
+				"could not load firmware (err=%d)\n", ret);
+			return -EINVAL;
+		}
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 		memcpy((void *)phys_to_virt(dev->mem.base),
-				fw_blob->data, fw_blob->size);
+			fw_blob->data, fw_blob->size);
 		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
-							fw_blob->size + 1);
+			fw_blob->size + 1);
 #elif defined(CONFIG_VIDEOBUF2_ION)
 		if (dev->mem.bitproc_buf == 0) {
 			err("failed to load FIMC-IS F/W\n");
+			return -EINVAL;
 		} else {
-			memcpy(dev->mem.kvaddr, fw_blob->data, fw_blob->size);
-			fimc_is_mem_cache_clean(
+		    memcpy(dev->mem.kvaddr, fw_blob->data, fw_blob->size);
+		    fimc_is_mem_cache_clean(
 				(void *)dev->mem.kvaddr, fw_blob->size + 1);
+		    dbg("FIMC_IS F/W loaded successfully - size:%d\n",
+				fw_blob->size);
 		}
 #endif
 
-	dbg("FIMC_IS F/W loaded successfully - size:%d\n",
-						fw_blob->size);
-	release_firmware(fw_blob);
+#if 0
+		memcpy((void *)dev->fw.fw_info,
+			(fw_blob->data + fw_blob->size - 0x1F), 0x17);
+		dev->fw.fw_info[24] = '\0';
+		memcpy((void *)dev->fw.fw_version,
+			(fw_blob->data + fw_blob->size - 0x7), 0x6);
+		dev->fw.state = 1;
+#endif
+		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
+			fw_blob->size);
+		release_firmware(fw_blob);
+#ifdef SDCARD_FW
+	}
+#endif
 
+out:
+#ifdef SDCARD_FW
+	if (!fw_requested) {
+		vfree(buf);
+		filp_close(fp, current->files);
+		set_fs(old_fs);
+	}
+#endif
+	printk(KERN_INFO "FIMC_IS FW loaded = 0x%08x\n", dev->mem.base);
 	return ret;
 }
 
@@ -436,7 +513,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 	dbg("fimc_is_init\n");
 	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {
 		/* Init sequence 1: Open sensor */
-		dbg("v4l2 : open sensor : %d\n", val);
+		dbg_sensor("v4l2 : open sensor : %d\n", val);
 
 		/* set mipi & fimclite */
 		f_frame.o_width =
@@ -450,16 +527,8 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		f_frame.height =
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 12;
 
-		/*start mipi & fimclite*/
-		dbg("start fimclite(pos:%d) (port:%d)\n",
-		dev->sensor.id_position,
-		dev->pdata->sensor_info[dev->sensor.id_position]->flite_id);
-
-		start_fimc_lite(dev->pdata->
-				sensor_info[dev->sensor.id_position]->
-				flite_id, &f_frame);
-		mdelay(10);
-		dbg("start mipi (pos:%d) (port:%d)\n",
+		/*start mipi*/
+		dbg_sensor("start mipi (pos:%d) (port:%d)\n",
 			dev->sensor.id_position,
 			dev->pdata->
 			sensor_info[dev->sensor.id_position]->csi_id);
@@ -550,10 +619,14 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		}
 
 #ifdef FIMC_IS_A5_DEBUG_ON
-		/*set_bit(FIMC_IS_DEBUG_MAIN, &debug_device);
+
+		/*
+		set_bit(FIMC_IS_DEBUG_MAIN, &debug_device);
 		set_bit(FIMC_IS_DEBUG_EC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SENSOR, &debug_device);
+		*/
 		set_bit(FIMC_IS_DEBUG_ISP, &debug_device);
+		/*
 		set_bit(FIMC_IS_DEBUG_DRC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_FD, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SDK, &debug_device);
@@ -570,7 +643,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		set_bit(IS_ST_RUN, &dev->state);
 
-		dbg("Init sequence completed!! Ready to use\n");
+		dbg_sensor("Init sequence completed!! Ready to use\n");
 	}
 
 	return 0;
@@ -1312,6 +1385,8 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				set_bit(IS_ST_STREAM_OFF, &dev->state);
 				set_bit(IS_ST_RUN, &dev->state);
 				break;
+			case HIC_SHOT:
+				break;
 			case HIC_SET_PARAMETER:
 				dev->p_region_index1 = 0;
 				dev->p_region_index2 = 0;
@@ -1428,12 +1503,142 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 		set_bit(IS_ST_SCALERP_FRAME_DONE, &dev->state);
 #endif
 		buf_index =  dev->i2h_cmd.arg[2];
+
+		/*iky to do here*/
+		/*dbg_sensor("P%d\n", buf_index);*/
 		dbg("ScalerP returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].
 				vbq.bufs[buf_index], VB2_BUF_STATE_DONE);
 		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_SCALERP);
 	}
 	wake_up(&dev->irq_queue);
+
+	return IRQ_HANDLED;
+}
+
+/* iky to do here */
+static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
+{
+	struct fimc_is_dev *dev = dev_id;
+	struct fimc_is_dev *isp = dev_id;
+	struct fimc_is_sensor_dev *sensor;
+	struct fimc_is_video_dev *sensor_video;
+	int buf_index;
+	unsigned int status1, status2, status3;
+
+	sensor = &dev->sensor;
+	sensor_video = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
+
+	status1 = flite_hw_get_status1(sensor->regs);
+	status2 = flite_hw_get_status2(sensor->regs);
+	status3 = flite_hw_get_present_frame_buffer(sensor->regs);
+
+	flite_hw_set_status1(sensor->regs, 0);
+
+	if (status1 & (1<<4)) {
+		buf_index =  status3 - 1;
+
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
+		writel(HIC_SHOT, dev->regs + ISSR0);
+		writel(dev->sensor.id_dual, dev->regs + ISSR1);
+		writel(sensor_video->buf[buf_index][0],
+			dev->regs + ISSR2);
+		fimc_is_hw_set_intgr0_gd0(dev);
+
+		dbg_sensor("L%d\n", status3);
+
+		vb2_buffer_done(sensor_video->vbq.bufs[buf_index],
+			VB2_BUF_STATE_DONE);
+	}
+
+	if (status1 & (1<<5))
+		dbg_sensor("[CamIF_0]Frame start done\n");
+
+	if (status1 & (0x1<<6)) {
+		/*Last Frame Capture Interrupt*/
+		dbg_sensor("[CamIF_0]Last Frame Capture\n");
+		/*Clear LastCaptureEnd bit*/
+		status2 &= ~(0x1 << 1);
+		flite_hw_set_status2(sensor->regs, status2);
+	}
+
+	if (status1 & (1<<8)) {
+		dbg_sensor("[CamIF_0]Overflow Cr\n");
+		/*uCIWDOFST |= (0x1 << 14);*/
+	}
+
+	if (status1 & (1<<9)) {
+		dbg_sensor("[CamIF_0]Overflow Cb\n");
+		/*uCIWDOFST |= (0x1 << 15);*/
+	}
+
+	if (status1 & (1<<10)) {
+		dbg_sensor("[CamIF_0]Overflow Y\n");
+		/*uCIWDOFST |= (0x1 << 30);*/
+	}
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
+{
+	struct fimc_is_dev *dev = dev_id;
+	struct fimc_is_dev *isp = dev_id;
+	struct fimc_is_sensor_dev *sensor;
+	struct fimc_is_video_dev *sensor_video;
+	int buf_index;
+	unsigned int status1, status2, status3;
+
+	sensor = &dev->sensor;
+	sensor_video = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
+
+	status1 = flite_hw_get_status1(sensor->regs);
+	status2 = flite_hw_get_status2(sensor->regs);
+	status3 = flite_hw_get_present_frame_buffer(sensor->regs);
+
+	flite_hw_set_status1(sensor->regs, 0);
+
+	if (status1 & (1<<4)) {
+		buf_index =  status3 - 1;
+
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
+		writel(HIC_SHOT, dev->regs + ISSR0);
+		writel(dev->sensor.id_dual, dev->regs + ISSR1);
+		writel(sensor_video->buf[buf_index][0],
+			dev->regs + ISSR2);
+		fimc_is_hw_set_intgr0_gd0(dev);
+
+		dbg_sensor("L%d\n", status3);
+
+		vb2_buffer_done(sensor_video->vbq.bufs[buf_index],
+			VB2_BUF_STATE_DONE);
+	}
+
+	if (status1 & (1<<5))
+		dbg_sensor("[CamIF_0]Frame start done\n");
+
+	if (status1 & (0x1<<6)) {
+		/*Last Frame Capture Interrupt*/
+		dbg_sensor("[CamIF_0]Last Frame Capture\n");
+		/*Clear LastCaptureEnd bit*/
+		status2 &= ~(0x1 << 1);
+		flite_hw_set_status2(sensor->regs, status2);
+	}
+
+	if (status1 & (1<<8)) {
+		dbg_sensor("[CamIF_0]Overflow Cr\n");
+		/*uCIWDOFST |= (0x1 << 14);*/
+	}
+
+	if (status1 & (1<<9)) {
+		dbg_sensor("[CamIF_0]Overflow Cb\n");
+		/*uCIWDOFST |= (0x1 << 15);*/
+	}
+
+	if (status1 & (1<<10)) {
+		dbg_sensor("[CamIF_0]Overflow Y\n");
+		/*uCIWDOFST |= (0x1 << 30);*/
+	}
 
 	return IRQ_HANDLED;
 }
@@ -1512,6 +1717,29 @@ static int fimc_is_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto p_err3;
 	}
+
+	/*iky to do here*/
+#if 1
+	{
+		unsigned long irq = IRQ_FIMC_LITE0;
+		ret = request_irq(irq, fimc_is_sensor_irq_handler0, 0,
+			"FIMC-LITE0", isp);
+		if (ret) {
+			dev_err(&pdev->dev, "request_irq(L0) failed\n");
+			goto p_err3;
+		}
+	}
+
+	{
+		unsigned long irq = IRQ_FIMC_LITE1;
+		ret = request_irq(irq, fimc_is_sensor_irq_handler1, 0,
+			"FIMC-LITE1", isp);
+		if (ret) {
+			dev_err(&pdev->dev, "request_irq(L1) failed\n");
+			goto p_err3;
+		}
+	}
+#endif
 
 	/*sensor entity*/
 	v4l2_subdev_init(&isp->sensor.sd, &fimc_is_sensor_subdev_ops);

@@ -44,6 +44,8 @@
 		(dev->is_p_region->parameter.isp.control.cmd = x)
 #define IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, x) \
 		(dev->is_p_region->parameter.isp.control.bypass = x)
+#define IS_ISP_SET_PARAM_CONTROL_RUNMODE(dev, x) \
+		(dev->is_p_region->parameter.isp.control.run_mode = x)
 #define IS_ISP_SET_PARAM_CONTROL_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.control.err = x)
 
@@ -2013,12 +2015,12 @@ struct is_share_region {
 
 	u32	af_position;
 	u32	af_status;
-	u32  	af_scene_type;
+	u32 	af_scene_type;
 
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
-	u32  	frame_descp_max_idx;
+	u32 	frame_descp_max_idx;
 
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];

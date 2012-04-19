@@ -75,6 +75,7 @@
 
 /* User defined formats. x = 0...0xF. */
 #define FLITE_REG_CIGCTRL_USER(x)			(0x30 + x - 1)
+#define FLITE_REG_CIGCTRL_OLOCAL_DISABLE	(1 << 22)
 #define FLITE_REG_CIGCTRL_SHADOWMASK_DISABLE		(1 << 21)
 #define FLITE_REG_CIGCTRL_ODMA_DISABLE			(1 << 20)
 #define FLITE_REG_CIGCTRL_SWRST_REQ			(1 << 19)
@@ -170,6 +171,10 @@
 #define FLITE_REG_CISTATUS2_LASTCAPEND			(1 << 1)
 #define FLITE_REG_CISTATUS2_FRMEND			(1 << 0)
 
+/* Camera Status3 */
+#define FLITE_REG_CISTATUS3				0x48
+#define FLITE_REG_CISTATUS3_PRESENT_MASK (0x3F)
+
 /* Qos Threshold */
 #define FLITE_REG_CITHOLD				(0xF0)
 #define FLITE_REG_CITHOLD_W_QOS_EN			(1 << 30)
@@ -180,6 +185,7 @@
 #define FLITE_REG_CIGENERAL_CAM_A			(0 << 0)
 #define FLITE_REG_CIGENERAL_CAM_B			(1 << 0)
 
+#define FLITE_REG_CIFCNTSEQ				0x100
 
 /*MIPI*/
 /* CSIS global control */
@@ -253,7 +259,7 @@ static void flite_hw_set_cam_channel(unsigned long flite_reg_base)
 	}
 }
 
-static void flite_hw_set_capture_start(unsigned long flite_reg_base)
+void flite_hw_set_capture_start(unsigned long flite_reg_base)
 {
 	u32 cfg = 0;
 
@@ -284,7 +290,7 @@ static int flite_hw_set_source_format(unsigned long flite_reg_base)
 	return 0;
 }
 
-static void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
+void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
 {
 	u32 cfg = 0;
 	cfg = readl(flite_reg_base + FLITE_REG_CIGCTRL);
@@ -293,6 +299,19 @@ static void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
 		cfg &= ~FLITE_REG_CIGCTRL_ODMA_DISABLE;
 	else
 		cfg |= FLITE_REG_CIGCTRL_ODMA_DISABLE;
+
+	writel(cfg, flite_reg_base + FLITE_REG_CIGCTRL);
+}
+
+void flite_hw_set_output_local(unsigned long flite_reg_base, bool enable)
+{
+	u32 cfg = 0;
+	cfg = readl(flite_reg_base + FLITE_REG_CIGCTRL);
+
+	if (enable)
+		cfg &= ~FLITE_REG_CIGCTRL_OLOCAL_DISABLE;
+	else
+		cfg |= FLITE_REG_CIGCTRL_OLOCAL_DISABLE;
 
 	writel(cfg, flite_reg_base + FLITE_REG_CIGCTRL);
 }
@@ -322,7 +341,16 @@ static void flite_hw_set_interrupt_source(unsigned long flite_reg_base)
 {
 	u32 cfg = 0;
 	cfg = readl(flite_reg_base + FLITE_REG_CIGCTRL);
-	cfg |= FLITE_REG_CIGCTRL_IRQ_LASTEN0_ENABLE;
+
+	/*
+	for checking stop complete
+	*/
+	cfg &= ~FLITE_REG_CIGCTRL_IRQ_LASTEN0_DISABLE;
+
+	/*
+	for checking frame done
+	*/
+	cfg &= ~FLITE_REG_CIGCTRL_IRQ_ENDEN0_DISABLE;
 
 	writel(cfg, flite_reg_base + FLITE_REG_CIGCTRL);
 }
@@ -379,6 +407,82 @@ static void flite_hw_set_last_capture_end_clear(unsigned long flite_reg_base)
 
 	writel(cfg, flite_reg_base + FLITE_REG_CISTATUS2);
 }
+
+int flite_hw_get_present_frame_buffer(unsigned long flite_reg_base)
+{
+	u32 status = 0;
+
+	status = readl(flite_reg_base + FLITE_REG_CISTATUS3);
+	status &= FLITE_REG_CISTATUS3_PRESENT_MASK;
+
+	return status;
+}
+
+int flite_hw_get_status2(unsigned long flite_reg_base)
+{
+	u32 status = 0;
+
+	status = readl(flite_reg_base + FLITE_REG_CISTATUS2);
+
+	return status;
+}
+
+void flite_hw_set_status1(unsigned long flite_reg_base, u32 val)
+{
+	writel(val, flite_reg_base + FLITE_REG_CISTATUS);
+}
+
+int flite_hw_get_status1(unsigned long flite_reg_base)
+{
+	u32 status = 0;
+
+	status = readl(flite_reg_base + FLITE_REG_CISTATUS);
+
+	return status;
+}
+
+void flite_hw_set_status2(unsigned long flite_reg_base, u32 val)
+{
+	writel(val, flite_reg_base + FLITE_REG_CISTATUS2);
+}
+
+void flite_hw_set_start_addr(unsigned long flite_reg_base, u32 number, u32 addr)
+{
+	u32 target;
+	if (number == 1) {
+		target = flite_reg_base + 0x30;
+	} else if (number >= 2) {
+		number -= 2;
+		target = flite_reg_base + 0x200 + (0x4*number);
+	} else
+		target = 0;
+
+	writel(addr, target);
+}
+
+void flite_hw_set_use_buffer(unsigned long flite_reg_base, u32 number)
+{
+	u32 buffer;
+	buffer = readl(flite_reg_base + FLITE_REG_CIFCNTSEQ);
+	buffer |= 1<<(number-1);
+	writel(buffer, flite_reg_base + FLITE_REG_CIFCNTSEQ);
+}
+
+void flite_hw_set_unuse_buffer(unsigned long flite_reg_base, u32 number)
+{
+	u32 buffer;
+	buffer = readl(flite_reg_base + FLITE_REG_CIFCNTSEQ);
+	buffer &= ~(1<<(number-1));
+	writel(buffer, flite_reg_base + FLITE_REG_CIFCNTSEQ);
+}
+
+u32 flite_hw_get_buffer_seq(unsigned long flite_reg_base)
+{
+	u32 buffer;
+	buffer = readl(flite_reg_base + FLITE_REG_CIFCNTSEQ);
+	return buffer;
+}
+
 
 static void s5pcsis_enable_interrupts(unsigned long mipi_reg_base, bool on)
 {
@@ -466,15 +570,40 @@ static void s5pcsis_set_params(unsigned long mipi_reg_base,
 	writel(val | S5PCSIS_CTRL_UPDATE_SHADOW, mipi_reg_base + S5PCSIS_CTRL);
 }
 
-int start_fimc_lite(int channel, struct flite_frame *f_frame)
+int init_fimc_lite(unsigned long mipi_reg_base)
 {
-	unsigned long base_reg = (unsigned long)FIMCLITE0_REG_BASE;
+	int i;
 
-	if (channel == FLITE_ID_A)
-		base_reg = (unsigned long)FIMCLITE0_REG_BASE;
-	else if (channel == FLITE_ID_B)
-		base_reg = (unsigned long)FIMCLITE1_REG_BASE;
+	writel(0, mipi_reg_base + FLITE_REG_CIFCNTSEQ);
 
+	for (i = 0; i < 32; i++)
+		flite_hw_set_start_addr(mipi_reg_base , (i+1), 0xffffffff);
+
+	return 0;
+}
+
+int start_fimc_lite(unsigned long mipi_reg_base, struct flite_frame *f_frame)
+{
+#if 1
+	flite_hw_set_cam_channel(mipi_reg_base);
+	flite_hw_set_cam_source_size(mipi_reg_base, f_frame);
+	flite_hw_set_camera_type(mipi_reg_base);
+	flite_hw_set_source_format(mipi_reg_base);
+	/*flite_hw_set_output_dma(mipi_reg_base, false);
+	flite_hw_set_output_local(base_reg, false);*/
+
+	flite_hw_set_interrupt_source(mipi_reg_base);
+	flite_hw_set_interrupt_starten0_disable(mipi_reg_base);
+	flite_hw_set_config_irq(mipi_reg_base);
+	flite_hw_set_window_offset(mipi_reg_base, f_frame);
+	/* flite_hw_set_test_pattern_enable(); */
+
+	flite_hw_set_last_capture_end_clear(mipi_reg_base);
+	flite_hw_set_capture_start(mipi_reg_base);
+
+	/*dbg_sensor("lite config : %08X\n",
+		*((unsigned int*)(base_reg + FLITE_REG_CIFCNTSEQ)));*/
+#else
 	flite_hw_set_cam_channel(base_reg);
 	flite_hw_set_cam_source_size(base_reg, f_frame);
 	flite_hw_set_camera_type(base_reg);
@@ -489,6 +618,7 @@ int start_fimc_lite(int channel, struct flite_frame *f_frame)
 
 	flite_hw_set_last_capture_end_clear(base_reg);
 	flite_hw_set_capture_start(base_reg);
+#endif
 
 	return 0;
 }
@@ -872,6 +1002,8 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 
 	zoom = value+10;
 
+	dbg_sensor("zoom %d\n", value);
+
 	crop_width = back_width*10/zoom;
 	crop_height = back_height*10/zoom;
 
@@ -884,8 +1016,9 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	crop_x &= 0xffe;
 	crop_y &= 0xffe;
 
-	dbg("crop_width : %d crop_height: %d\n", crop_width, crop_height);
-	dbg("crop_x:%d crop_y: %d\n", crop_x, crop_y);
+	dbg_sensor("crop_width : %d crop_height: %d\n",
+		crop_width, crop_height);
+	dbg_sensor("crop_x:%d crop_y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);
