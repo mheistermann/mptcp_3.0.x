@@ -1170,7 +1170,6 @@ static int fimc_is_scalerp_video_streamoff(struct file *file, void *priv,
 						enum v4l2_buf_type type)
 {
 	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev *isp = video_drvdata(file);
 	int result;
 
 	dbg("%s\n", __func__);
@@ -1675,7 +1674,6 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 #endif
 		break;
 	case V4L2_CID_CAMERA_ZOOM:
-		/*iky to do here*/
 		ret = fimc_is_digital_zoom(isp, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_SET_DIS:
@@ -2081,6 +2079,7 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+
 		dbg("IS Stream Off");
 		fimc_is_hw_set_stream(isp, 0);
 		mutex_lock(&isp->lock);

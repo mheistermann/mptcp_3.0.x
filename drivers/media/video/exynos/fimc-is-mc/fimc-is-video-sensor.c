@@ -69,8 +69,8 @@ static int fimc_is_bayer_video_open(struct file *file)
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 	}
 
-#if 0
-	/*iky to do here*/
+	/*TODO: will fixed*/
+	/*
 	INIT_LIST_HEAD(&sensor->shot_free_head);
 	INIT_LIST_HEAD(&sensor->shot_request_head);
 	sensor->shot_free_cnt = 0;
@@ -82,7 +82,7 @@ static int fimc_is_bayer_video_open(struct file *file)
 		sensor->shot_free_cnt++;
 
 	}
-#endif
+	*/
 
 	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
 	fimc_is_fw_clear_irq1_all(isp);
@@ -98,6 +98,20 @@ static int fimc_is_bayer_video_close(struct file *file)
 	int ret;
 
 	dbg_sensor("%s\n", __func__);
+
+	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)) {
+		sensor_id = isp->sensor.id_position;
+		flite_ch = isp->pdata->sensor_info[sensor_id]->flite_id;
+		csi_ch = isp->pdata->sensor_info[sensor_id]->csi_id;
+		dbg_sensor("stop flite & mipi (pos:%d) (port:%d)\n",
+			sensor_id, flite_ch);
+		stop_fimc_lite(flite_ch);
+		stop_mipi_csi(csi_ch);
+	}
+
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq);
 	clear_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state);
 
@@ -118,14 +132,6 @@ static int fimc_is_bayer_video_close(struct file *file)
 			err("wait timeout : %s\n", __func__);
 			ret = -EINVAL;
 		}
-
-		sensor_id = isp->sensor.id_position;
-		flite_ch = isp->pdata->sensor_info[sensor_id]->flite_id;
-		csi_ch = isp->pdata->sensor_info[sensor_id]->csi_id;
-		dbg_sensor("stop flite & mipi (pos:%d) (port:%d)\n",
-			sensor_id, flite_ch);
-		stop_fimc_lite(flite_ch);
-		stop_mipi_csi(csi_ch);
 
 		fimc_is_hw_a5_power(isp, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
@@ -513,6 +519,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 	struct fimc_is_sensor_dev *sensor = &isp->sensor;
 	struct flite_frame f_frame;
 	struct isp_param *isp_param;
+	struct odc_param *odc_param;
 	unsigned int width, height;
 	int ret;
 	int i;
@@ -592,6 +599,13 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		IS_SET_PARAM_BIT(isp, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(isp);
 		IS_INC_PARAM_NUM(isp);
+		IS_INC_PARAM_NUM(isp);
+
+		odc_param = &isp->is_p_region->parameter.odc;
+		odc_param->control.cmd = CONTROL_COMMAND_START;
+		odc_param->control.bypass = CONTROL_BYPASS_ENABLE;
+
+		IS_SET_PARAM_BIT(isp, PARAM_ODC_CONTROL);
 		IS_INC_PARAM_NUM(isp);
 
 		fimc_is_mem_cache_clean((void *)isp->is_p_region,

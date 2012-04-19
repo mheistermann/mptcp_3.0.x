@@ -314,7 +314,8 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 #endif
 
 #define SDCARD_FW
-#define FIMC_IS_FW_SDCARD "/sdcard/ispfw_a5.bin"
+/*#define FIMC_IS_FW_SDCARD "/sdcard/ispfw_a5.bin"*/
+#define FIMC_IS_FW_SDCARD "/sdcard/fimc_is_fw.bin"
 
 static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 {
@@ -624,9 +625,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		set_bit(FIMC_IS_DEBUG_MAIN, &debug_device);
 		set_bit(FIMC_IS_DEBUG_EC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SENSOR, &debug_device);
-		*/
 		set_bit(FIMC_IS_DEBUG_ISP, &debug_device);
-		/*
 		set_bit(FIMC_IS_DEBUG_DRC, &debug_device);
 		set_bit(FIMC_IS_DEBUG_FD, &debug_device);
 		set_bit(FIMC_IS_DEBUG_SDK, &debug_device);
@@ -1519,15 +1518,14 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 /* iky to do here */
 static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 {
-	struct fimc_is_dev *dev = dev_id;
-	struct fimc_is_dev *isp = dev_id;
+	struct fimc_is_dev *is = dev_id;
 	struct fimc_is_sensor_dev *sensor;
-	struct fimc_is_video_dev *sensor_video;
+	struct fimc_is_video_dev *video;
 	int buf_index;
 	unsigned int status1, status2, status3;
 
-	sensor = &dev->sensor;
-	sensor_video = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
+	sensor = &is->sensor;
+	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
 
 	status1 = flite_hw_get_status1(sensor->regs);
 	status2 = flite_hw_get_status2(sensor->regs);
@@ -1538,16 +1536,18 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 	if (status1 & (1<<4)) {
 		buf_index =  status3 - 1;
 
-		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		writel(HIC_SHOT, dev->regs + ISSR0);
-		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		writel(sensor_video->buf[buf_index][0],
-			dev->regs + ISSR2);
-		fimc_is_hw_set_intgr0_gd0(dev);
+		if (sensor->streaming) {
+			fimc_is_hw_wait_intmsr0_intmsd0(is);
+			writel(HIC_SHOT, is->regs + ISSR0);
+			writel(sensor->id_dual, is->regs + ISSR1);
+			writel(video->buf[buf_index][0],
+				is->regs + ISSR2);
+			fimc_is_hw_set_intgr0_gd0(is);
 
-		dbg_sensor("L%d\n", status3);
+			dbg_sensor("L%d\n", status3);
+		}
 
-		vb2_buffer_done(sensor_video->vbq.bufs[buf_index],
+		vb2_buffer_done(video->vbq.bufs[buf_index],
 			VB2_BUF_STATE_DONE);
 	}
 
@@ -1573,7 +1573,12 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 	}
 
 	if (status1 & (1<<10)) {
+		u32 ciwdofst;
+
 		dbg_sensor("[CamIF_0]Overflow Y\n");
+		ciwdofst = readl(sensor->regs + 0x10);
+		ciwdofst  |= (0x1 << 30);
+		writel(ciwdofst, sensor->regs + 0x10);
 		/*uCIWDOFST |= (0x1 << 30);*/
 	}
 
@@ -1582,15 +1587,14 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 
 static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 {
-	struct fimc_is_dev *dev = dev_id;
-	struct fimc_is_dev *isp = dev_id;
+	struct fimc_is_dev *is = dev_id;
 	struct fimc_is_sensor_dev *sensor;
-	struct fimc_is_video_dev *sensor_video;
+	struct fimc_is_video_dev *video;
 	int buf_index;
 	unsigned int status1, status2, status3;
 
-	sensor = &dev->sensor;
-	sensor_video = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
+	sensor = &is->sensor;
+	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
 
 	status1 = flite_hw_get_status1(sensor->regs);
 	status2 = flite_hw_get_status2(sensor->regs);
@@ -1601,42 +1605,49 @@ static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 	if (status1 & (1<<4)) {
 		buf_index =  status3 - 1;
 
-		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		writel(HIC_SHOT, dev->regs + ISSR0);
-		writel(dev->sensor.id_dual, dev->regs + ISSR1);
-		writel(sensor_video->buf[buf_index][0],
-			dev->regs + ISSR2);
-		fimc_is_hw_set_intgr0_gd0(dev);
+		if (sensor->streaming) {
+			fimc_is_hw_wait_intmsr0_intmsd0(is);
+			writel(HIC_SHOT, is->regs + ISSR0);
+			writel(sensor->id_dual, is->regs + ISSR1);
+			writel(video->buf[buf_index][0],
+				is->regs + ISSR2);
+			fimc_is_hw_set_intgr0_gd0(is);
 
-		dbg_sensor("L%d\n", status3);
+			dbg_sensor("L%d\n", status3);
+		}
 
-		vb2_buffer_done(sensor_video->vbq.bufs[buf_index],
+		vb2_buffer_done(video->vbq.bufs[buf_index],
 			VB2_BUF_STATE_DONE);
 	}
 
 	if (status1 & (1<<5))
-		dbg_sensor("[CamIF_0]Frame start done\n");
+		dbg_sensor("[CamIF_1]Frame start done\n");
 
 	if (status1 & (0x1<<6)) {
 		/*Last Frame Capture Interrupt*/
-		dbg_sensor("[CamIF_0]Last Frame Capture\n");
+		dbg_sensor("[CamIF_1]Last Frame Capture\n");
 		/*Clear LastCaptureEnd bit*/
 		status2 &= ~(0x1 << 1);
 		flite_hw_set_status2(sensor->regs, status2);
 	}
 
 	if (status1 & (1<<8)) {
-		dbg_sensor("[CamIF_0]Overflow Cr\n");
+		dbg_sensor("[CamIF_1]Overflow Cr\n");
 		/*uCIWDOFST |= (0x1 << 14);*/
 	}
 
 	if (status1 & (1<<9)) {
-		dbg_sensor("[CamIF_0]Overflow Cb\n");
+		dbg_sensor("[CamIF_1]Overflow Cb\n");
 		/*uCIWDOFST |= (0x1 << 15);*/
 	}
 
 	if (status1 & (1<<10)) {
-		dbg_sensor("[CamIF_0]Overflow Y\n");
+		u32 ciwdofst;
+
+		dbg_sensor("[CamIF_1]Overflow Y\n");
+		ciwdofst = readl(sensor->regs + 0x10);
+		ciwdofst  |= (0x1 << 30);
+		writel(ciwdofst, sensor->regs + 0x10);
 		/*uCIWDOFST |= (0x1 << 30);*/
 	}
 

@@ -1030,11 +1030,15 @@ int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset)
 void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 {
 	if (on) {
+		dev->sensor.streaming = true;
+		dbg_sensor("son\n");
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
+		dev->sensor.streaming = false;
+		dbg_sensor("sof\n");
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_OFF, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
@@ -2050,6 +2054,17 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		crop_x);
 	IS_SCALERC_SET_PARAM_INPUT_CROP_POS_Y(dev,
 		crop_y);
+
+	IS_SCALERC_SET_PARAM_INPUT_CROP_IN_WIDTH(dev,
+		front_width);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev,
+		front_height);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
+		dis_width);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
+		dis_height);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_CMD(dev,
+		SCALER_CROP_COMMAND_ENABLE);
 
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_INPUT_CROP);
 	IS_INC_PARAM_NUM(dev);

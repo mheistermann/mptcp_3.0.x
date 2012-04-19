@@ -987,38 +987,67 @@ int fimc_is_ctrl_3dnr(struct fimc_is_dev *dev, int value)
 
 int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 {
+	u32 front_width, front_height;
 	u32 back_width, back_height;
-	u32 crop_width, crop_height, crop_x, crop_y;
+	u32 dis_width, dis_height;
+	u32 front_crop_ratio, back_crop_ratio;
+	u32 crop_width = 0, crop_height = 0, crop_x, crop_y;
 	u32 zoom;
 	int ret;
 
-	if (dev->back.dis_on) {
-		back_width = dev->back.dis_width;
-		back_height = dev->back.dis_height;
-	} else {
-		back_width = dev->back.width;
-		back_height = dev->back.height;
+	front_width = dev->front.width;
+	front_height = dev->front.height;
+	back_width = dev->back.width;
+	back_height = dev->back.height;
+	dis_width = dev->back.dis_width;
+	dis_height = dev->back.dis_height;
+
+	front_crop_ratio = front_width * 1000 / front_height;
+	back_crop_ratio = back_width * 1000 / back_height;
+
+	if (front_crop_ratio == back_crop_ratio) {
+		crop_width = front_width;
+		crop_height = front_height;
+
+	} else if (front_crop_ratio < back_crop_ratio) {
+		crop_width = front_width;
+		crop_height = (front_width
+				* (1000 * 100 / back_crop_ratio)) / 100;
+		crop_width = ALIGN(crop_width, 8);
+		crop_height = ALIGN(crop_height, 8);
+
+	} else if (front_crop_ratio > back_crop_ratio) {
+		crop_height = front_height;
+		crop_width = (front_height
+				* (back_crop_ratio * 100 / 1000)) / 100 ;
+		crop_width = ALIGN(crop_width, 8);
+		crop_height = ALIGN(crop_height, 8);
 	}
 
-	zoom = value+10;
+	printk("value: %d front_width: %d, front_height: %d\n",
+		value, front_width,  front_height);
+	printk("value: %d dis_width: %d, dis_height: %d\n",
+		value, dis_width, dis_height);
 
-	dbg_sensor("zoom %d\n", value);
+	zoom = value + 10;
 
-	crop_width = back_width*10/zoom;
-	crop_height = back_height*10/zoom;
+	dbg("zoom value : %d\n", value);
+
+	crop_width = crop_width * 10 / zoom;
+	crop_height = crop_height * 10 / zoom;
 
 	crop_width &= 0xffe;
 	crop_height &= 0xffe;
 
-	crop_x = (back_width - crop_width)/2;
-	crop_y = (back_height - crop_height)/2;
+	crop_x = (front_width - crop_width)/2;
+	crop_y = (front_height - crop_height)/2;
 
 	crop_x &= 0xffe;
 	crop_y &= 0xffe;
 
-	dbg_sensor("crop_width : %d crop_height: %d\n",
+	dbg("crop_width : %d crop_height: %d\n",
 		crop_width, crop_height);
-	dbg_sensor("crop_x:%d crop_y: %d\n", crop_x, crop_y);
+	dbg("crop_x:%d crop_y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);
@@ -1028,6 +1057,18 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 		crop_x);
 	IS_SCALERC_SET_PARAM_INPUT_CROP_POS_Y(dev,
 		crop_y);
+
+	IS_SCALERC_SET_PARAM_INPUT_CROP_IN_WIDTH(dev,
+		front_width);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_IN_HEIGHT(dev,
+		front_height);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
+		dis_width);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
+		dis_height);
+	IS_SCALERC_SET_PARAM_INPUT_CROP_CMD(dev,
+		SCALER_CROP_COMMAND_ENABLE);
+
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERC_INPUT_CROP);
 	IS_INC_PARAM_NUM(dev);
 
@@ -1049,7 +1090,6 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	}
 	return 0;
 }
-
 
 int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 {
@@ -3125,6 +3165,7 @@ int fimc_is_v4l2_fd_angle_mode(struct fimc_is_dev *dev, int value)
 int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
+	dbg("%s: value: %d\n", __func__, value);
 
 	switch (value) {
 	case 0: /* AUTO Mode */
@@ -3207,6 +3248,7 @@ int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 			err("wait timeout 1 : %s\n", __func__);
 			return -EINVAL;
 		}
+#ifdef FPS_ENABLE
 		if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
 			IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
@@ -3257,6 +3299,7 @@ int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 				return -EINVAL;
 			}
 		}
+#endif
 	}
 	return 0;
 }

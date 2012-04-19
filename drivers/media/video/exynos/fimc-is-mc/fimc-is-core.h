@@ -49,7 +49,8 @@
 #define FIMC_IS_VIDEO_SCALERP_NAME		"exynos5-fimc-is-scalerp"
 
 #define FIMC_IS_DEBUG_LEVEL			(3)
-#define FIMC_IS_A5_DEBUG_ON			(1)
+/*#define FIMC_IS_A5_DEBUG_ON			(1)*/
+/*#define FPS_ENABLE				(1)*/
 
 #define MAX_I2H_ARG				(4)
 
@@ -341,6 +342,7 @@ struct fimc_is_sensor_dev {
 	struct list_head shot_request_head;
 	u32 shot_free_cnt;
 	u32 shot_request_cnt;
+	bool streaming;
 };
 
 struct fimc_is_front_dev {
