@@ -32,7 +32,7 @@
 #define EXYNOS5_GPIO_C1_NR	(7)
 #define EXYNOS5_GPIO_C2_NR	(7)
 #define EXYNOS5_GPIO_C3_NR	(7)
-#define EXYNOS5_GPIO_C4_NR	(8)
+#define EXYNOS5_GPIO_C4_NR	(7)
 #define EXYNOS5_GPIO_D0_NR	(8)
 #define EXYNOS5_GPIO_D1_NR	(8)
 #define EXYNOS5_GPIO_Y0_NR	(6)
