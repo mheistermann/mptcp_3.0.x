@@ -671,27 +671,14 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	struct list_head *head;
 
-	if (index >= MFC_MAX_BUFFERS) {
-		mfc_err("Per-buffer control index is out of range\n");
-		return -EINVAL;
-	}
-
 	if (type & MFC_CTRL_TYPE_SRC) {
-		if (test_bit(index, &ctx->src_ctrls_avail)) {
-			mfc_info("Source per-buffer control is already "
-					"initialized [%d]\n", index);
-			return 0;
-		}
 		head = &ctx->src_ctrls[index];
+		ctx->src_ctrls_flag[index] = 1;
 	} else if (type & MFC_CTRL_TYPE_DST) {
-		if (test_bit(index, &ctx->dst_ctrls_avail)) {
-			mfc_info("Dest. per-buffer control is already "
-					"initialized [%d]\n", index);
-			return 0;
-		}
 		head = &ctx->dst_ctrls[index];
+		ctx->dst_ctrls_flag[index] = 1;
 	} else {
-		mfc_err("Control type mismatch. type : %d\n", type);
+		mfc_err("Control type missmatch. type : %d\n", type);
 		return -EINVAL;
 	}
 
@@ -712,7 +699,7 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 
 		buf_ctrl = kzalloc(sizeof(struct s5p_mfc_buf_ctrl), GFP_KERNEL);
 		if (buf_ctrl == NULL) {
-			mfc_err("Failed to allocate buf_ctrl type: %d, id: 0x%08x\n",
+			mfc_err("failed to allocate buf_ctrl type: %d, id: 0x%08x\n",
 				mfc_ctrl_list[i].type, mfc_ctrl_list[i].id);
 
 			return -ENOMEM;
@@ -738,43 +725,12 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 				buf_ctrl->id, buf_ctrl->type);
 	}
 
-	if (type & MFC_CTRL_TYPE_SRC)
-		set_bit(index, &ctx->src_ctrls_avail);
-	else
-		set_bit(index, &ctx->dst_ctrls_avail);
-
 	return 0;
 }
 
-static int dec_cleanup_buf_ctrls(struct s5p_mfc_ctx *ctx,
-	enum s5p_mfc_ctrl_type type, unsigned int index)
+static int dec_cleanup_buf_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
-	struct list_head *head;
-
-	if (index >= MFC_MAX_BUFFERS) {
-		mfc_err("Per-buffer control index is out of range\n");
-		return -EINVAL;
-	}
-
-	if (type & MFC_CTRL_TYPE_SRC) {
-		if (!(test_and_clear_bit(index, &ctx->src_ctrls_avail))) {
-			mfc_info("Source per-buffer control is "
-					"not available [%d]\n", index);
-			return 0;
-		}
-		head = &ctx->src_ctrls[index];
-	} else if (type & MFC_CTRL_TYPE_DST) {
-		if (!(test_and_clear_bit(index, &ctx->dst_ctrls_avail))) {
-			mfc_info("Dest. per-buffer Control is "
-					"not available [%d]\n", index);
-			return 0;
-		}
-		head = &ctx->dst_ctrls[index];
-	} else {
-		mfc_err("Control type mismatch. type : %d\n", type);
-		return -EINVAL;
-	}
 
 	while (!list_empty(head)) {
 		buf_ctrl = list_entry(head->next,
@@ -832,7 +788,7 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 			continue;
 
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (!(ctx_ctrl->type & MFC_CTRL_TYPE_GET))
+			if ((ctx_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
 				continue;
 
 			if (ctx_ctrl->id == buf_ctrl->id) {
@@ -910,7 +866,7 @@ static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 	unsigned int value = 0;
 
 	list_for_each_entry(buf_ctrl, head, list) {
-		if (!(buf_ctrl->type & MFC_CTRL_TYPE_GET))
+		if ((buf_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
 			continue;
 
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
@@ -1291,12 +1247,11 @@ static int vidioc_s_fmt_vid_out_mplane(struct file *file, void *priv, struct v4l
 
 		/* Reinitialize controls for source buffers */
 		for (i = 0; i < MFC_MAX_BUFFERS; i++) {
-			if (test_bit(i, &ctx->src_ctrls_avail)) {
-				if (call_cop(ctx, cleanup_buf_ctrls, ctx,
-						MFC_CTRL_TYPE_SRC, i) < 0)
+			if (ctx->src_ctrls_flag[i]) {
+				if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[i]) < 0)
 					mfc_err("failed in cleanup_buf_ctrls\n");
-				if (call_cop(ctx, init_buf_ctrls, ctx,
-						MFC_CTRL_TYPE_SRC, i) < 0)
+				ctx->src_ctrls_flag[i] = 0;
+				if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SRC, i) < 0)
 					mfc_err("failed in init_buf_ctrls\n");
 			}
 		}
@@ -1690,7 +1645,7 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (!(ctx_ctrl->type & MFC_CTRL_TYPE_GET))
+			if ((ctx_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
 				continue;
 
 			if (ctx_ctrl->id == ctrl->id) {
@@ -2134,13 +2089,13 @@ static void s5p_mfc_buf_cleanup(struct vb2_buffer *vb)
 	mfc_debug_enter();
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		if (call_cop(ctx, cleanup_buf_ctrls, ctx,
-					MFC_CTRL_TYPE_DST, index) < 0)
+		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in cleanup_buf_ctrls\n");
+		ctx->dst_ctrls_flag[index] = 0;
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (call_cop(ctx, cleanup_buf_ctrls, ctx,
-					MFC_CTRL_TYPE_SRC, index) < 0)
+		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in cleanup_buf_ctrls\n");
+		ctx->src_ctrls_flag[index] = 0;
 	} else {
 		mfc_err("s5p_mfc_buf_cleanup: unknown queue type.\n");
 	}
@@ -2315,6 +2270,7 @@ const struct v4l2_ioctl_ops *get_dec_v4l2_ioctl_ops(void)
 int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dec *dec;
+	int i;
 	int ret = 0;
 
 	dec = kzalloc(sizeof(struct s5p_mfc_dec), GFP_KERNEL);
@@ -2331,8 +2287,10 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->src_queue_cnt = 0;
 	ctx->dst_queue_cnt = 0;
 
-	ctx->src_ctrls_avail = 0;
-	ctx->dst_ctrls_avail = 0;
+	for (i = 0; i < MFC_MAX_BUFFERS; i++) {
+		ctx->src_ctrls_flag[i] = 0;
+		ctx->dst_ctrls_flag[i] = 0;
+	}
 
 	ctx->capture_state = QUEUE_FREE;
 	ctx->output_state = QUEUE_FREE;
