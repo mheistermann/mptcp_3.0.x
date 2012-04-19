@@ -22,6 +22,10 @@
 #include "mali_kbase_jm.h"
 #include <kbase/src/common/mali_kbase_defs.h>
 
+#ifdef MALI_GATOR_SUPPORT
+#include "mali_kbase_gator.h"
+#endif
+
 /*
  * Private types
  */
