@@ -43,6 +43,9 @@ enum tmu_status_t {
 	TMU_STATUS_TRIPPED,
 };
 
+extern int mali_dvfs_freq_lock(int level);
+extern void mali_dvfs_freq_unlock(void);
+
 unsigned int already_limit;
 static struct workqueue_struct  *tmu_monitor_wq;
 
@@ -157,6 +160,7 @@ static void tmu_monitor(struct work_struct *work)
 		container_of(delayed_work, struct tmu_info, polling);
 	struct tmu_data *data = info->dev->platform_data;
 	char cur_temp;
+	unsigned int gpu_status;
 
 #ifdef CONFIG_TMU_DEBUG
 	cancel_delayed_work(&info->monitor);
@@ -203,10 +207,22 @@ static void tmu_monitor(struct work_struct *work)
 							!already_limit) {
 			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU,
 				data->cpulimit.warning_freq);
+			if (soc_is_exynos5250()) {
+				gpu_status = mali_dvfs_freq_lock(0);
+				if (!gpu_status) {
+					pr_info(">>>>>>>> GPU clock down!!<<<<<<\n");
+					pr_info("GPU use 0 level clock");
+				} else
+				pr_err("*****Fail GPU clock down\n");
+			}
 			already_limit = 1;
 		} else if (cur_temp <= data->ts.stop_warning) {
 			info->tmu_state = TMU_STATUS_THROTTLED;
 			exynos_cpufreq_upper_limit_free(DVFS_LOCK_ID_TMU);
+			if (soc_is_exynos5250()) {
+				mali_dvfs_freq_unlock();
+				pr_info("CPU and GPU clock release!!\n");
+			}
 			already_limit = 0;
 		}
 		queue_delayed_work_on(0, tmu_monitor_wq,
@@ -402,18 +418,18 @@ static irqreturn_t tmu_irq(int irq, void *id)
 	status = __raw_readl(info->tmu_base + INTSTAT);
 
 	if (status & INTSTAT_RISE2) {
-		pr_info("Tripping interrupt occured!!!!\n");
+		pr_info("@@@@@@@@@@@@@@ Tripping interrupt occured!!!!\n");
 		info->tmu_state = TMU_STATUS_TRIPPED;
 		__raw_writel(INTCLEAR_RISE2, info->tmu_base + INTCLEAR);
 		tmu_tripped_cb(info);
 	} else if (status & INTSTAT_RISE1) {
-		pr_info("Warning interrupt occured!!!!\n");
+		pr_info("@@@@@@@@@@@@@@@ Warning interrupt occured!!!!\n");
 		__raw_writel(INTCLEAR_RISE1, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_WARNING;
 		queue_delayed_work_on(0, tmu_monitor_wq,
 				&info->polling, usecs_to_jiffies(200 * 1000));
 	} else if (status & INTSTAT_RISE0) {
-		pr_info("Throttling interrupt occured!!!!\n");
+		pr_info("@@@@@@@@@@@@ Throttling interrupt occured!!!!\n");
 		__raw_writel(INTCLEAR_RISE0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_THROTTLED;
 		queue_delayed_work_on(0, tmu_monitor_wq,
