@@ -37,6 +37,10 @@ int exynos4_mfc_setup_clock(struct device *dev,
 
 static struct s5p_mfc_platdata default_mfc_pd __initdata = {
 	.clock_rate = 200 * MHZ,
+	.lock_thrd_w = 1920,
+	.lock_thrd_h = 1080,
+	.lock_freq_mem = 100,
+	.lock_freq_bus = 160,
 };
 
 void __init s5p_mfc_set_platdata(struct s5p_mfc_platdata *pd)

@@ -17,6 +17,10 @@
 
 struct s5p_mfc_platdata {
 	int clock_rate;
+	int lock_thrd_w;
+	int lock_thrd_h;
+	int lock_freq_mem;
+	int lock_freq_bus;
 };
 
 extern unsigned int mfc_clk_rate;

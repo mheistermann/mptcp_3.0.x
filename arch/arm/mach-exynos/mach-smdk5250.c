@@ -848,6 +848,10 @@ static void __init smdk5250_smsc911x_init(void)
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 static struct s5p_mfc_platdata smdk5250_mfc_pd = {
 	.clock_rate = 333000000,
+	.lock_thrd_w = 1920,
+	.lock_thrd_h = 1080,
+	.lock_freq_mem = 100,
+	.lock_freq_bus = 160,
 };
 #endif
 
