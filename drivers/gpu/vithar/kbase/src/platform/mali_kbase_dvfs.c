@@ -356,12 +356,11 @@ void kbase_platform_dvfs_term(void)
 }
 #endif
 
-#ifdef CONFIG_VITHAR_FREQ_LOCK
 int mali_get_dvfs_upper_locked_freq(void)
 {
 	unsigned int locked_level = -1;
 
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.upper_lock].clock;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
@@ -373,7 +372,7 @@ int mali_get_dvfs_under_locked_freq(void)
 {
 	unsigned int locked_level = -1;
 
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	locked_level = mali_dvfs_infotbl[mali_dvfs_status_current.under_lock].clock;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
@@ -385,7 +384,7 @@ int mali_get_dvfs_under_locked_freq(void)
 
 int mali_dvfs_freq_lock(int level)
 {
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.upper_lock = level;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
@@ -394,7 +393,7 @@ int mali_dvfs_freq_lock(int level)
 }
 void mali_dvfs_freq_unlock(void)
 {
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.upper_lock = -1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
@@ -403,7 +402,7 @@ void mali_dvfs_freq_unlock(void)
 
 int mali_dvfs_freq_under_lock(int level)
 {
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.under_lock = level;
@@ -413,13 +412,12 @@ int mali_dvfs_freq_under_lock(int level)
 }
 void mali_dvfs_freq_under_unlock(void)
 {
-#ifdef CONFIG_VITHAR_DVFS
+#ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.under_lock = -1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 #endif
 }
-#endif
 
 int kbase_platform_regulator_init(struct device *dev)
 {
