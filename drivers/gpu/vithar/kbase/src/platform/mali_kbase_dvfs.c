@@ -78,6 +78,7 @@ typedef struct _mali_dvfs_status_type{
 	kbase_device *kbdev;
 	int step;
 	int utilisation;
+	int util_avg;
 	int keepcnt;
 	uint noutilcnt;
 #ifdef CONFIG_VITHAR_FREQ_LOCK
@@ -149,7 +150,7 @@ static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 	{1025000, 266, 50, 70},
 	{1125000, 400, 60, 80},
 	{1150000, 450, 70, 90},
-	{1250000, 533, 80, 100}
+	{1250000, 533, 90, 100}
 #elif (MALI_DVFS_STEP == 2)
 	{937500, 266, 0, 55},
 	{1250000, 533, 45, 100}
@@ -237,8 +238,10 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 
+	dvfs_status.util_avg = ((dvfs_status.util_avg*9) + dvfs_status.utilisation)/10;
+
 #if MALI_DVFS_START_MAX_STEP
-	/*If no input is for longtime, first step will be max step. */
+	/*If no input is keeping for longtime, first step will be max step. */
 	if (dvfs_status.utilisation > 10 && dvfs_status.noutilcnt > 20) {
 		dvfs_status.step=MALI_DVFS_STEP-2;
 		dvfs_status.utilisation = 100;
@@ -248,7 +251,14 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
 		OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
-		dvfs_status.step++;
+		if (dvfs_status.step==MALI_DVFS_STEP-2) {
+			if (dvfs_status.util_avg >  mali_dvfs_infotbl[dvfs_status.step].max_threshold)
+			{
+				dvfs_status.step++;
+			}
+		} else {
+			dvfs_status.step++;
+		}
 		dvfs_status.keepcnt=0;
 	}else if ((dvfs_status.step>0) &&
 			(dvfs_status.utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
@@ -287,8 +297,8 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 
 #if MALI_DVFS_DEBUG
-	printk("[mali_dvfs] utilisation: %d  step: %d[%d,%d] cnt: %d\n",
-			dvfs_status.utilisation, dvfs_status.step,
+	printk("[mali_dvfs] utilisation: %d[avg:%d]  step: %d[%d,%d] cnt: %d\n",
+			dvfs_status.utilisation, dvfs_status.util_avg, dvfs_status.step,
 			mali_dvfs_infotbl[dvfs_status.step].min_threshold,
 			mali_dvfs_infotbl[dvfs_status.step].max_threshold, dvfs_status.keepcnt);
 #endif
