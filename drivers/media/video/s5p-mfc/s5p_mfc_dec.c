@@ -1500,12 +1500,13 @@ static int vidioc_streamon(struct file *file, void *priv,
 		ret = vb2_streamon(&ctx->vq_src, type);
 	} else if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 #ifdef CONFIG_BUSFREQ_OPP
-		if (ctx->img_width >= MFC_LOCK_THRD_HOR ||
-				ctx->img_height >= MFC_LOCK_THRD_VER) {
+		if (ctx->img_width >= dev->lock_thrd_w ||
+				ctx->img_height >= dev->lock_thrd_h) {
 			if (atomic_read(&dev->freq_lock) == 0) {
 				dev_lock(dev_get("exynos-busfreq"),
 						&dev->plat_dev->dev,
-						MFC_LOCK_FREQ);
+						(dev->lock_freq_mem * 1000) +
+						dev->lock_freq_bus);
 			}
 
 			atomic_inc(&dev->freq_lock);

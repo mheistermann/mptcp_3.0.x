@@ -28,6 +28,10 @@
 #include <plat/cpu.h>
 #include <media/videobuf2-core.h>
 
+#ifdef CONFIG_BUSFREQ_OPP
+#include <plat/s5p-mfc.h>
+#endif
+
 #include "s5p_mfc_common.h"
 
 #include "s5p_mfc_intr.h"
@@ -1337,6 +1341,10 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_BUSFREQ_OPP
 	atomic_set(&dev->freq_lock, 0);
+	dev->lock_thrd_w = dev->platdata->lock_thrd_w;
+	dev->lock_thrd_h = dev->platdata->lock_thrd_h;
+	dev->lock_freq_mem = dev->platdata->lock_freq_mem;
+	dev->lock_freq_bus = dev->platdata->lock_freq_bus;
 #endif
 
 	dev->variant = (struct s5p_mfc_variant *)
