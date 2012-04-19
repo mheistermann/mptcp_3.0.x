@@ -248,7 +248,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 
-	kbase_platform_dvfs_set_level(dvfs_status.step);
+	kbase_platform_dvfs_set_level(dvfs_status.kbdev, dvfs_status.step);
 
 #if MALI_DVFS_START_MAX_STEP
 	if (dvfs_status.utilisation == 0) {
@@ -611,7 +611,7 @@ int kbase_platform_dvfs_get_level(int freq)
 	return -1;
 }
 
-void kbase_platform_dvfs_set_level(int level)
+void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level)
 {
 	static int level_prev=-1;
 
@@ -623,9 +623,9 @@ void kbase_platform_dvfs_set_level(int level)
 
 	if (level > level_prev) {
 		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
-		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+		kbase_platform_dvfs_set_clock(kbdev, mali_dvfs_infotbl[level].clock);
 	}else{
-		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+		kbase_platform_dvfs_set_clock(kbdev, mali_dvfs_infotbl[level].clock);
 		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
 	}
 	level_prev = level;

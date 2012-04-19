@@ -316,7 +316,7 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 		return -ENOENT;
 	}
 
-	kbase_platform_dvfs_set_level(kbase_platform_dvfs_get_level(freq));
+	kbase_platform_dvfs_set_level(kbdev, kbase_platform_dvfs_get_level(freq));
 	/* Waiting for clock is stable */
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
