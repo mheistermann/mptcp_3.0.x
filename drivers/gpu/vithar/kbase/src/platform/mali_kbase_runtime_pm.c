@@ -61,7 +61,6 @@ int kbase_device_runtime_idle(struct device *dev)
 int kbase_device_runtime_suspend(struct device *dev)
 {
 	if(allow_rp_control==0) {
-		printk("mali driver is not initialized\n");
 		return 0;
 	}
 #if MALI_RTPM_DEBUG
@@ -81,7 +80,6 @@ int kbase_device_runtime_suspend(struct device *dev)
 int kbase_device_runtime_resume(struct device *dev)
 {
 	if(allow_rp_control==0) {
-		printk("mali driver is not initialized\n");
 		return 0;
 	}
 #if MALI_RTPM_DEBUG
@@ -125,24 +123,74 @@ void kbase_device_runtime_init(struct device *dev)
 void kbase_device_runtime_get_sync(struct device *dev)
 {
 	int result;
-#if MALI_RTPM_DEBUG
-	printk("kbase_device_runtime_get_sync\n");
-#endif
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	/********************************************
+	 *
+	 *  This is workaround about occurred kernel panic when you turn off the system.
+	 *
+	 *  System kernel will call the "__pm_runtime_disable" when you turn off the system.
+	 *  After that function, System kernel do not run the runtimePM API more.
+	 *
+	 *  So, this code is check the "dev->power.disable_depth" value is not zero.
+	 *
+	********************************************/
+	if(dev->power.disable_depth > 0) {
+		if(kbdev->pm.cmu_pmu_status == 0)
+			kbase_platform_cmu_pmu_control(dev, 1);
+		return;
+	}
+
 	result = pm_runtime_resume(dev);
-	//OSK_PRINT_ERROR(OSK_BASE_PM, "get_sync, usage_count=%d  \n", atomic_read(&dev->power.usage_count));
-	if(result < 0)
+
+#if MALI_RTPM_DEBUG
+	//printk( "kbase_device_runtime_get_sync, usage_count=%d, runtime_status=%d\n", atomic_read(&dev->power.usage_count), dev->power.runtime_status);
+	printk( "kbase_device_runtime_get_sync, usage_count=%d\n", atomic_read(&dev->power.usage_count));
+#endif
+
+	/********************************************
+	 *
+	 *  This check is re-confirm about maybe context switch by another cpu when turn off the system.
+	 *
+	 *  runtimePM put_sync -------- runtimePM get_sync -------- runtimePM put_sync          : CPU 0
+	 *                                      \
+	 *                                       \ ( context running by another core. )
+	 *                                        \
+	 *                                         - (turn off the system) runtimePM disable    : CPU 1
+	 *                                                                    \
+	 *                                                                     \
+	 *                                                                      => do not success implement runtimePM API
+	********************************************/
+	if(result < 0 && result == -EAGAIN)
+		kbase_platform_cmu_pmu_control(dev, 1);
+	else if(result < 0)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_get_sync failed (%d)\n", result);
 }
 
 void kbase_device_runtime_put_sync(struct device *dev)
 {
 	int result;
+	/********************************************
+	 *
+	 *  This is workaround about occurred kernel panic when you turn off the system.
+	 *
+	 *  System kernel will call the "__pm_runtime_disable" when you turn off the system.
+	 *  After that function, System kernel do not run the runtimePM API more.
+	 *
+	 *  So, this code is check the "dev->power.disable_depth" value is not zero.
+	 *
+	********************************************/
+	if(dev->power.disable_depth > 0)
+		return;
+
+	result = pm_schedule_suspend(dev, RUNTIME_PM_DELAY_TIME);
 
 #if MALI_RTPM_DEBUG
-	printk("kbase_device_runtime_put_sync %d\n", dev->power.runtime_status);
+	//printk( "kbase_device_runtime_put_sync, usage_count=%d, runtime_status=%d\n", atomic_read(&dev->power.usage_count), dev->power.runtime_status);
+	printk( "kbase_device_runtime_put_sync, usage_count=%d\n", atomic_read(&dev->power.usage_count));
 #endif
-	result = pm_schedule_suspend(dev, RUNTIME_PM_DELAY_TIME);
-	//OSK_PRINT_ERROR(OSK_BASE_PM, "put_sync, usage_count=%d  \n", atomic_read(&dev->power.usage_count));
-	if(result < 0)
+
+	if(result < 0 && result != -EAGAIN)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_put_sync failed (%d)\n", result);
 }
