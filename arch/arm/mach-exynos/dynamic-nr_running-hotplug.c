@@ -153,6 +153,17 @@ static ssize_t __ref store_hotplug_state(struct sys_device *dev,
 	switch (buf[0]) {
 	case '0':
 		can_hotplug = 0;
+		if (soc_is_exynos4412()) {
+			if (cpu_online(1) == 0)
+				cpu_up(1);
+			if (cpu_online(2) == 0)
+				cpu_up(2);
+			if (cpu_online(3) == 0)
+				cpu_up(3);
+		} else {
+			if (cpu_online(1) == 0)
+				cpu_up(1);
+		}
 		break;
 	case '1':
 		can_hotplug = 1;
