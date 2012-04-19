@@ -43,6 +43,8 @@ int kbase_platform_set_voltage(struct device *dev, int vol);
 void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq);
 int kbase_platform_dvfs_sprint_avs_table(char *buf);
 int kbase_platform_dvfs_set(int enable);
+void kbase_platform_dvfs_set_level(int level);
+int kbase_platform_dvfs_get_level(int freq);
 
 #ifdef CONFIG_VITHAR_DVFS
 int kbase_platform_dvfs_init(struct device *dev);

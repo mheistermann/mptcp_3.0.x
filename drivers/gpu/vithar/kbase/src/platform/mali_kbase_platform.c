@@ -14,7 +14,6 @@
  * @file mali_kbase_platform.c
  * Platform-dependent init.
  */
-
 #include <osk/mali_osk.h>
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
@@ -294,54 +293,34 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct kbase_device *kbdev;
-	unsigned int tmp = 0;
-	unsigned int cmd = 0;
+	unsigned int tmp = 0, freq = 0;
 	kbdev = dev_get_drvdata(dev);
 
-	if (!kbdev)
-		return -ENODEV;
-
-	if(!kbdev->sclk_g3d)
+	if ((!kbdev) || (!kbdev->sclk_g3d) || (!buf))
 		return -ENODEV;
 
 	if (sysfs_streq("533", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 1250000 );
-		kbase_platform_dvfs_set_clock(kbdev, 533);
+		freq=533;
 	} else if (sysfs_streq("450", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 1150000 );
-		kbase_platform_dvfs_set_clock(kbdev, 450);
+		freq=450;
 	} else if (sysfs_streq("400", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 1100000 );
-		kbase_platform_dvfs_set_clock(kbdev, 400);
+		freq=400;
 	} else if (sysfs_streq("266", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 937500);
-		kbase_platform_dvfs_set_clock(kbdev, 266);
+		freq=266;
 	} else if (sysfs_streq("160", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 937500 );
-		kbase_platform_dvfs_set_clock(kbdev, 160);
+		freq=160;
 	} else if (sysfs_streq("100", buf)) {
-		cmd = 1;
-		kbase_platform_set_voltage( dev, 937500 );
-		kbase_platform_dvfs_set_clock(kbdev, 100);
+		freq=100;
 	} else {
 		dev_err(dev, "set_clock: invalid value\n");
 		return -ENOENT;
 	}
 
-	if(cmd == 1) {
-		/* Waiting for clock is stable */
-		do {
-			tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
-		} while (tmp & 0x1000000);
-	}
-	else if(cmd == 2) {
-		/* Do we need to check */
-	}
+	kbase_platform_dvfs_set_level(kbase_platform_dvfs_get_level(freq));
+	/* Waiting for clock is stable */
+	do {
+		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
+	} while (tmp & 0x1000000);
 
 	return count;
 }

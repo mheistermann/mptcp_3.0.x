@@ -50,11 +50,8 @@
 
 
 #ifdef MALI_DVFS_ASV_ENABLE
-#define MALI_DVFS_ASV_GROUP_NUM 10
-#endif
-
-#ifdef MALI_DVFS_ASV_ENABLE
 #include <mach/asv.h>
+#define MALI_DVFS_ASV_GROUP_NUM 10
 #endif
 
 #ifdef CONFIG_REGULATOR
@@ -66,13 +63,31 @@ static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
 #endif
 #endif
 
-#ifdef CONFIG_VITHAR_DVFS
 typedef struct _mali_dvfs_info{
 	unsigned int voltage;
 	unsigned int clock;
 	int min_threshold;
 	int	max_threshold;
 }mali_dvfs_info;
+
+static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
+{
+#if (MALI_DVFS_STEP == 6)
+	{912500, 100, 0, 40},
+	{925000, 160, 30, 60},
+	{1025000, 266, 50, 70},
+	{1125000, 400, 60, 80},
+	{1150000, 450, 70, 90},
+	{1250000, 533, 90, 100}
+#elif (MALI_DVFS_STEP == 2)
+	{937500, 266, 0, 55},
+	{1250000, 533, 45, 100}
+#else
+#error no table
+#endif
+};
+
+#ifdef CONFIG_VITHAR_DVFS
 
 typedef struct _mali_dvfs_status_type{
 	kbase_device *kbdev;
@@ -139,61 +154,8 @@ static mali_dvfs_status mali_dvfs_status_current;
 #ifdef MALI_DVFS_ASV_ENABLE
 static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
 	{ 912500, 925000, 1025000, 1125000, 1150000, 1250000};
-static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
-#else
-static const mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 #endif
-{
-#if (MALI_DVFS_STEP == 6)
-	{912500, 100, 0, 40},
-	{925000, 160, 30, 60},
-	{1025000, 266, 50, 70},
-	{1125000, 400, 60, 80},
-	{1150000, 450, 70, 90},
-	{1250000, 533, 90, 100}
-#elif (MALI_DVFS_STEP == 2)
-	{937500, 266, 0, 55},
-	{1250000, 533, 45, 100}
-#else
-#error no table
-#endif
-};
 
-static void kbase_platform_dvfs_set_vol(unsigned int vol)
-{
-	static int _vol = -1;
-
-	if (_vol == vol)
-		return;
-
-	kbase_platform_set_voltage(NULL, vol);
-	_vol = vol;
-#if MALI_DVFS_DEBUG
-	printk("dvfs_set_vol %dmV\n", vol);
-#endif
-	return;
-}
-
-
-void kbase_platform_dvfs_set_level(int level)
-{
-	static int level_prev=-1;
-
-	if (level == level_prev)
-		return;
-
-	if (WARN_ON(level >= MALI_DVFS_STEP))
-		panic("invalid level");
-
-	if (level > level_prev) {
-		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
-		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
-	}else{
-		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
-		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
-	}
-	level_prev = level;
-}
 #ifdef MALI_DVFS_ASV_ENABLE
 static int mali_dvfs_update_asv(int group)
 {
@@ -621,6 +583,52 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 #endif
 #endif
 	return;
+}
+
+static void kbase_platform_dvfs_set_vol(unsigned int vol)
+{
+	static int _vol = -1;
+
+	if (_vol == vol)
+		return;
+
+	kbase_platform_set_voltage(NULL, vol);
+	_vol = vol;
+#if MALI_DVFS_DEBUG
+	printk("dvfs_set_vol %dmV\n", vol);
+#endif
+	return;
+}
+
+int kbase_platform_dvfs_get_level(int freq)
+{
+	int i;
+	for (i=0; i < MALI_DVFS_STEP;i++)
+	{
+		if (mali_dvfs_infotbl[i].clock == freq)
+			return i;
+	}
+	return -1;
+}
+
+void kbase_platform_dvfs_set_level(int level)
+{
+	static int level_prev=-1;
+
+	if (level == level_prev)
+		return;
+
+	if (WARN_ON((level >= MALI_DVFS_STEP)||(level < 0)))
+		panic("invalid level");
+
+	if (level > level_prev) {
+		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
+		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+	}else{
+		kbase_platform_dvfs_set_clock(mali_dvfs_status_current.kbdev, mali_dvfs_infotbl[level].clock);
+		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
+	}
+	level_prev = level;
 }
 
 int kbase_platform_dvfs_sprint_avs_table(char *buf)
