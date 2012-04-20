@@ -548,19 +548,27 @@ static int adb_function_set_alt(struct usb_function *f,
 {
 	struct adb_dev	*dev = func_to_adb(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
+	struct usb_endpoint_descriptor *desc_in, *desc_out;
 	int ret;
 
 	DBG(cdev, "adb_function_set_alt intf: %d alt: %d\n", intf, alt);
-	ret = usb_ep_enable(dev->ep_in,
-			ep_choose(cdev->gadget,
-				&adb_highspeed_in_desc,
-				&adb_fullspeed_in_desc));
+
+	if (gadget_is_superspeed(cdev->gadget) &&
+	    cdev->gadget->speed == USB_SPEED_SUPER) {
+		desc_in = &adb_superspeed_in_desc;
+		desc_out = &adb_superspeed_out_desc;
+	} else {
+		desc_in = ep_choose(cdev->gadget, &adb_highspeed_in_desc,
+						  &adb_fullspeed_in_desc);
+		desc_out = ep_choose(cdev->gadget, &adb_highspeed_out_desc,
+						   &adb_fullspeed_out_desc);
+	}
+
+	ret = usb_ep_enable(dev->ep_in, desc_in);
 	if (ret)
 		return ret;
-	ret = usb_ep_enable(dev->ep_out,
-			ep_choose(cdev->gadget,
-				&adb_highspeed_out_desc,
-				&adb_fullspeed_out_desc));
+
+	ret = usb_ep_enable(dev->ep_out, desc_out);
 	if (ret) {
 		usb_ep_disable(dev->ep_in);
 		return ret;
