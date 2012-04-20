@@ -12,7 +12,7 @@
 #ifndef FIMC_IS_PARAMS_H
 #define FIMC_IS_PARAMS_H
 
-#define IS_REGION_VER 121  /* IS REGION VERSION 1.15 */
+#define IS_REGION_VER 134  /* IS REGION VERSION 1.34 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1029,7 +1029,8 @@ enum interrupt_map {
 /* ----------------------  Input  ----------------------------------- */
 enum control_command {
 	CONTROL_COMMAND_STOP	= 0,
-	CONTROL_COMMAND_START	= 1
+	CONTROL_COMMAND_START	= 1,
+	CONTROL_COMMAND_TEST	= 2
 };
 
 enum bypass_command {
@@ -1293,10 +1294,11 @@ enum isp_af_error {
 
 /* -------------------------  Flash  ------------------------------------- */
 enum isp_flash_command {
-	ISP_FLASH_COMMAND_DISABLE	= 0 ,
+	ISP_FLASH_COMMAND_DISABLE	= 0,
 	ISP_FLASH_COMMAND_MANUALON	= 1, /* (forced flash) */
 	ISP_FLASH_COMMAND_AUTO		= 2,
-	ISP_FLASH_COMMAND_TORCH		= 3  /* 3 sec */
+	ISP_FLASH_COMMAND_TORCH		= 3,   /* 3 sec */
+	ISP_FLASH_COMMAND_FLASH_ON	= 4
 };
 
 enum isp_flash_redeye {
@@ -1330,9 +1332,10 @@ enum isp_awb_error {
 enum isp_imageeffect_command {
 	ISP_IMAGE_EFFECT_DISABLE		= 0,
 	ISP_IMAGE_EFFECT_MONOCHROME		= 1,
-	ISP_IMAGE_EFFECT_NEGATIVE_MONO		= 2,
-	ISP_IMAGE_EFFECT_NEGATIVE_COLOR		= 3,
-	ISP_IMAGE_EFFECT_SEPIA			= 4
+	ISP_IMAGE_EFFECT_NEGATIVE_COLOR		= 2,
+	ISP_IMAGE_EFFECT_SEPIA			= 3,
+	ISP_IMAGE_EFFECT_EMBOSS			= 4,
+	ISP_IMAGE_EFFECT_CCM			= 15
 };
 
 enum isp_imageeffect_error {
@@ -1358,6 +1361,8 @@ enum iso_adjust_command {
 	ISP_ADJUST_COMMAND_MANUAL_EXPOSURE	= (1 << 3),
 	ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS	= (1 << 4),
 	ISP_ADJUST_COMMAND_MANUAL_HUE		= (1 << 5),
+	ISP_ADJUST_COMMAND_MANUAL_HOTPIXEL	= (1 << 6),
+	ISP_ADJUST_COMMAND_MANUAL_SHADING	= (1 << 7),
 	ISP_ADJUST_COMMAND_MANUAL_ALL		= 0x7F
 };
 
@@ -1628,7 +1633,8 @@ struct param_isp_aa {
 struct param_isp_flash {
 	u32	cmd;
 	u32	redeye;
-	u32	reserved[PARAMETER_MAX_MEMBER-3];
+	u32	flashintensity;
+	u32	reserved[PARAMETER_MAX_MEMBER-4];
 	u32	err;
 };
 
@@ -1660,7 +1666,9 @@ struct param_isp_adjust {
 	s32	exposure;
 	s32	brightness;
 	s32	hue;
-	u32	reserved[PARAMETER_MAX_MEMBER-8];
+	s32	hot_pixel_enable;
+	s32	shading_correction_enable;
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
 
@@ -1994,6 +2002,13 @@ struct is_region {
 	u32			shared[MAX_SHARED_COUNT];
 };
 
+struct is_time_measure_us {
+	u32  min_time_us;
+	u32  max_time_us;
+	u32  avrg_time_us;
+	u32  current_time_us;
+};
+
 struct is_debug_frame_descriptor {
 	u32	sensor_frame_time;
 	u32	sensor_exposure_time;
@@ -2015,12 +2030,12 @@ struct is_share_region {
 
 	u32	af_position;
 	u32	af_status;
-	u32 	af_scene_type;
+	u32  	af_scene_type;
 
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
-	u32 	frame_descp_max_idx;
+	u32  	frame_descp_max_idx;
 
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
@@ -2032,25 +2047,28 @@ struct is_share_region {
 	u8	sirc_sdk_version_no[MAX_VERSION_DISPLAY_BUF];
 	u8	sirc_sdk_revsion_no[MAX_VERSION_DISPLAY_BUF];
 	u8	sirc_sdk_version_date[MAX_VERSION_DISPLAY_BUF];
+
+	/*measure timing*/
+	struct is_time_measure_us	isp_sdk_Time;
 };
 
 struct is_debug_control {
-	u32 uiWritePoint;	/* 0~500KB boundary*/
-	u32 uiAssertFlag;	/* 0:Not Inovked, 1:Invoked*/
-	u32 uiPAbortFlag;	/* 0:Not Inovked, 1:Invoked*/
-	u32 uiDAbortFlag;	/* 0:Not Inovked, 1:Invoked*/
-	u32 uiPDReadyFlag;	/* 0:Normal, 1:EnterIdle(Ready to power down)*/
-	u32 uiISPFrameErr;	/* Frame Error Count.*/
-	u32 uiDRCFrameErr;	/* Frame Error Count.*/
-	u32 uiSCCFrameErr;	/* Frame Error Count.*/
-	u32 uiODCFrameErr;	/* Frame Error Count.*/
-	u32 uiDISFrameErr;	/* Frame Error Count.*/
-	u32 uiTDNRFrameErr;	/* Frame Error Count.*/
-	u32 uiSCPFrameErr;	/* Frame Error Count.*/
-	u32 uiFDFrameErr;	/* Frame Error Count.*/
-	u32 uiISPFrameDrop;	/* Frame Drop Count.*/
-	u32 uiDRCFrameDrop;	/* Frame Drop Count.*/
-	u32 uiDISFrameDrop;	/* Frame Drop Count.*/
+	u32 write_point;	/* 0~500KB boundary*/
+	u32 assert_flag;	/* 0:Not Inovked, 1:Invoked*/
+	u32 pabort_flag;	/* 0:Not Inovked, 1:Invoked*/
+	u32 dabort_flag;	/* 0:Not Inovked, 1:Invoked*/
+	u32 pd_Ready_flag;	/* 0:Normal, 1:EnterIdle(Ready to power down)*/
+	u32 isp_frameErr;	/* Frame Error Count.*/
+	u32 drc_frame_err;	/* Frame Error Count.*/
+	u32 scc_frame_err;	/* Frame Error Count.*/
+	u32 odc_frame_err;	/* Frame Error Count.*/
+	u32 dis_frame_err;	/* Frame Error Count.*/
+	u32 tdnr_frame_err;	/* Frame Error Count.*/
+	u32 scp_frame_err;	/* Frame Error Count.*/
+	u32 fd_frame_err;	/* Frame Error Count.*/
+	u32 isp_frame_drop;	/* Frame Drop Count.*/
+	u32 drc_frame_drop;	/* Frame Drop Count.*/
+	u32 dis_frame_drop;	/* Frame Drop Count.*/
 };
 
 #endif

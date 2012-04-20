@@ -646,15 +646,15 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		flite_hw_set_output_local(sensor->regs, false);
 
 		f_frame.o_width = width + 16;
-		f_frame.o_height = height + 12;
+		f_frame.o_height = height + 10;
 		f_frame.offs_h = 0;
 		f_frame.offs_v = 0;
 		f_frame.width = width + 16;
-		f_frame.height = height + 12;
+		f_frame.height = height + 10;
 
 		dbg_sensor("start_fimc(%dx%d)",
 			(width + 16),
-			(height + 12));
+			(height + 10));
 
 		start_fimc_lite(sensor->regs, &f_frame);
 #endif

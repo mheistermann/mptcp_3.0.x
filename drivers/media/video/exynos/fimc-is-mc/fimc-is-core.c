@@ -520,13 +520,13 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		f_frame.o_width =
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width + 16;
 		f_frame.o_height =
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 12;
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 10;
 		f_frame.offs_h = 0;
 		f_frame.offs_v = 0;
 		f_frame.width =
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width + 16;
 		f_frame.height =
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 12;
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 10;
 
 		/*start mipi*/
 		dbg_sensor("start mipi (pos:%d) (port:%d)\n",
