@@ -1198,13 +1198,13 @@ int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 
 static int fimc_is_suspend(struct device *dev)
 {
-	dbg("%s\n", __func__);
+	printk(KERN_INFO "FIMC_IS Suspend\n");
 	return 0;
 }
 
 static int fimc_is_resume(struct device *dev)
 {
-	dbg("%s\n", __func__);
+	printk(KERN_INFO "FIMC_IS Resume\n");
 	return 0;
 }
 
@@ -1213,8 +1213,16 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct fimc_is_dev *isp
 		= (struct fimc_is_dev *)platform_get_drvdata(pdev);
+	u32 timeout;
+	int ret = 0;
 
-	return fimc_is_hw_a5_power_off(isp);
+	printk(KERN_INFO "FIMC_IS runtime suspend\n");
+#if defined(CONFIG_VIDEOBUF2_ION)
+	if (isp->alloc_ctx)
+		fimc_is_mem_suspend(isp->alloc_ctx);
+#endif
+
+	return ret;
 }
 
 static int fimc_is_runtime_resume(struct device *dev)
@@ -1222,8 +1230,29 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct fimc_is_dev *isp
 		= (struct fimc_is_dev *)platform_get_drvdata(pdev);
+	u32 cfg, timeout;
+	int ret = 0;
 
-	return fimc_is_hw_a5_power_on(isp);
+	printk(KERN_INFO "FIMC_IS runtime resume\n");
+
+	/* 1. Enable MIPI */
+	enable_mipi();
+	/* 2. Clock setting */
+	if (isp->pdata->clk_cfg) {
+		isp->pdata->clk_cfg(isp->pdev);
+	} else {
+		err("failed to config clock\n");
+		return -EINVAL;
+	}
+
+	if (isp->pdata->clk_on) {
+		isp->pdata->clk_on(isp->pdev);
+	} else {
+		err("failed to clock on\n");
+		return -EINVAL;
+	}
+
+	return ret;
 }
 
 static int fimc_is_get_md_callback(struct device *dev, void *p)

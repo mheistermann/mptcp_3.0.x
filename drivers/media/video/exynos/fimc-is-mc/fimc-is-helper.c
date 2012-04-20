@@ -31,7 +31,9 @@
 #include <linux/gpio.h>
 #include <plat/gpio-cfg.h>
 #include <media/exynos_fimc_is.h>
-
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+#include <mach/dev.h>
+#endif
 
 #include "fimc-is-core.h"
 #include "fimc-is-regs.h"
@@ -842,6 +844,7 @@ done:
 
 void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 {
+	u32 cfg, timeout;
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	struct device *dev = &isp->pdev->dev;
 #endif
@@ -849,15 +852,114 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 	printk(KERN_INFO "%s(%d)\n", __func__, on);
 
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
-	if (on)
+	if (on) {
+		/* 1. Bus lock */
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+		mutex_lock(&isp->busfreq_lock);
+		isp->busfreq_num++;
+		if (isp->busfreq_num == 1) {
+			dev_lock(isp->bus_dev, &isp->pdev->dev,
+				(FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
+			dbg("busfreq locked on <%d/%d>MHz\n",
+				FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
+		}
+		mutex_unlock(&isp->busfreq_lock);
+#endif
+		if (isp->low_power_mode)
+			fimc_is_hw_set_low_poweroff(isp, false);
+		/* 2. FIMC-IS local power enable */
 		pm_runtime_get_sync(dev);
-	else
+		printk(KERN_INFO "PMUREG_ISP_STATUS = 0x%08x\n",
+					__raw_readl(PMUREG_ISP_STATUS));
+		/* 3. A5 power on */
+		/* 1). A5 start address setting */
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+		cfg = isp->mem.base;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+		cfg = isp->mem.dvaddr;
+		if (isp->alloc_ctx)
+			fimc_is_mem_resume(isp->alloc_ctx);
+#endif
+		dbg("mem.base(dvaddr) : 0x%08x\n", cfg);
+		dbg("mem.base(kvaddr) : 0x%08x\n",
+				(unsigned int)isp->mem.kvaddr);
+		writel(cfg, isp->regs + BBOAR);
+
+		/* 2). A5 power on*/
+		writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
+		/* 3). enable A5 */
+		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
+		timeout = 1000;
+		while ((__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) != 0x1) {
+			if (timeout == 0)
+				err("A5 power on failed\n");
+			timeout--;
+			udelay(1);
+		}
+		/* HACK : fimc_is_irq_handler() cannot set 1 on
+				FIMC_IS_PWR_ST_POWER_ON_OFF */
+		set_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power);
+	} else {
+		/* 1. A5 power down */
+		/* 1). disable A5 */
+		writel(0x0, PMUREG_ISP_ARM_OPTION);
+		/* 2). A5 power off*/
+		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
+		/* 3). Check A5 power off status register */
+		timeout = 1000;
+		while (__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) {
+			if (timeout == 0) {
+				printk(KERN_ERR "A5 power off failed\n");
+				fimc_is_hw_set_low_poweroff(isp, true);
+			}
+			timeout--;
+			udelay(1);
+		}
+		writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
+		/* 2. FIMC-IS local power down */
 		pm_runtime_put_sync(dev);
+		printk(KERN_INFO "PMUREG_ISP_STATUS = 0x%08x\n",
+					__raw_readl(PMUREG_ISP_STATUS));
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+		mutex_lock(&isp->busfreq_lock);
+		if (isp->busfreq_num == 1) {
+			dev_unlock(isp->bus_dev, &isp->pdev->dev);
+			printk(KERN_DEBUG "busfreq locked off\n");
+		}
+		isp->busfreq_num--;
+		if (isp->busfreq_num < 0)
+			isp->busfreq_num = 0;
+		mutex_unlock(&isp->busfreq_lock);
+#endif
+	}
 #else
-	if (on)
+	if (on) {
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+		mutex_lock(&isp->busfreq_lock);
+		isp->busfreq_num++;
+		if (isp->busfreq_num == 1) {
+			dev_lock(isp->bus_dev, &isp->pdev->dev,
+				(FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
+			dbg("busfreq locked on <%d/%d>MHz\n",
+				FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
+		}
+		mutex_unlock(&isp->busfreq_lock);
+#endif
 		fimc_is_hw_a5_power_on(isp);
-	else
+	} else {
 		fimc_is_hw_a5_power_off(isp);
+#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
+		mutex_lock(&isp->busfreq_lock);
+		if (isp->busfreq_num == 1) {
+			dev_unlock(isp->bus_dev, &isp->pdev->dev);
+			printk(KERN_DEBUG "busfreq locked off\n");
+		}
+		isp->busfreq_num--;
+		if (isp->busfreq_num < 0)
+			isp->busfreq_num = 0;
+		mutex_unlock(&isp->busfreq_lock);
+#endif
+	}
 #endif
 }
 

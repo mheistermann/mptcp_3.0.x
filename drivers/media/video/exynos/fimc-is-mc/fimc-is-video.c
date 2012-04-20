@@ -1,5 +1,5 @@
 /*
- * Samsung Exynos5 SoC series FIMC-IS driver
+* Samsung Exynos5 SoC series FIMC-IS driver
  *
  * exynos5 fimc-is video functions
  *
@@ -165,18 +165,6 @@ static int fimc_is_scalerc_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
-	mutex_lock(&isp->busfreq_lock);
-	isp->busfreq_num++;
-	if (isp->busfreq_num == 1) {
-		dev_lock(isp->bus_dev, &isp->pdev->dev,
-			(FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
-		dbg("busfreq locked on <%d/%d>MHz\n",
-			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
-	}
-	mutex_unlock(&isp->busfreq_lock);
-#endif
-
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERC];
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = 0;
@@ -244,18 +232,6 @@ static int fimc_is_scalerc_video_close(struct file *file)
 	} else {
 		mutex_unlock(&isp->lock);
 	}
-
-#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
-	mutex_lock(&isp->busfreq_lock);
-	if (isp->busfreq_num == 1) {
-		dev_unlock(isp->bus_dev, &isp->pdev->dev);
-		printk(KERN_DEBUG "busfreq locked off\n");
-	}
-	isp->busfreq_num--;
-	if (isp->busfreq_num < 0)
-		isp->busfreq_num = 0;
-	mutex_unlock(&isp->busfreq_lock);
-#endif
 
 	return 0;
 }
@@ -596,7 +572,7 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
-		dbg("IS change mode\n");
+		printk(KERN_INFO "ScalerC mode change\n");
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
 		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
 		mutex_lock(&isp->lock);
@@ -618,7 +594,7 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 		test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED,
 			&isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-		dbg("IS Stream On");
+		printk(KERN_INFO "ScalerC stream enable\n");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
@@ -712,7 +688,7 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 {
 	struct fimc_is_video_dev *video = q->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
-	int ret;
+	int ret = 0;
 
 	clear_bit(IS_ST_STREAM_OFF, &isp->state);
 	fimc_is_hw_set_stream(isp, 0);
@@ -793,8 +769,8 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 		test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		clear_bit(IS_ST_STREAM_OFF, &isp->state);
 
+		printk(KERN_INFO "ScalerC stream disable\n");
 		fimc_is_hw_set_stream(isp, 0);
-		dbg("IS Stream Off");
 		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
 			test_bit(IS_ST_STREAM_OFF, &isp->state),
@@ -871,18 +847,6 @@ static int fimc_is_scalerp_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
-	mutex_lock(&isp->busfreq_lock);
-	isp->busfreq_num++;
-	if (isp->busfreq_num == 1) {
-		dev_lock(isp->bus_dev, &isp->pdev->dev,
-			(FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
-		dbg("busfreq locked on <%d/%d>MHz\n",
-			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
-	}
-	mutex_unlock(&isp->busfreq_lock);
-#endif
-
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf = 0;
@@ -951,18 +915,6 @@ static int fimc_is_scalerp_video_close(struct file *file)
 	} else {
 		mutex_unlock(&isp->lock);
 	}
-
-#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
-	mutex_lock(&isp->busfreq_lock);
-	if (isp->busfreq_num == 1) {
-		dev_unlock(isp->bus_dev, &isp->pdev->dev);
-		printk(KERN_DEBUG "busfreq locked off\n");
-	}
-	isp->busfreq_num--;
-	if (isp->busfreq_num < 0)
-		isp->busfreq_num = 0;
-	mutex_unlock(&isp->busfreq_lock);
-#endif
 
 	return 0;
 
@@ -1843,7 +1795,7 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
 
-		dbg("IS change mode\n");
+		printk(KERN_INFO "ScalerP mode change\n");
 		clear_bit(IS_ST_RUN, &isp->state);
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
 		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
@@ -1866,7 +1818,8 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 		test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED,
 			&isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-		dbg("IS Stream On");
+
+		printk(KERN_INFO "ScalerP stream enable\n");
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
@@ -2142,7 +2095,7 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 		test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 		clear_bit(IS_ST_STREAM_OFF, &isp->state);
 
-		dbg("IS Stream Off");
+		printk(KERN_INFO "ScalerP stream disable\n");
 		fimc_is_hw_set_stream(isp, 0);
 		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
@@ -2222,18 +2175,6 @@ const struct vb2_ops fimc_is_scalerp_qops = {
 static int fimc_is_3dnr_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
-
-#if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
-	mutex_lock(&isp->busfreq_lock);
-	isp->busfreq_num++;
-	if (isp->busfreq_num == 1) {
-		dev_lock(isp->bus_dev, &isp->pdev->dev,
-			(FIMC_IS_FREQ_MIF * 1000) + FIMC_IS_FREQ_INT);
-		dbg("busfreq locked on <%d/%d>MHz\n",
-			FIMC_IS_FREQ_MIF, FIMC_IS_FREQ_INT);
-	}
-	mutex_unlock(&isp->busfreq_lock);
-#endif
 
 	dbg("%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_3DNR];
