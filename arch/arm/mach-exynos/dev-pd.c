@@ -107,6 +107,7 @@ int exynos_pd_disable(struct device *dev)
 	 * first, ISP_ARM power domain be off.
 	 */
 	if (soc_is_exynos5250() &&
+		(samsung_rev() < EXYNOS5250_REV_1_0) &&
 		(pdata->base == EXYNOS5_ISP_CONFIGURATION)) {
 		if (!(__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1)) {
 			/* Disable ISP_ARM */
