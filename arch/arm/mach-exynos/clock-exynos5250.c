@@ -2686,6 +2686,42 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	clk_set_rate(&exynos5_clk_aclk_acp.clk, 267000000);
 	clk_set_rate(&exynos5_clk_pclk_acp.clk, 134000000);
 
+	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_disp1_mid1.clk,
+				&exynos5_clk_mout_cpll.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_cpll.clk.name,
+				exynos5_clk_mout_aclk_300_disp1_mid1.clk.name);
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_disp1.clk,
+				&exynos5_clk_mout_aclk_300_disp1_mid1.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_aclk_300_disp1_mid1.clk.name,
+				exynos5_clk_mout_aclk_300_disp1.clk.name);
+		if (clk_set_parent(&exynos5_clk_aclk_300_disp1.clk,
+				&exynos5_clk_dout_aclk_300_disp1.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_dout_aclk_300_disp1.clk.name,
+				exynos5_clk_aclk_300_disp1.clk.name);
+		clk_set_rate(&exynos5_clk_dout_aclk_300_disp1.clk, 334000000);
+	} else {
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_disp1_mid.clk,
+				&exynos5_clk_mout_mpll_user.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_mpll_user.clk.name,
+				exynos5_clk_mout_aclk_300_disp1_mid.clk.name);
+		if (clk_set_parent(&exynos5_clk_mout_aclk_300_disp1.clk,
+				&exynos5_clk_mout_aclk_300_disp1_mid.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_mout_aclk_300_disp1_mid.clk.name,
+				exynos5_clk_mout_aclk_300_disp1.clk.name);
+		if (clk_set_parent(&exynos5_clk_aclk_300_disp1.clk,
+				&exynos5_clk_dout_aclk_300_disp1.clk))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_dout_aclk_300_disp1.clk.name,
+				exynos5_clk_aclk_300_disp1.clk.name);
+		clk_set_rate(&exynos5_clk_dout_aclk_300_disp1.clk, 267000000);
+	}
+
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_clksrcs); ptr++)
 		s3c_set_clksrc(&exynos5_clksrcs[ptr], true);
 }
