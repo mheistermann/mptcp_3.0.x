@@ -1516,7 +1516,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		/* FW partially supported it */
 		ret = fimc_is_v4l2_frame_rate(isp, ctrl->value);
 #else
-		err("ERR(%s) disabled FRAME_RATE\n", __func__);
+		err("WARN(%s) FRAME_RATE is not available now.\n", __func__);
 #endif
 		break;
 	/* Focus */
@@ -1663,14 +1663,14 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 #ifdef ODC_ENABLE
 		ret = fimc_is_ctrl_odc(isp, ctrl->value);
 #else
-		err("ERR(%s) disabled ODC\n", __func__);
+		err("WARN(%s) ODC is not available now.\n", __func__);
 #endif
 		break;
 	case V4L2_CID_CAMERA_SET_3DNR:
 #ifdef TDNR_ENABLE
 		ret = fimc_is_ctrl_3dnr(isp, ctrl->value);
 #else
-		err("ERR(%s) disabled 3DNR\n", __func__);
+		err("WARN(%s) 3DNR is not available now.\n", __func__);
 #endif
 		break;
 	case V4L2_CID_CAMERA_ZOOM:
@@ -1681,7 +1681,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		/* FW partially supported it */
 		ret = fimc_is_ctrl_dis(isp, ctrl->value);
 #else
-		err("ERR(%s) disabled DIS\n", __func__);
+		err("WARN(%s) DIS is not available now.\n", __func__);
 #endif
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
