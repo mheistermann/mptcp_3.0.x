@@ -351,6 +351,7 @@ struct ion_handle *ion_exynos_get_user_pages(struct ion_client *client,
 	struct ion_handle *handle;
 	struct ion_device *dev = client->dev;
 	struct ion_buffer *buffer = NULL;
+	struct ion_heap *heap;
 
 	if (WARN_ON(!len))
 		return ERR_PTR(-EINVAL);
@@ -361,18 +362,23 @@ struct ion_handle *ion_exynos_get_user_pages(struct ion_client *client,
 
 	mutex_lock(&dev->lock);
 	for (n = rb_first(&dev->heaps); n != NULL; n = rb_next(n)) {
-		struct ion_heap *heap = rb_entry(n, struct ion_heap, node);
-		/* if the client doesn't support this heap type */
-		if (!((1 << heap->type) & client->heap_mask))
-			continue;
-		/* if the caller didn't specify this heap type */
-		if (!((1 << heap->id) & flags))
-			continue;
-		buffer = ion_buffer_create(heap, dev, len, uvaddr, flags);
-		if (!IS_ERR_OR_NULL(buffer))
-			break;
+		heap = rb_entry(n, struct ion_heap, node);
+
+		if (((1 << heap->type) & client->heap_mask) &&
+				((1 << heap->id) & flags))
+			break;;
 	}
 	mutex_unlock(&dev->lock);
+
+	/* ion_buffer_create must be called after releasing mutex, dev->lock
+	 * to avoid deadlock. (See ion_share_mmap() which holds dev->lock.)
+	 * It is practically OK to access heap without holding mutex, dev->lock
+	 * because any ion_heap is neither removed before ION module is removed
+	 * and nor added after initializing ION module in Exynos implementation.
+	 */
+	if (n != NULL) /* found heap */ {
+		buffer = ion_buffer_create(heap, dev, len, uvaddr, flags);
+	}
 
 	if (buffer == NULL)
 		return ERR_PTR(-ENODEV);
@@ -673,26 +679,30 @@ struct ion_handle *ion_import_uva(struct ion_client *client, unsigned long uva,
 	struct vm_area_struct *vma;
 	struct ion_handle *handle;
 
+	down_read(&current->mm->mmap_sem);
 	vma = find_vma(current->mm, uva);
 	if (!vma) {
 		pr_err("%s: invalid importing address 0x%lx.\n", __func__, uva);
-		return ERR_PTR(-EINVAL);
+		handle = ERR_PTR(-EINVAL);
+		goto finish;
 	}
 
 	if (!vma->vm_file) {
 		pr_debug("%s: imported address is not file-mapped\n", __func__);
-		return ERR_PTR(-ENXIO);
+		handle = ERR_PTR(-ENXIO);
+		goto finish;
 	}
 
 	if (vma->vm_file->f_op != &ion_share_fops) {
 		pr_debug("%s: imported file is not a shared ion file.\n",
 		__func__);
-		return ERR_PTR(-ENXIO);
+		handle = ERR_PTR(-ENXIO);
+		goto finish;
 	}
 
 	handle = ion_import(client, vma->vm_file->private_data);
 	if (IS_ERR(handle))
-		return handle;
+		goto finish;
 
 	if (offset) {
 		ion_phys_addr_t phys;
@@ -703,14 +713,17 @@ struct ion_handle *ion_import_uva(struct ion_client *client, unsigned long uva,
 			/* if vma is VM_PFN_AT_MMAPed, vma->vm_pgoff indicates
 			 * mapped physical address */
 			size_t len;
-			if (ion_phys(client, handle, &phys, &len))
-				return ERR_PTR(-EINVAL);
+			if (ion_phys(client, handle, &phys, &len)) {
+				handle = ERR_PTR(-EINVAL);
+				goto finish;
+			}
 
 			*offset -= phys;
 		}
 		*offset += uva - vma->vm_start;
 	}
-
+finish:
+	up_read(&current->mm->mmap_sem);
 	return handle;
 }
 

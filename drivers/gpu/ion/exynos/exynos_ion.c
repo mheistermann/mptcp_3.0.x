@@ -522,14 +522,18 @@ static int pfnmap_digger(struct sg_table *sgt, unsigned long addr, int nr_pages)
 
 	down_read(&current->mm->mmap_sem);
 	vma = find_vma(current->mm, addr);
-	up_read(&current->mm->mmap_sem);
 
-	if ((vma == NULL) || (vma->vm_end < (addr + (nr_pages << PAGE_SHIFT))))
-		return -EINVAL;
+	if ((vma == NULL) ||
+			(vma->vm_end < (addr + (nr_pages << PAGE_SHIFT)))) {
+		ret = -EINVAL;
+		goto err_dig_prepare;
+	}
 
 	pfns = kmalloc(sizeof(*pfns) * nr_pages, GFP_KERNEL);
-	if (!pfns)
-		return -ENOMEM;
+	if (!pfns) {
+		ret = -ENOMEM;
+		goto err_dig_prepare;
+	}
 
 	ret = follow_pfn(vma, addr, &pfns[0]); /* no side effect */
 	if (ret)
@@ -596,6 +600,8 @@ static int pfnmap_digger(struct sg_table *sgt, unsigned long addr, int nr_pages)
 			((pfns[i] & ~PAGE_MASK) + 1) << PAGE_SHIFT, 0);
 err_follow_pfn:
 	kfree(pfns);
+err_dig_prepare:
+	up_read(&current->mm->mmap_sem);
 	return ret;
 }
 
