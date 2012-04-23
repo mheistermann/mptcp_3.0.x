@@ -48,22 +48,27 @@ static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 			case 0:
 				host->pdata->sdr_timing = 0x03020001;
 				host->pdata->ddr_timing = 0x03030002;
+				host->pdata->clk_drv = 0x3;
 				break;
 			case 1:
 				host->pdata->sdr_timing = 0x03020001;
 				host->pdata->ddr_timing = 0x03030002;
+				host->pdata->clk_drv = 0x3;
 				break;
 			case 2:
 				host->pdata->sdr_timing = 0x03020001;
 				host->pdata->ddr_timing = 0x03030002;
+				host->pdata->clk_drv = 0x3;
 				break;
 			case 3:
 				host->pdata->sdr_timing = 0x03020001;
 				host->pdata->ddr_timing = 0x03030002;
+				host->pdata->clk_drv = 0x3;
 				break;
 			default:
 				host->pdata->sdr_timing = 0x03020001;
 				host->pdata->ddr_timing = 0x03030002;
+				host->pdata->clk_drv = 0x3;
 				break;
 			}
 		} else {
@@ -78,13 +83,20 @@ static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 static void exynos_dwmci_set_io_timing(void *data, unsigned char timing)
 {
 	struct dw_mci *host = (struct dw_mci *)data;
+	u32 clksel;
 
-	if (timing == MMC_TIMING_UHS_DDR50)
+	if (timing == MMC_TIMING_MMC_HS200 ||
+			timing == MMC_TIMING_UHS_SDR104) {
+		clksel = __raw_readl(host->regs + DWMCI_CLKSEL);
+		clksel = (clksel & 0xfff8ffff) | (host->pdata->clk_drv << 16);
+		__raw_writel(clksel, host->regs + DWMCI_CLKSEL);
+	} else if (timing == MMC_TIMING_UHS_DDR50)
 		__raw_writel(host->pdata->ddr_timing,
 			host->regs + DWMCI_CLKSEL);
-	else
+	else {
 		__raw_writel(host->pdata->sdr_timing,
 			host->regs + DWMCI_CLKSEL);
+	}
 }
 
 static struct resource exynos_dwmci_resource[] = {

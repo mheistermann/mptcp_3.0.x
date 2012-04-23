@@ -231,6 +231,7 @@ struct dw_mci_board {
 	/* Phase Shift Value */
 	unsigned int sdr_timing;
 	unsigned int ddr_timing;
+	u8 clk_drv;
 
 	/*
 	 * Enable power to selected slot and set voltage to desired level.
