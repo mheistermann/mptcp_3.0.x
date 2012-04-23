@@ -784,12 +784,12 @@ static int gsc_capture_close(struct file *file)
 		gsc_cap_pipeline_shutdown(gsc);
 	}
 
-	pm_runtime_put(&gsc->pdev->dev);
-
 	if (gsc->cap.refcnt == 0) {
 		vb2_queue_release(&gsc->cap.vbq);
 		gsc_ctrls_delete(gsc->cap.ctx);
 	}
+
+	pm_runtime_put(&gsc->pdev->dev);
 
 	return v4l2_fh_release(file);
 }
