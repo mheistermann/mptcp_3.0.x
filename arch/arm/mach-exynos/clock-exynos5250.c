@@ -1368,7 +1368,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_fsys_ctrl ,
 		.ctrlbit	= (1 << 17),
 	}, {
-		.name		= "mipi-hsi",
+		.name		= "mipihsi",
 		.enable		= exynos5_clk_ip_fsys_ctrl ,
 		.ctrlbit	= (1 << 8),
 	}, {

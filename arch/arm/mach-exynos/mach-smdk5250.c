@@ -60,6 +60,9 @@
 #ifdef CONFIG_EXYNOS_C2C
 #include <mach/c2c.h>
 #endif
+#ifdef CONFIG_EXYNOS_HSI
+#include <mach/hsi.h>
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 #include <plat/tvout.h>
 #endif
@@ -240,6 +243,12 @@ struct exynos_c2c_platdata smdk5250_c2c_pdata = {
 	.default_opp_mode	= C2C_OPP50,
 	.get_c2c_state	= NULL,
 	.c2c_sysreg	= S5P_VA_CMU + 0x6000,
+};
+#endif
+
+#ifdef CONFIG_EXYNOS_HSI
+struct exynos_hsi_platdata smdk5250_hsi_pdata = {
+	.setup_gpio	= NULL,
 };
 #endif
 
@@ -499,6 +508,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
+#endif
+#ifdef CONFIG_EXYNOS_HSI
+	&exynos_device_hsi,
 #endif
 	&exynos5_device_ahci,
 };
@@ -1055,6 +1067,11 @@ static void __init smdk5250_machine_init(void)
 #ifdef CONFIG_EXYNOS_C2C
 	exynos_c2c_set_platdata(&smdk5250_c2c_pdata);
 #endif
+
+#ifdef CONFIG_EXYNOS_HSI
+	exynos_hsi_set_platdata(&smdk5250_hsi_pdata);
+#endif
+
 #ifdef CONFIG_VIDEO_JPEG_V2X
 	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
 #endif
