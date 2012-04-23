@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-exynos/clock-exynos5.c
+/* linux/arch/arm/mach-exynos/clock-exynos5250.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * EXYNOS5 - Clock support
+ * EXYNOS5250 - Clock support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
