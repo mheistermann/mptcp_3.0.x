@@ -87,20 +87,20 @@ static void exynos_dwmci0_cfg_gpio(int width)
 	case MMC_BUS_WIDTH_8:
 		for (gpio = EXYNOS5_GPC1(0); gpio <= EXYNOS5_GPC1(3); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
 		}
 	case MMC_BUS_WIDTH_4:
 		for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
 		}
 		break;
 	case MMC_BUS_WIDTH_1:
 		gpio = EXYNOS5_GPC0(3);
 		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
 	default:
 		break;
@@ -141,14 +141,14 @@ static void exynos_dwmci2_cfg_gpio(int width)
 	case MMC_BUS_WIDTH_4:
 		for (gpio = EXYNOS5_GPC3(3); gpio <= EXYNOS5_GPC3(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 		}
 		break;
 	case MMC_BUS_WIDTH_1:
 		gpio = EXYNOS5_GPC3(3);
 		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 	default:
 		break;
@@ -156,7 +156,7 @@ static void exynos_dwmci2_cfg_gpio(int width)
 
 	gpio = EXYNOS5_GPC3(2);
 	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
-	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
 	s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 }
 
