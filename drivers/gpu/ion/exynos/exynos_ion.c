@@ -790,9 +790,10 @@ static long ion_exynos_heap_msync(struct ion_client *client,
 		struct ion_handle *handle, off_t offset, size_t size, long dir)
 {
 	struct ion_buffer *buffer;
-	struct scatterlist *sg, *tsg;
-	int nents = 0;
-	int ret = 0;
+#ifdef CONFIG_OUTER_CACHE
+	struct scatterlist *sg;
+#endif
+	void *virt;
 
 	buffer = ion_share(client, handle);
 	if (IS_ERR(buffer))
@@ -801,6 +802,20 @@ static long ion_exynos_heap_msync(struct ion_client *client,
 	if ((offset + size) > buffer->size)
 		return -EINVAL;
 
+	virt = ion_map_kernel(client, handle);
+	if (IS_ERR(virt))
+			return PTR_ERR(virt);
+
+	if (dir & IMSYNC_SYNC_FOR_DEV)
+		dmac_map_area(virt + offset, size,
+			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
+	else if (dir & IMSYNC_SYNC_FOR_CPU)
+		dmac_unmap_area(virt + offset, size,
+			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
+
+	ion_unmap_kernel(client, handle);
+
+#ifdef CONFIG_OUTER_CACHE
 	sg = ion_map_dma(client, handle);
 	if (IS_ERR(sg))
 		return PTR_ERR(sg);
@@ -810,33 +825,25 @@ static long ion_exynos_heap_msync(struct ion_client *client,
 		sg = sg_next(sg);
 	}
 
-	size += offset;
+	while (sg && (size > sg_dma_len(sg))) {
+		if ((dir & IMSYNC_SYNC_FOR_DEV) &&
+			(ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]
+				 == DMA_TO_DEVICE))
+			outer_clean_range(sg_phys(sg) + offset,
+					sg_phys(sg) + sg_dma_len(sg) - offset);
+		else if (!((dir & IMSYNC_SYNC_FOR_CPU) &&
+			(ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]
+				 == DMA_TO_DEVICE)))
+			outer_inv_range(sg_phys(sg) + offset,
+					sg_phys(sg) + sg_dma_len(sg) - offset);
 
-	if (!sg)
-		goto err_buf_sync;
-
-	tsg = sg;
-	while (tsg && (size > sg_dma_len(tsg))) {
-		size -= sg_dma_len(tsg);
-		nents++;
-		tsg = sg_next(tsg);
+		offset = 0;
 	}
 
-	if (tsg && size)
-		nents++;
-
-	/* TODO: exclude offset in the first entry and remainder of the
-	   last entry. */
-	if (dir & IMSYNC_SYNC_FOR_CPU)
-		dma_sync_sg_for_cpu(NULL, sg, nents,
-			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
-	else if (dir & IMSYNC_SYNC_FOR_DEV)
-		dma_sync_sg_for_device(NULL, sg, nents,
-			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
-
-err_buf_sync:
 	ion_unmap_dma(client, handle);
-	return ret;
+#endif
+
+	return 0;
 }
 
 struct ion_msync_data {
