@@ -24,6 +24,7 @@
 
 #include <plat/cpu.h>
 #include <plat/pm.h>
+#include <plat/bts.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-gpio.h>
@@ -373,6 +374,7 @@ static void exynos5_pm_resume(void)
 	tmp = ((0x1 << 8) | (0x1 << 0));
 	__raw_writel(tmp, S5P_VA_COMBINER_BASE + 0x54);
 
+	bts_enable(PD_TOP);
 	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
 early_wakeup:

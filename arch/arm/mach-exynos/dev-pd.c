@@ -21,6 +21,7 @@
 
 #include <plat/cpu.h>
 #include <plat/pd.h>
+#include <plat/bts.h>
 
 int exynos_pd_init(struct device *dev)
 {
@@ -77,6 +78,7 @@ int exynos_pd_enable(struct device *dev)
 	if (data->clk_base)
 		__raw_writel(tmp, data->clk_base);
 
+	bts_enable(pdata->id);
 	return 0;
 }
 
