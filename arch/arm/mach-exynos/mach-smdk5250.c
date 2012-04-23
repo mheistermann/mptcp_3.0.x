@@ -18,6 +18,8 @@
 #include <linux/memblock.h>
 #include <linux/smsc911x.h>
 #include <linux/delay.h>
+#include <linux/notifier.h>
+#include <linux/reboot.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -410,6 +412,24 @@ static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
 	},
 };
 #endif
+
+static int exynos5_notifier_call(struct notifier_block *this,
+		unsigned long code, void *_cmd)
+{
+	int mode = 0;
+
+	if ((code == SYS_RESTART) && _cmd)
+		if (!strcmp((char *)_cmd, "recovery"))
+			mode = 0xf;
+
+	__raw_writel(mode, REG_INFORM4);
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block exynos5_reboot_notifier = {
+	.notifier_call = exynos5_notifier_call,
+};
 
 static struct platform_device *smdk5250_devices[] __initdata = {
 	&s3c_device_wdt,
@@ -1064,6 +1084,8 @@ static void __init smdk5250_machine_init(void)
 #endif
 
 	smdk5250_smsc911x_init();
+
+	register_reboot_notifier(&exynos5_reboot_notifier);
 }
 
 #ifdef CONFIG_EXYNOS_C2C
