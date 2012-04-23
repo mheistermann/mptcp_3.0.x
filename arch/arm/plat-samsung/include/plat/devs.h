@@ -154,6 +154,7 @@ extern struct platform_device exynos5_device_gsc2;
 extern struct platform_device exynos5_device_gsc3;
 extern struct platform_device exynos5_device_ahci;
 extern struct platform_device exynos_device_c2c;
+extern struct platform_device exynos_device_hsi;
 extern struct platform_device exynos_device_ss_udc;
 extern struct platform_device exynos_device_xhci;
 

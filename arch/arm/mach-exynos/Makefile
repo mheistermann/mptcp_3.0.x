@@ -130,3 +130,4 @@ obj-$(CONFIG_EXYNOS5_DEV_BTS)		+= bts.o
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
 obj-$(CONFIG_EXYNOS_C2C)		+= setup-c2c.o
 obj-$(CONFIG_EXYNOS_THERMAL)		+= tmu-exynos.o
+obj-$(CONFIG_EXYNOS_HSI) 		+= setup-hsi.o dev-hsi.o

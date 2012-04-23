@@ -101,6 +101,9 @@
 #ifdef CONFIG_EXYNOS_C2C
 #include <mach/c2c.h>
 #endif
+#ifdef CONFIG_EXYNOS_HSI
+#include <mach/hsi.h>
+#endif
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 #include <mach/mipi_ddi.h>
 #include <mach/dsim.h>
@@ -2871,6 +2874,13 @@ struct exynos_c2c_platdata smdk4x12_c2c_pdata = {
 };
 #endif
 
+#ifdef CONFIG_EXYNOS_HSI
+struct exynos_hsi_platdata smdk4x12_hsi_pdata = {
+	.setup_gpio	= NULL,
+};
+#endif
+
+
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 static struct s5p_usbswitch_platdata smdk4x12_usbswitch_pdata;
 
@@ -3101,6 +3111,9 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&samsung_device_keypad,
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
+#endif
+#ifdef CONFIG_EXYNOS_HSI
+	&exynos_device_hsi,
 #endif
 	&smdk4x12_gpio_keys,
 	&smdk4x12_smsc911x,
@@ -4131,6 +4144,9 @@ static void __init smdk4x12_machine_init(void)
 	exynos_c2c_set_platdata(&smdk4x12_c2c_pdata);
 #endif
 
+#ifdef CONFIG_EXYNOS_HSI
+	exynos_hsi_set_platdata(&smdk4x12_hsi_pdata);
+#endif
 	exynos_sysmmu_init();
 
 	platform_add_devices(smdk4x12_devices, ARRAY_SIZE(smdk4x12_devices));
