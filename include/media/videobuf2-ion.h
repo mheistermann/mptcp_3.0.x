@@ -104,6 +104,9 @@ struct vb2_ion_cookie {
 	struct scatterlist *sg;
 	int nents;
 	off_t offset;
+	void *kva;
+	unsigned long size;
+	bool cached;
 };
 
 /* vb2_ion_phys_address - returns the physical address of the given buffer
