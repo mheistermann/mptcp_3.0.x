@@ -841,3 +841,11 @@ config EXYNOS5250_ABB_WA
 	default y
 	help
 	 Add W/A to fix ARM/INT ABB errata in EVT0
+
+config EXYNOS_HSI
+	bool
+	depends on SAMSUNG_HSI
+	default y
+	help
+	 Add features for supporting MIPI-HSI device driver
+
