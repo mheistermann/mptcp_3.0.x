@@ -1213,7 +1213,6 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct fimc_is_dev *isp
 		= (struct fimc_is_dev *)platform_get_drvdata(pdev);
-	u32 timeout;
 	int ret = 0;
 
 	printk(KERN_INFO "FIMC_IS runtime suspend\n");
@@ -1230,7 +1229,6 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct fimc_is_dev *isp
 		= (struct fimc_is_dev *)platform_get_drvdata(pdev);
-	u32 cfg, timeout;
 	int ret = 0;
 
 	printk(KERN_INFO "FIMC_IS runtime resume\n");
