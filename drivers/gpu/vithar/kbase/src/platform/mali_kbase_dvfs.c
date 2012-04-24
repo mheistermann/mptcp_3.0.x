@@ -73,12 +73,12 @@ typedef struct _mali_dvfs_info{
 static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
 #if (MALI_DVFS_STEP == 6)
-	{912500, 100, 0, 40},
-	{925000, 160, 30, 60},
-	{1025000, 266, 50, 70},
-	{1125000, 400, 60, 80},
-	{1150000, 450, 70, 90},
-	{1250000, 533, 90, 100}
+	{912500, 100, 0, 80},
+	{925000, 160, 60, 80},
+	{1025000, 266, 70, 80},
+	{1125000, 400, 70, 80},
+	{1150000, 450, 70, 80},
+	{1250000, 533, 80, 100}
 #elif (MALI_DVFS_STEP == 2)
 	{937500, 266, 0, 55},
 	{1250000, 533, 45, 100}
@@ -209,27 +209,23 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		dvfs_status.utilisation = 100;
 	}
 #endif
-
-	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
+	if (dvfs_status.util_avg > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
 		OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
-		if (dvfs_status.step==MALI_DVFS_STEP-2) {
-			if (dvfs_status.util_avg >  mali_dvfs_infotbl[dvfs_status.step].max_threshold)
-			{
-				dvfs_status.step++;
-			}
-		} else {
+		if (dvfs_status.keepcnt>=2) {
 			dvfs_status.step++;
+			dvfs_status.keepcnt=0;
+		} else {
+			dvfs_status.keepcnt++;
 		}
-		dvfs_status.keepcnt=0;
 	}else if ((dvfs_status.step>0) &&
-			(dvfs_status.utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
-		dvfs_status.keepcnt++;
-		if (dvfs_status.keepcnt > MALI_DVFS_KEEP_STAY_CNT)
-		{
-			OSK_ASSERT(dvfs_status.step > 0);
+			(dvfs_status.util_avg < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
+		OSK_ASSERT(dvfs_status.step > 0);
+		if (dvfs_status.keepcnt>=2) {
 			dvfs_status.step--;
 			dvfs_status.keepcnt=0;
+		} else {
+			dvfs_status.keepcnt++;
 		}
 	}else{
 		dvfs_status.keepcnt=0;
