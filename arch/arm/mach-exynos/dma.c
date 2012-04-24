@@ -234,6 +234,43 @@ static struct s3c_pl330_platdata exynos5250_pdma0_pdata = {
 	},
 };
 
+static struct s3c_pl330_platdata exynos5410_pdma0_pdata = {
+	.peri = {
+		[0] = DMACH_PCM0_RX,
+		[1] = DMACH_PCM0_TX,
+		[2] = DMACH_PCM2_RX,
+		[3] = DMACH_PCM2_TX,
+		[4] = DMACH_SPI0_RX,
+		[5] = DMACH_SPI0_TX,
+		[6] = DMACH_SPI2_RX,
+		[7] = DMACH_SPI2_TX,
+		[8] = DMACH_I2S0S_TX,
+		[9] = DMACH_I2S0_RX,
+		[10] = DMACH_I2S0_TX,
+		[11] = DMACH_I2S2_RX,
+		[12] = DMACH_I2S2_TX,
+		[13] = DMACH_UART0_RX,
+		[14] = DMACH_UART0_TX,
+		[15] = DMACH_UART2_RX,
+		[16] = DMACH_UART2_TX,
+		[17] = DMACH_MAX,
+		[18] = DMACH_MAX,
+		[19] = DMACH_MAX,
+		[20] = DMACH_MAX,
+		[21] = DMACH_MAX,
+		[22] = DMACH_MAX,
+		[23] = DMACH_MAX,
+		[24] = DMACH_MAX,
+		[25] = DMACH_AC97_MICIN,
+		[26] = DMACH_AC97_PCMIN,
+		[27] = DMACH_AC97_PCMOUT,
+		[28] = DMACH_MIPI_HSI0,
+		[29] = DMACH_MIPI_HSI2,
+		[30] = DMACH_MIPI_HSI4,
+		[31] = DMACH_MIPI_HSI6,
+	},
+};
+
 struct platform_device exynos_device_pdma0 = {
 	.name		= "s3c-pl330",
 	.id		= 1,
@@ -369,6 +406,42 @@ static struct s3c_pl330_platdata exynos5250_pdma1_pdata = {
 	},
 };
 
+static struct s3c_pl330_platdata exynos5410_pdma1_pdata = {
+	.peri = {
+		[0] = DMACH_PCM0_RX,
+		[1] = DMACH_PCM0_TX,
+		[2] = DMACH_PCM1_RX,
+		[3] = DMACH_PCM1_TX,
+		[4] = DMACH_SPI1_RX,
+		[5] = DMACH_SPI1_TX,
+		[6] = DMACH_PWM,
+		[7] = DMACH_SPDIF,
+		[8] = DMACH_I2S0S_TX,
+		[9] = DMACH_I2S0_RX,
+		[10] = DMACH_I2S0_TX,
+		[11] = DMACH_I2S1_RX,
+		[12] = DMACH_I2S1_TX,
+		[13] = DMACH_UART0_RX,
+		[14] = DMACH_UART0_TX,
+		[15] = DMACH_UART1_RX,
+		[16] = DMACH_UART1_TX,
+		[17] = DMACH_UART3_RX,
+		[18] = DMACH_UART3_TX,
+		[19] = DMACH_MAX,
+		[20] = DMACH_MAX,
+		[21] = DMACH_MAX,
+		[22] = DMACH_MAX,
+		[23] = DMACH_MAX,
+		[24] = DMACH_MAX,
+		[25] = DMACH_MAX,
+		[26] = DMACH_MAX,
+		[27] = DMACH_DISP1,
+		[28] = DMACH_MIPI_HSI1,
+		[29] = DMACH_MIPI_HSI3,
+		[30] = DMACH_MIPI_HSI5,
+		[31] = DMACH_MIPI_HSI7,
+	},
+};
 struct platform_device exynos_device_pdma1 = {
 	.name		= "s3c-pl330",
 	.id		= 2,
@@ -397,6 +470,9 @@ static int __init exynos_dma_init(void)
 	} else if (soc_is_exynos5250()) {
 		exynos_device_pdma0.dev.platform_data = &exynos5250_pdma0_pdata;
 		exynos_device_pdma1.dev.platform_data = &exynos5250_pdma1_pdata;
+	} else if (soc_is_exynos5410()) {
+		exynos_device_pdma0.dev.platform_data = &exynos5410_pdma0_pdata;
+		exynos_device_pdma1.dev.platform_data = &exynos5410_pdma1_pdata;
 	}
 
 	return platform_add_devices(exynos_dmacs, ARRAY_SIZE(exynos_dmacs));
