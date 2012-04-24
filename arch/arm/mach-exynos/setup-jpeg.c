@@ -94,15 +94,15 @@ int __init exynos5_jpeg_setup_clock(struct device *dev,
 {
 	struct clk *sclk;
 	struct clk *mout_user = NULL;
-		int ret;
+	int ret;
 
 	sclk = clk_get(dev, "sclk_jpeg");
 	if (IS_ERR(sclk))
 		return PTR_ERR(sclk);
 	if (samsung_rev() >= EXYNOS5250_REV_1_0) {
 		mout_user = clk_get(dev, "mout_mpll_user");
-		if (IS_ERR(sclk))
-			return PTR_ERR(sclk);
+		if (IS_ERR(mout_user))
+			return PTR_ERR(mout_user);
 
 		ret = clk_set_parent(sclk, mout_user);
 		if (ret < 0) {
