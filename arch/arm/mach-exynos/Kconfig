@@ -731,6 +731,12 @@ config MACH_SMDK5410
 	  Machine support for Samsung FPGA5410
 endmenu
 
+config EXYNOS5_DEV_BTS
+	bool "Support BTS driver"
+	select S5P_BTS
+	help
+	  Compile in platform device definitions for BTS devices
+
 menu "MMC/SD slot setup"
 depends on PLAT_S5P
 
