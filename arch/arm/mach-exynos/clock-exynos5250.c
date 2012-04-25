@@ -1084,7 +1084,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "lcd",
 		.devname	= "s3cfb.1",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
-		.ctrlbit	= (1 << 0),
+		.ctrlbit	= ((0x7 << 10) | (1 << 0)),
 	}, {
 		.name		= "dp",
 		.devname	= "s5p-dp",
@@ -1094,7 +1094,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "mfc",
 		.devname	= "s3c-mfc",
 		.enable		= exynos5_clk_ip_mfc_ctrl,
-		.ctrlbit	= (1 << 0),
+		.ctrlbit	= ((1 << 4) | (1 << 3) | (1 << 0)),
 	}, {
 		.name		= "g3d",
 		.enable		= exynos5_clk_ip_g3d_ctrl,
@@ -1103,12 +1103,12 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "isp0",
 		.devname	= "exynos5-fimc-is",
 		.enable		= exynos5_clk_ip_isp0_ctrl,
-		.ctrlbit	= (0xDFF000FF << 0),
+		.ctrlbit	= (0xDFFFC0FF << 0),
 	}, {
 		.name		= "isp1",
 		.devname	= "exynos5-fimc-is",
 		.enable		= exynos5_clk_ip_isp1_ctrl,
-		.ctrlbit	= (0x3007 << 0),
+		.ctrlbit	= (0x3F07 << 0),
 	}, {
 		.name		= "hdmi",
 		.devname	= "exynos5-hdmi",
@@ -1118,7 +1118,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "mixer",
 		.devname	= "s5p-mixer",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
-		.ctrlbit	= (1 << 5),
+		.ctrlbit	= ((0x3 << 13) | (1 << 5)),
 	}, {
 		.name           = "hdmiphy",
 		.devname	= "exynos5-hdmi",
@@ -1128,22 +1128,22 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "gscl",
 		.devname	= "exynos-gsc.0",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
-		.ctrlbit	= (1 << 0),
+		.ctrlbit	= ((1 << 15) | (1 << 0)),
 	}, {
 		.name		= "gscl",
 		.devname	= "exynos-gsc.1",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
-		.ctrlbit	= (1 << 1),
+		.ctrlbit	= ((1 << 16) | (1 << 1)),
 	}, {
 		.name		= "gscl",
 		.devname	= "exynos-gsc.2",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
-		.ctrlbit	= (1 << 2),
+		.ctrlbit	= ((1 << 17) | (1 << 2)),
 	}, {
 		.name		= "gscl",
 		.devname	= "exynos-gsc.3",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
-		.ctrlbit	= (1 << 3),
+		.ctrlbit	= ((1 << 18) | (1 << 3)),
 	}, {
 		.name		= "camif_top",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
@@ -1162,11 +1162,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "rotator",
 		.devname	= "exynos-rot",
 		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= (1 << 1),
+		.ctrlbit	= ((1 << 11) | (1 << 1)),
 	}, {
 		.name		= "jpeg",
 		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= (1 << 2),
+		.ctrlbit	= ((1 << 12) | (1 << 2)),
 	}, {
 		.name		= "dsim0",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
@@ -1344,7 +1344,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "acp",
 		.enable		= exynos5_clk_ip_acp_ctrl,
-		.ctrlbit	= ((1 << 11) | (1 << 10) | (1 << 9) | (1 << 8)),
+		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "rtic",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
@@ -1352,19 +1352,11 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "disp1",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
-		.ctrlbit	= ((0x7f << 10) | (1 << 8)),
-	}, {
-		.name		= "mfc",
-		.enable		= exynos5_clk_ip_mfc_ctrl,
-		.ctrlbit	= ((1 << 4) | (1 << 3)),
-	}, {
-		.name		= "gen",
-		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= ((1 << 14) | (1 << 12) | (1 << 11)),
+		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "gscl",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
-		.ctrlbit	= (0xff << 11),
+		.ctrlbit	= ((0xf << 11) | (1 << 19)),
 	}, {
 		.name		= "secss",
 		.parent		= &exynos5_clk_aclk_acp.clk,
@@ -1496,7 +1488,7 @@ struct clk exynos5_init_dmaclocks[] = {
 		.name		= "pdma",
 		.devname	= "s3c-pl330.0",
 		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= (1 << 4),
+		.ctrlbit	= ((1 << 4) | (1 << 14)),
 	}, {
 		.name		= "pdma",
 		.devname	= "s3c-pl330.1",
@@ -1510,7 +1502,7 @@ struct clk exynos5_init_dmaclocks[] = {
 	}, {
 		.name		= "pdma",
 		.enable		= exynos5_clk_ip_acp_ctrl,
-		.ctrlbit	= (1 << 1),
+		.ctrlbit	= ((1 << 1) | (1 << 8)),
 	},
 };
 
