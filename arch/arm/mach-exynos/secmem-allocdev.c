@@ -165,9 +165,6 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (drm_onoff == false) {
 				drm_onoff = true;
 				pm_runtime_forbid((*(secmem.this_device)).parent);
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
-				exynos_pd_enable(&exynos4_device_pd[PD_MFC].dev);
-#endif
 			} else
 				printk(KERN_ERR "%s: DRM is already on\n", __func__);
 		} else {
