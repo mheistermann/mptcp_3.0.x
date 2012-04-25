@@ -263,7 +263,6 @@ static void srp_commbox_deinit(void)
 		srp.audss_clk_enable(true);
 
 	srp_wait_for_pending();
-	srp.decoding_started = 0;
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 }
 
