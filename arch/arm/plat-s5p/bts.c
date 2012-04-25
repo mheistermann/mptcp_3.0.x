@@ -283,12 +283,12 @@ static int bts_probe(struct platform_device *pdev)
 	int i, ret = 0;
 
 	bts_pdata = pdev->dev.platform_data;
-	fbm_res = bts_pdata->fbm->res;
-
 	if (!bts_pdata) {
 		dev_err(&pdev->dev, "platform data is missed!\n");
 		return -ENODEV;
 	}
+
+	fbm_res = bts_pdata->fbm->res;
 
 	if (list_empty(&fbm_list)) {
 		for (i = 0; i < bts_pdata->fbm->res_num; i++) {
