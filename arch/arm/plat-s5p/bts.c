@@ -352,19 +352,19 @@ static int bts_probe(struct platform_device *pdev)
 	return 0;
 
 probe_err2:
-	kfree(bts_data);
-	kfree(bts_local_data);
 	if (bts_pdata->clk_name) {
 		clk_disable(clk);
 		clk_put(bts_data->clk);
 	}
+	kfree(bts_data);
+	kfree(bts_local_data);
 
 probe_err1:
 	if (fbm_data) {
 		list_for_each_entry(fbm_data, &fbm_list, node) {
 			iounmap((void __iomem *)fbm_data->fbm.base);
-			kfree(fbm_data);
 			list_del(&fbm_data->node);
+			kfree(fbm_data);
 		}
 	}
 
@@ -385,17 +385,18 @@ static int bts_remove(struct platform_device *pdev)
 	}
 	kfree(bts_data->bts_local_data);
 	list_del(&bts_data->node);
+
+	if (bts_data->clk)
+		clk_put(bts_data->clk);
+
 	kfree(bts_data);
 
 	if (list_empty(&bts_list))
 		list_for_each_entry(fbm_data, &fbm_list, node) {
 			iounmap((void __iomem *)fbm_data->fbm.base);
-			kfree(fbm_data);
 			list_del(&fbm_data->node);
+			kfree(fbm_data);
 		}
-
-	if (bts_data->clk)
-		clk_put(bts_data->clk);
 
 	return 0;
 }
