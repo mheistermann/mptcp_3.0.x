@@ -339,15 +339,9 @@ static void srp_reset(void)
 	srp_debug("Reset\n");
 
 	/* RESET */
-	if (soc_is_exynos5250()) {
-		if (!srp.first_init) {
-			writel(reg, srp.commbox + SRP_CONT);
-			srp.first_init = 1;
-		} else {
-			/* Request sw reset */
-			srp_request_intr_mode(RESET);
-		}
-	} else
+	if (soc_is_exynos5250())
+		srp_request_intr_mode(RESET);
+	else
 		writel(reg, srp.commbox + SRP_CONT);
 
 	writel(reg, srp.commbox + SRP_INTERRUPT);
@@ -790,6 +784,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			} else {
 				srp_debug("IBUF1 empty\n");
 				srp.ibuf_empty[1] = 1;
+
+				if (soc_is_exynos5250() && !srp.ready_to_reset) {
+					srp.ready_to_reset = true;
+					wakeup_read = 1;
+				}
 			}
 
 			srp_fill_ibuf();
@@ -1229,13 +1228,43 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err7;
 	}
 
-	srp.first_init = 0;
+	srp.ready_to_reset = false;
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
 	srp.audss_clken_stat = audss_clken_stat;
 
+	if (soc_is_exynos5250()) {
+
+		if (!srp.audss_clken_stat())
+			srp.audss_clk_enable(true);
+
+		srp_fw_download();
+		writel(0x0, srp.commbox + SRP_CONT);
+
+		srp_pending_ctrl(RUN);
+		srp.decoding_started = 1;
+
+		ret = wait_event_interruptible_timeout(read_wq,
+				srp.ready_to_reset, HZ / 20);
+		if (!ret) {
+			if (srp.audss_clken_stat())
+				srp.audss_clk_enable(false);
+
+			srp_err("Couldn't to ready by timeout\n");
+			goto err8;
+		}
+
+		srp_pending_ctrl(STALL);
+
+		if (srp.audss_clken_stat())
+			srp.audss_clk_enable(false);
+	}
+
 	return 0;
 
+err8:
+	srp_pending_ctrl(STALL);
+	srp.decoding_started = 0;
 err7:
 	free_irq(IRQ_AUDIO_SS, pdev);
 err6:

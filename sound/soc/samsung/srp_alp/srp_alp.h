@@ -179,7 +179,6 @@ struct srp_info {
 	unsigned long	pcm_size;
 
 	/* SRP status information */
-	unsigned int	first_init;
 	unsigned int	decoding_started;
 	unsigned int	is_opened;
 	unsigned int	is_running;
@@ -193,6 +192,7 @@ struct srp_info {
 	bool	pm_suspended;
 	bool	pm_resumed;
 	bool	initialized;
+	bool	ready_to_reset;
 
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
