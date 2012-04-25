@@ -1084,12 +1084,20 @@ void srp_prepare_suspend(void)
 		/* Request Suspend mode */
 		srp_request_intr_mode(SUSPEND);
 
-		if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
-			/* EVT0 : Work around code */
-			for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
-				writel(readl(srp.dmem + i), srp.fw_info.data + i);
-		} else
+		if (soc_is_exynos5250()) {
+			if (samsung_rev() < EXYNOS5250_REV_1_0) {
+				/* EVT0 : Work around code */
+				for (i = DATA_OFFSET; i < DMEM_SIZE; i += 4)
+					writel(readl(srp.dmem + i),
+							srp.fw_info.data + i);
+			} else {
+				memcpy(srp.fw_info.data + DATA_OFFSET,
+						srp.dmem + DATA_OFFSET,
+						DMEM_SIZE - DATA_OFFSET);
+			}
+		} else {
 			memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
+		}
 
 		memcpy(srp.sp_data.commbox, srp.commbox, COMMBOX_SIZE);
 		srp.pm_suspended = true;
