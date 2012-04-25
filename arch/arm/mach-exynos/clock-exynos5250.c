@@ -159,6 +159,11 @@ static int exynos5_clk_ip_core_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_CORE, clk, enable);
 }
 
+static int exynos5_clk_ip_sysrgt_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_SYSRGT, clk, enable);
+}
+
 static int exynos5_clk_ip_cpu_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_CPU, clk, enable);
@@ -1340,16 +1345,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "acp",
 		.enable		= exynos5_clk_ip_acp_ctrl,
 		.ctrlbit	= ((1 << 11) | (1 << 10) | (1 << 9) | (1 << 8)),
-	},
-#ifndef CONFIG_SAMSUNG_C2C
-	{
-		.name		= "c2c",
-		.devname	= "samsung-c2c",
-		.enable		= exynos5_clk_ip_cpu_ctrl,
-		.ctrlbit	= (0x3f << 11),
-	},
-#endif
-	{
+	}, {
 		.name		= "rtic",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= ((1 << 11) | (1 << 9)),
@@ -1517,6 +1513,15 @@ struct clk exynos5_init_dmaclocks[] = {
 		.ctrlbit	= (1 << 1),
 	},
 };
+
+#ifndef CONFIG_SAMSUNG_C2C
+struct clk exynos5_c2c_clock = {
+	.name		= "c2c",
+	.devname	= "samsung-c2c",
+	.enable		= exynos5_clk_ip_cpu_ctrl,
+	.ctrlbit	= (0x3f << 11),
+};
+#endif
 
 static struct clk *clkset_sclk_audio0_list[] = {
 	[0] = &exynos5_clk_audiocdclk0.clk,
@@ -2745,6 +2750,16 @@ void __init exynos5_register_clocks(void)
 		s3c_register_clksrc(&exynos5_clk_sclk_c2c_rev0, 1);
 		s3c_register_clksrc(&exynos5_clk_aclk_c2c_rev0, 1);
 	}
+
+#ifndef CONFIG_SAMSUNG_C2C
+	if (soc_is_exynos5250() && (samsung_rev() >= EXYNOS5250_REV_1_0)) {
+		exynos5_c2c_clock.enable = exynos5_clk_ip_sysrgt_ctrl;
+		exynos5_c2c_clock.ctrlbit = ((1 << 2) | (1 << 1));
+	}
+
+	s3c24xx_register_clock(&exynos5_c2c_clock);
+	s3c_disable_clocks(&exynos5_c2c_clock, 1);
+#endif
 
 	register_syscore_ops(&exynos5_clock_syscore_ops);
 	s3c_pwmclk_init();
