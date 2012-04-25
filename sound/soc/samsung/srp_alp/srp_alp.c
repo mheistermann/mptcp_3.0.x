@@ -116,14 +116,17 @@ static void srp_request_intr_mode(int mode)
 
 	switch (mode) {
 	case SUSPEND:
+		srp_info("Request Suspend to SRP\n");
 		pwr_mode &= ~SRP_POWER_MODE_TRIGGER;
 		check_mode = SRP_SUSPENED_CHECKED;
 		break;
 	case RESUME:
+		srp_info("Request Resume to SRP\n");
 		pwr_mode |= SRP_POWER_MODE_TRIGGER;
 		check_mode = 0;
 		break;
 	case RESET:
+		srp_info("Request S/W reset to SRP\n");
 		pwr_mode |= SRP_SW_RESET_TRIGGER;
 		check_mode = SRP_SW_RESET_DONE;
 		break;
