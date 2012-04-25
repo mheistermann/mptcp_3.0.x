@@ -701,8 +701,6 @@ static int srp_open(struct inode *inode, struct file *file)
 	srp.dec_info.channels = 0;
 	srp.dec_info.sample_rate = 0;
 
-	srp.pm_suspended = false;
-	srp.pm_resumed = false;
 	srp.initialized = false;
 
 	return 0;
@@ -1228,6 +1226,8 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err7;
 	}
 
+	srp.pm_suspended = false;
+	srp.pm_resumed = false;
 	srp.ready_to_reset = false;
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
