@@ -209,7 +209,7 @@ static struct s3c_sdhci_platdata smdk5250_hsmmc3_pdata __initdata = {
 };
 #endif
 
-static struct platform_device *smdk5250_mmc_devices[] __initdata = {
+static struct platform_device *smdk5250_mmc_devices_rev0[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -224,6 +224,11 @@ static struct platform_device *smdk5250_mmc_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
+#endif
+};
+
+static struct platform_device *smdk5250_mmc_devices_rev1[] __initdata = {
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci0,
 	&exynos_device_dwmci2,
 #endif
@@ -246,6 +251,9 @@ void __init exynos5_smdk5250_mmc_init(void)
 			&exynos_device_dwmci2.dev);
 		clk_add_alias("sclk_dwmci", "dw_mmc.2", "sclk_mmc",
 			&exynos_device_dwmci2.dev);
+
+		platform_add_devices(smdk5250_mmc_devices_rev1,
+				ARRAY_SIZE(smdk5250_mmc_devices_rev1));
 	} else
 #endif
 	{
@@ -264,8 +272,7 @@ void __init exynos5_smdk5250_mmc_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk5250_hsmmc3_pdata);
 #endif
+	platform_add_devices(smdk5250_mmc_devices_rev0,
+			ARRAY_SIZE(smdk5250_mmc_devices_rev0));
 	}
-
-	platform_add_devices(smdk5250_mmc_devices,
-			ARRAY_SIZE(smdk5250_mmc_devices));
 }
