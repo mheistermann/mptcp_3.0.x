@@ -181,7 +181,6 @@ struct srp_info {
 	/* SRP status information */
 	unsigned int	decoding_started;
 	unsigned int	is_opened;
-	unsigned int	is_running;
 	unsigned int	is_pending;
 	unsigned int	block_mode;
 	unsigned int	stop_after_eos;
@@ -190,9 +189,9 @@ struct srp_info {
 	unsigned int	play_done;
 
 	bool	pm_suspended;
-	bool	pm_resumed;
 	bool	initialized;
 	bool	ready_to_reset;
+	bool	is_running;
 
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);

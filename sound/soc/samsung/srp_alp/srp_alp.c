@@ -417,8 +417,14 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 
 	srp_debug("Write(%d bytes)\n", size);
 
+	if (!srp.is_running)
+		srp.is_running = true;
+
 	if (!srp.audss_clken_stat())
 		srp.audss_clk_enable(true);
+
+	if (srp.is_running)
+		srp_post_resume();
 
 	if (srp.initialized) {
 		srp_set_default_fw();
@@ -482,11 +488,17 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	srp_debug("Entered Get Obuf in PCM function\n");
 
 	if (srp.prepare_for_eos) {
+		if (!srp.is_running)
+			srp.is_running = true;
+
+		if (!srp.audss_clken_stat())
+			srp.audss_clk_enable(true);
+
+		if (srp.is_running)
+			srp_post_resume();
+
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
 		srp_debug("Elapsed Obuf[%d] after Send EOS\n", srp.obuf_ready);
-		if (srp.pm_resumed)
-			srp.pm_suspended = false;
-
 		srp_pending_ctrl(RUN);
 		srp_obuf_elapsed();
 	}
@@ -537,9 +549,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 
 	if (!srp.obuf_fill_done[srp.obuf_next] && !srp.wait_for_eos) {
 		srp_debug("Decoding start for filling OBUF[%d]\n", srp.obuf_next);
-		if (srp.pm_resumed)
-			srp.pm_suspended = false;
-
 		srp_pending_ctrl(RUN);
 	}
 
@@ -1071,7 +1080,7 @@ void srp_prepare_suspend(void)
 {
 	unsigned long i;
 
-	if (srp.decoding_started && !srp.pm_suspended) {
+	if (srp.is_running && !srp.pm_suspended) {
 		/* IBUF/OBUF Save */
 		if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
 			/* EVT0 : Work around code */
@@ -1104,6 +1113,7 @@ void srp_prepare_suspend(void)
 
 		memcpy(srp.sp_data.commbox, srp.commbox, COMMBOX_SIZE);
 		srp.pm_suspended = true;
+		srp.is_running = false;
 	}
 }
 
@@ -1127,7 +1137,7 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 void srp_post_resume(void)
 {
-	if (srp.decoding_started && srp.pm_suspended) {
+	if (srp.is_running && srp.pm_suspended) {
 		srp_fw_download();
 
 		memcpy(srp.commbox, srp.sp_data.commbox, COMMBOX_SIZE);
@@ -1138,7 +1148,7 @@ void srp_post_resume(void)
 		writel(0x0, srp.commbox + SRP_CONT);
 		srp_request_intr_mode(RESUME);
 
-		srp.pm_resumed = true;
+		srp.pm_suspended = false;
 	}
 }
 
@@ -1237,8 +1247,9 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	}
 
 	srp.pm_suspended = false;
-	srp.pm_resumed = false;
 	srp.ready_to_reset = false;
+	srp.is_running = soc_is_exynos5250() ? false : true;
+
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
 	srp.audss_clken_stat = audss_clken_stat;
@@ -1252,7 +1263,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		writel(0x0, srp.commbox + SRP_CONT);
 
 		srp_pending_ctrl(RUN);
-		srp.decoding_started = 1;
+		srp.is_running = true;
 
 		ret = wait_event_interruptible_timeout(read_wq,
 				srp.ready_to_reset, HZ / 20);
