@@ -1124,10 +1124,15 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 	if (!srp.audss_clken_stat())
 		srp.audss_clk_enable(true);
 
-	if (srp.is_opened)
+	if (soc_is_exynos5250()) {
+		/* Always request suspend mode */
 		srp_prepare_suspend();
-	else if (soc_is_exynos5250())
-		srp_request_intr_mode(SUSPEND);
+	} else {
+		if (srp.is_opened) {
+			/* Request Suspend mode */
+			srp_prepare_suspend();
+		}
+	}
 
 	if (srp.audss_clken_stat())
 		srp.audss_clk_enable(false);
@@ -1159,20 +1164,21 @@ static int srp_resume(struct platform_device *pdev)
 	if (!srp.audss_clken_stat())
 		srp.audss_clk_enable(true);
 
-	if (srp.is_opened) {
-		if (!srp.decoding_started) {
-			srp_set_default_fw();
-			srp_flush_ibuf();
-			srp_flush_obuf();
-			srp_reset();
-		} else {
-			srp_post_resume();
+	if (soc_is_exynos5250()) {
+		/* Wake up from suspended mode */
+		srp_post_resume();
+	} else {
+		if (srp.is_opened) {
+			if (!srp.decoding_started) {
+				srp_set_default_fw();
+				srp_flush_ibuf();
+				srp_flush_obuf();
+				srp_reset();
+			} else {
+				/* Wake up from suspended mode */
+				srp_post_resume();
+			}
 		}
-	} else if (soc_is_exynos5250()) {
-			srp_fw_download();
-			/* RESET */
-			writel(0x0, srp.commbox + SRP_CONT);
-			srp_request_intr_mode(RESUME);
 	}
 
 	if (srp.audss_clken_stat())
