@@ -189,11 +189,6 @@ void audss_clk_enable(bool enable)
 		clk_enable(audss.bus_clk);
 		if (!strcmp(audss.rclksrc, "i2sclk"))
 			clk_enable(audss.i2s_clk);
-
-#ifdef CONFIG_SND_SAMSUNG_ALP
-		if (soc_is_exynos5250() && audss.pd_ctl_enable)
-			srp_post_resume();
-#endif
 	} else {
 #ifdef CONFIG_SND_SAMSUNG_ALP
 		if (soc_is_exynos5250() && audss.pd_ctl_enable)
