@@ -349,6 +349,9 @@ static int bts_probe(struct platform_device *pdev)
 	list_add_tail(&bts_data->node, &bts_list);
 	pdev->dev.platform_data = bts_data;
 
+	if (bts_pdata->clk_name)
+		clk_disable(clk);
+
 	return 0;
 
 probe_err2:
