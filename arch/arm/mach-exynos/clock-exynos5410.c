@@ -329,22 +329,122 @@ static struct clksrc_clk exynos5_clk_dout_pclk_cdrex = {
 };
 
 /* Top Part clock */
-static struct clk *exynos5_clk_src_mpll_user_list[] = {
+
+/* Mux output for MPLL_USER */
+static struct clk *exynos5_clkset_mout_mpll_user_list[] = {
 	[0] = &clk_fin_mpll,
 	[1] = &exynos5_clk_mout_mpll.clk,
 };
 
-static struct clksrc_sources exynos5_clk_src_mpll_user = {
-	.sources	= exynos5_clk_src_mpll_user_list,
-	.nr_sources	= ARRAY_SIZE(exynos5_clk_src_mpll_user_list),
+static struct clksrc_sources exynos5_clkset_mout_mpll_user = {
+	.sources	= exynos5_clkset_mout_mpll_user_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_mpll_user_list),
 };
 
 static struct clksrc_clk exynos5_clk_mout_mpll_user = {
 	.clk	= {
 		.name		= "mout_mpll_user",
 	},
-	.sources = &exynos5_clk_src_mpll_user,
+	.sources = &exynos5_clkset_mout_mpll_user,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP2, .shift = 20, .size = 1 },
+};
+
+/* Mux output for BPLL_USER */
+static struct clk *exynos5_clkset_mout_bpll_user_list[] = {
+	[0] = &clk_fin_bpll,
+	[1] = &exynos5_clk_mout_bpll.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_mout_bpll_user = {
+	.sources	= exynos5_clkset_mout_bpll_user_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_bpll_user_list),
+};
+
+static struct clksrc_clk exynos5_clk_mout_bpll_user = {
+	.clk	= {
+		.name		= "mout_bpll_user",
+	},
+	.sources = &exynos5_clkset_mout_bpll_user,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP2, .shift = 24, .size = 1 },
+};
+
+/* Clock for ACLK_XXX */
+static struct clk *exynos5_clkset_aclk_xxx_list[] = {
+	[0] = &exynos5_clk_mout_mpll_user.clk,
+	[1] = &exynos5_clk_mout_bpll_user.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_aclk_xxx = {
+	.sources	= exynos5_clkset_aclk_xxx_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_xxx_list),
+};
+
+static struct clk *exynos5_clkset_aclk_xxx_pre_list[] = {
+	[0] = &exynos5_clk_mout_cpll.clk,
+	[1] = &exynos5_clk_mout_mpll_user.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_aclk_xxx_pre = {
+	.sources	= exynos5_clkset_aclk_xxx_pre_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_xxx_pre_list),
+};
+
+/* ACKL_400 */
+static struct clksrc_clk exynos5_clk_aclk_400 = {
+	.clk	= {
+		.name		= "aclk_400",
+	},
+	.sources = &exynos5_clkset_aclk_xxx,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 20, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 24, .size = 3 },
+};
+
+/* ACLK_333_PRE */
+static struct clksrc_clk exynos5_clk_aclk_333_pre = {
+	.clk	= {
+		.name		= "aclk_333_pre",
+	},
+	.sources = &exynos5_clkset_aclk_xxx_pre,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 16, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 20, .size = 3 },
+};
+
+/* ACLK_333 */
+static struct clk *exynos5_clkset_aclk_333_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_aclk_333_pre.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_aclk_333 = {
+	.sources	= exynos5_clkset_aclk_333_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_333_list),
+};
+
+static struct clksrc_clk exynos5_clk_aclk_333 = {
+	.clk	= {
+		.name		= "aclk_333",
+	},
+	.sources = &exynos5_clkset_aclk_333,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 24, .size = 1 },
+};
+
+/* ACKL_266 */
+static struct clksrc_clk exynos5_clk_aclk_266 = {
+	.clk	= {
+		.name		= "aclk_266",
+		.parent		= &exynos5_clk_mout_mpll_user.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 16, .size = 3 },
+};
+
+/* ACLK_166 */
+static struct clksrc_clk exynos5_clk_aclk_166 = {
+	.clk	= {
+		.name		= "aclk_166",
+	},
+	.sources = &exynos5_clkset_aclk_xxx_pre,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 8, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 8, .size = 3 },
 };
 
 /* Common Clock Src group */
@@ -451,6 +551,13 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_ipll,
 	&exynos5_clk_mout_vpllsrc,
 	&exynos5_clk_mout_vpll,
+	&exynos5_clk_mout_mpll_user,
+	&exynos5_clk_mout_bpll_user,
+	&exynos5_clk_aclk_400,
+	&exynos5_clk_aclk_333_pre,
+	&exynos5_clk_aclk_333,
+	&exynos5_clk_aclk_266,
+	&exynos5_clk_aclk_166,
 	&exynos5_clk_mout_cpu,
 	&exynos5_clk_dout_arm,
 	&exynos5_clk_dout_arm2,
