@@ -52,21 +52,29 @@
 
 static int fimc_is_bayer_video_open(struct file *file)
 {
-	struct fimc_is_dev *isp = video_drvdata(file);
+	struct fimc_is_dev *is = video_drvdata(file);
+	struct fimc_is_sensor_dev *sensor;
+	struct fimc_is_video_dev *video;
 
 	dbg_sensor("%s\n", __func__);
-	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_BAYER];
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].num_buf = 0;
-	isp->video[FIMC_IS_VIDEO_NUM_BAYER].buf_ref_cnt = 0;
 
-	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
-		isp->sensor_num = 1;
+	sensor = &is->sensor;
+	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
 
-		fimc_is_load_fw(isp);
+	file->private_data = video;
+	video->num_buf = 0;
+	video->buf_ref_cnt = 0;
+	sensor->last_capture = false;
+	sensor->streaming = false;
 
-		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
+	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &is->pipe_state)) {
+		is->sensor_num = 1;
+
+		fimc_is_load_fw(is);
+
+		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &is->pipe_state);
+		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &is->pipe_state);
+		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &is->pipe_state);
 	}
 
 	/*TODO: will fixed*/
@@ -84,60 +92,74 @@ static int fimc_is_bayer_video_open(struct file *file)
 	}
 	*/
 
-	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
-	fimc_is_fw_clear_irq1_all(isp);
+	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &is->pipe_state);
+	fimc_is_fw_clear_irq1_all(is);
 	return 0;
-
 }
 
 static int fimc_is_bayer_video_close(struct file *file)
 {
-	struct fimc_is_dev *isp = video_drvdata(file);
+	struct fimc_is_dev *is = video_drvdata(file);
+	struct fimc_is_sensor_dev *sensor;
 	int sensor_id;
 	int flite_ch, csi_ch;
 	int ret;
 
 	dbg_sensor("%s\n", __func__);
 
-	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)) {
-		sensor_id = isp->sensor.id_position;
-		flite_ch = isp->pdata->sensor_info[sensor_id]->flite_id;
-		csi_ch = isp->pdata->sensor_info[sensor_id]->csi_id;
-		dbg_sensor("stop flite & mipi (pos:%d) (port:%d)\n",
-			sensor_id, flite_ch);
+	sensor = &is->sensor;
+	sensor_id = is->sensor.id_position;
+	flite_ch = is->pdata->sensor_info[sensor_id]->flite_id;
+	csi_ch = is->pdata->sensor_info[sensor_id]->csi_id;
+
+	dbg_sensor("stop flite & mipi (pos:%d) (port:%d)\n",
+		sensor_id, flite_ch);
+
+	stop_fimc_lite(flite_ch);
+	stop_mipi_csi(csi_ch);
+
+	dbg_sensor("waiting last capture\n");
+	mutex_lock(&is->lock);
+	ret = wait_event_timeout(is->irq_queue,
+		sensor->last_capture,
+		FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	mutex_unlock(&is->lock);
+	if (!ret) {
+		err("last capture timeout:%s\n", __func__);
 		stop_fimc_lite(flite_ch);
 		stop_mipi_csi(csi_ch);
+		msleep(60);
 	}
 
-	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_BAYER].vbq);
-	clear_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state);
+	sensor->last_capture = false;
+	dbg_sensor("last capture done\n");
 
-	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->power)) {
-		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-		fimc_is_hw_subip_poweroff(isp);
+	vb2_queue_release(&is->video[FIMC_IS_VIDEO_NUM_BAYER].vbq);
+	clear_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &is->pipe_state);
 
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &isp->power),
+	if (!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &is->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &is->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &is->pipe_state) &&
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &is->power)) {
+		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &is->pipe_state);
+		fimc_is_hw_subip_poweroff(is);
+
+		mutex_lock(&is->lock);
+		ret = wait_event_timeout(is->irq_queue,
+			!test_bit(FIMC_IS_PWR_ST_POWER_ON_OFF, &is->power),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		mutex_unlock(&isp->lock);
+		mutex_unlock(&is->lock);
 
 		if (!ret) {
 			err("wait timeout : %s\n", __func__);
 			ret = -EINVAL;
 		}
 
-		fimc_is_hw_a5_power(isp, 0);
-		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
+		fimc_is_hw_a5_power(is, 0);
+		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &is->pipe_state);
 	}
-	return 0;
 
+	return 0;
 }
 
 static unsigned int fimc_is_bayer_video_poll(struct file *file,
@@ -527,40 +549,12 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 
 	dbg_sensor("%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
 
-	if (test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
-
-		dbg_sensor("IS_ST_CHANGE_MODE\n");
-#if 0
-		set_bit(IS_ST_CHANGE_MODE, &isp->state);
-
-		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
-		mutex_lock(&isp->lock);
-		ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_CHANGE_MODE_DONE,
-			&isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		mutex_unlock(&isp->lock);
-		if (!ret) {
-			dev_err(&isp->pdev->dev,
-				"Mode change timeout:%s\n", __func__);
-			return -EBUSY;
-		}
-#endif
-
-		set_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
-	}
-
-	if (test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED,
-		&isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED,
+	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED,
 		&isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
-
 		dbg_sensor("IS Stream On\n");
 
 		/*iky to do here*/
-#if 1
 		set_bit(IS_ST_CHANGE_MODE, &isp->state);
 
 		width = isp->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width;
@@ -626,9 +620,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 				"Mode change timeout:%s\n", __func__);
 			return -EBUSY;
 		}
-#endif
 
-#if 1
 		init_fimc_lite(sensor->regs);
 
 		for (i = 0; i < sensor_video->num_buf; i++) {
@@ -657,8 +649,10 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 			(height + 10));
 
 		start_fimc_lite(sensor->regs, &f_frame);
-#endif
 
+		set_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
+		set_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
+#if 1
 		fimc_is_hw_set_stream(isp, 1);
 		mutex_lock(&isp->lock);
 		ret = wait_event_timeout(isp->irq_queue,
@@ -672,15 +666,8 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_STREAM_ON, &isp->state);
-
 		set_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
-	}
-
-	if (test_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state) &&
-		test_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state)) {
-
-		set_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);
+#endif
 	}
 
 	return 0;
@@ -695,14 +682,9 @@ static int fimc_is_bayer_stop_streaming(struct vb2_queue *q)
 #if 1
 	dbg_sensor("%s\n", __func__);
 
-	if (!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state)) {
-		dbg_sensor("lite stopped\n");
-
-		sensor_id = isp->sensor.id_position;
-		flite_ch = isp->pdata->sensor_info[sensor_id]->flite_id;
-		stop_fimc_lite(flite_ch);
-	}
+	sensor_id = isp->sensor.id_position;
+	flite_ch = isp->pdata->sensor_info[sensor_id]->flite_id;
+	stop_fimc_lite(flite_ch);
 
 	clear_bit(FIMC_IS_STATE_BAYER_BUFFER_PREPARED, &isp->pipe_state);
 	clear_bit(FIMC_IS_STATE_BAYER_STREAM_ON, &isp->pipe_state);

@@ -542,6 +542,7 @@ int fimc_is_hw_wait_intmsr0_intmsd0(struct fimc_is_dev *dev)
 	u32 cfg = readl(dev->regs + INTMSR0);
 	u32 status = INTMSR0_GET_INTMSD0(cfg);
 	while (status) {
+		err("[MAIN] INTMSR1's 0 bit is not cleared.\n");
 		cfg = readl(dev->regs + INTMSR0);
 		status = INTMSR0_GET_INTMSD0(cfg);
 	}
@@ -618,6 +619,7 @@ int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev)
 
 void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 {
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_OPEN_SENSOR, dev->regs + ISSR0);
 	writel(id, dev->regs + ISSR1);
@@ -662,17 +664,19 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 	/* Parameter3 : Scenario ID(Initial Scenario) */
 	writel(ISS_PREVIEW_STILL, dev->regs + ISSR4);
 	fimc_is_hw_set_intgr0_gd0(dev);
-
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 void fimc_is_hw_close_sensor(struct fimc_is_dev *dev, u32 id)
 {
 	if (dev->sensor.id_dual == id) {
+		spin_lock_irq(&dev->mcu_slock);
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_CLOSE_SENSOR, dev->regs + ISSR0);
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
 		writel(dev->sensor.id_dual, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
+		spin_unlock_irq(&dev->mcu_slock);
 	}
 }
 
@@ -701,10 +705,12 @@ void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on)
 void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
 {
 	/* 1. Make FIMC-IS power-off state */
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_POWER_DOWN, dev->regs + ISSR0);
 	writel(dev->sensor.id_dual, dev->regs + ISSR1);
 	fimc_is_hw_set_intgr0_gd0(dev);
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 int fimc_is_hw_a5_power_on(struct fimc_is_dev *isp)
@@ -979,19 +985,23 @@ void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
 void fimc_is_hw_get_setfile_addr(struct fimc_is_dev *dev)
 {
 	/* 1. Get FIMC-IS setfile address */
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_GET_SET_FILE_ADDR, dev->regs + ISSR0);
 	writel(dev->sensor.id_dual, dev->regs + ISSR1);
 	fimc_is_hw_set_intgr0_gd0(dev);
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 void fimc_is_hw_load_setfile(struct fimc_is_dev *dev)
 {
 	/* 1. Make FIMC-IS power-off state */
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_LOAD_SET_FILE, dev->regs + ISSR0);
 	writel(dev->sensor.id_dual, dev->regs + ISSR1);
 	fimc_is_hw_set_intgr0_gd0(dev);
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev)
@@ -1008,6 +1018,7 @@ void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev,
 				int module,
 				int level)
 {
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_MSG_CONFIG, dev->regs + ISSR0);
 	writel(dev->sensor.id_dual, dev->regs + ISSR1);
@@ -1016,28 +1027,34 @@ void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev,
 	writel(module, dev->regs + ISSR3);
 	writel(level, dev->regs + ISSR4);
 	fimc_is_hw_set_intgr0_gd0(dev);
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 {
+	int region_num;
+
+	region_num = atomic_read(&dev->p_region_num);
+
+	spin_lock_irq(&dev->mcu_slock);
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_SET_PARAMETER, dev->regs + ISSR0);
 	writel(dev->sensor.id_dual, dev->regs + ISSR1);
-
 	writel(dev->scenario_id, dev->regs + ISSR2);
-
-	writel(atomic_read(&dev->p_region_num), dev->regs + ISSR3);
+	writel(region_num, dev->regs + ISSR3);
 	writel(dev->p_region_index1, dev->regs + ISSR4);
 	writel(dev->p_region_index2, dev->regs + ISSR5);
+	fimc_is_hw_set_intgr0_gd0(dev);
+	spin_unlock_irq(&dev->mcu_slock);
+
 	dbg("### set param\n");
 	dbg("cmd :0x%08x\n", HIC_SET_PARAMETER);
 	dbg("senorID :0x%08x\n", dev->sensor.id_dual);
 	dbg("parma1 :0x%08x\n", dev->scenario_id);
-	dbg("parma2 :0x%08x\n", atomic_read(&dev->p_region_num));
+	dbg("parma2 :0x%08x\n", region_num);
 	dbg("parma3 :0x%08x\n", (unsigned int)dev->p_region_index1);
 	dbg("parma4 :0x%08x\n", (unsigned int)dev->p_region_index2);
 
-	fimc_is_hw_set_intgr0_gd0(dev);
 	return 0;
 }
 
@@ -1131,6 +1148,7 @@ int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset)
 
 void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 {
+	spin_lock_irq(&dev->mcu_slock);
 	if (on) {
 		dev->sensor.streaming = true;
 		dbg_sensor("son\n");
@@ -1146,10 +1164,12 @@ void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 		writel(dev->sensor.id_dual, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	}
+	spin_unlock_irq(&dev->mcu_slock);
 }
 
 void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 {
+	spin_lock_irq(&dev->mcu_slock);
 	switch (val) {
 	case IS_MODE_PREVIEW_STILL:
 		dev->scenario_id = ISS_PREVIEW_STILL;
@@ -1188,6 +1208,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	}
+	spin_unlock_irq(&dev->mcu_slock);
 }
 /*
  Group 3. Initial setting
@@ -2123,12 +2144,12 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_HEIGHT(dev,
 		crop_height);
 
-	dbg("calulate crop size\n");
-	dbg("front w: %d front h: %d\n", front_width, front_height);
-	dbg("dis w: %d dis h: %d\n", dis_width, dis_height);
-	dbg("back w: %d back h: %d\n", back_width, back_height);
+	dbg_sensor("calulate crop size\n");
+	dbg_sensor("front w: %d front h: %d\n", front_width, front_height);
+	dbg_sensor("dis w: %d dis h: %d\n", dis_width, dis_height);
+	dbg_sensor("back w: %d back h: %d\n", back_width, back_height);
 
-	dbg("front_crop_ratio: %d back_crop_ratio: %d\n",
+	dbg_sensor("front_crop_ratio: %d back_crop_ratio: %d\n",
 			front_crop_ratio, back_crop_ratio);
 
 	crop_x = (front_width - crop_width) / 2;
@@ -2145,8 +2166,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	dev->back.dis_width = dis_width;
 	dev->back.dis_height = dis_height;
 
-	dbg("crop w: %d crop h: %d\n", crop_width, crop_height);
-	dbg("crop x: %d crop y: %d\n", crop_x, crop_y);
+	dbg_sensor("crop w: %d crop h: %d\n", crop_width, crop_height);
+	dbg_sensor("crop x: %d crop y: %d\n", crop_x, crop_y);
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_WIDTH(dev,
 		crop_width);

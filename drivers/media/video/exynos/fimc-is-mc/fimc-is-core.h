@@ -12,11 +12,15 @@
 #ifndef FIMC_IS_CORE_H
 #define FIMC_IS_CORE_H
 
-/*#define DEBUG 1*/
-#define FRAME_RATE_ENABLE	1
-/*#define ODC_ENABLE	1*/
-/*#define TDNR_ENABLE	1*/
-/*#define DIS_ENABLE	1*/
+/*#define DEBUG*/
+#define FRAME_RATE_ENABLE
+/*#define ODC_ENABLE*/
+#define TDNR_ENABLE
+#define DIS_ENABLE
+#define FD_ENABLE
+#define FW_SUPPORT_FACE_AF
+/*#define TASKLET*/
+#define FIMCLITE
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -125,8 +129,6 @@
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
-/*#define DEBUG*/
-
 #ifdef DEBUG
 #define dbg(fmt, args...) \
 	printk(KERN_DEBUG "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -214,7 +216,6 @@ enum fimc_is_pipe_state {
 	FIMC_IS_STATE_SCALERP_BUFFER_PREPARED,
 	FIMC_IS_STATE_3DNR_BUFFER_PREPARED,
 	FIMC_IS_STATE_BAYER_BUFFER_PREPARED,
-
 };
 
 enum fimc_is_state {
@@ -342,6 +343,9 @@ struct fimc_is_sensor_dev {
 	struct list_head shot_request_head;
 	u32 shot_free_cnt;
 	u32 shot_request_cnt;
+	u32 shot_buffer_index0;
+	u32 shot_buffer_index1;
+	bool last_capture;
 	bool streaming;
 };
 
@@ -465,6 +469,9 @@ struct fimc_is_dev {
 	spinlock_t				slock;
 	struct mutex				vb_lock;
 	struct mutex				lock;
+
+	/*iky*/
+	spinlock_t				mcu_slock;
 
 	struct fimc_is_sensor_dev		sensor;
 	struct fimc_is_front_dev		front;

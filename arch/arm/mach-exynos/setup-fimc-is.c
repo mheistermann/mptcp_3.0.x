@@ -355,7 +355,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	ret = gpio_request(EXYNOS5_GPE0(3), "GPE0");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPE0_3 ####\n");
-	s3c_gpio_cfgpin(EXYNOS5_GPE0(3), (0x3<<12));
+	s3c_gpio_cfgpin(EXYNOS5_GPE0(3), (0x2<<12));
 	s3c_gpio_setpull(EXYNOS5_GPE0(3), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS5_GPE0(3));
 

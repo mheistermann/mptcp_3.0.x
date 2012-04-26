@@ -170,6 +170,7 @@ static int fimc_is_scalerc_video_open(struct file *file)
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = 0;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt = 0;
 
+	mutex_lock(&isp->lock);
 	if (!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)) {
 		isp->sensor_num = 1;
 		printk(KERN_INFO "++++ IS load fw (Scaler C open)\n");
@@ -999,6 +1000,10 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.format.num_planes
 							= frame->num_planes;
 
+	dbg_sensor("req w : %d req h : %d\n", pix->width, pix->height);
+	dbg_sensor("cur w : %d cur h : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width,
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height);
+
 	if ( isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width != pix->width ||
 		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height != pix->height) {
 			isp->video[FIMC_IS_VIDEO_NUM_SCALERP].
@@ -1030,6 +1035,7 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
 		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
 		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+
 		fimc_is_hw_set_param(isp);
 
 		if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
@@ -1175,7 +1181,6 @@ static int fimc_is_scalerp_video_streamon(struct file *file, void *priv,
 	dbg("%s\n", __func__);
 
 	/*TODO*/
-	/*fimc_is_bayer_video_ioctl_ops.vidioc_streamon(file, priv, type);*/
 
 	return vb2_streamon(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, type);
 }
@@ -1191,7 +1196,6 @@ static int fimc_is_scalerp_video_streamoff(struct file *file, void *priv,
 	result = vb2_streamoff(&video->vbq, type);
 
 	/*TODO:*/
-	/*fimc_is_bayer_video_ioctl_ops.vidioc_streamoff(file, priv, type);*/
 
 	return result;
 }
@@ -1521,6 +1525,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 	int ret = 0;
 
 	dbg("fimc_is_scalerp_video_s_ctrl(%d)(%d)\n", ctrl->id, ctrl->value);
+#if 1
 	switch (ctrl->id) {
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
 		ret = fimc_is_v4l2_shot_mode(isp, ctrl->value);
@@ -1663,7 +1668,9 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		ret = fimc_is_v4l2_cmd_drc(isp, ctrl->value);
 		break;
 	case V4L2_CID_IS_CMD_FD:
+#ifdef FD_ENABLE
 		ret = fimc_is_v4l2_cmd_fd(isp, ctrl->value);
+#endif
 		break;
 	case V4L2_CID_CAMERA_SCENE_MODE:
 		ret = fimc_is_v4l2_isp_scene_mode(isp, ctrl->value);
@@ -1704,7 +1711,7 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		err("Invalid control\n");
 		return -EINVAL;
 	}
-
+#endif
 	return ret;
 }
 
@@ -2030,6 +2037,7 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 			err("s_power off failed!!\n");
 		return -EBUSY;
 	}
+	dbg_sensor("-soff\n");
 
 	IS_SCALERP_SET_PARAM_DMA_OUTPUT_CMD(isp,
 		DMA_OUTPUT_COMMAND_DISABLE);
@@ -2047,8 +2055,9 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 	isp->scenario_id = ISS_PREVIEW_STILL;
 	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
 	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
-	fimc_is_hw_set_param(isp);
 
+	dbg_sensor("+setP\n");
+	fimc_is_hw_set_param(isp);
 	mutex_lock(&isp->lock);
 	ret = wait_event_timeout(isp->irq_queue,
 		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
@@ -2059,10 +2068,13 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 			"wait timeout 2: %s\n", __func__);
 		return -EBUSY;
 	}
+	dbg_sensor("-setP\n");
 
 	dbg("IS change mode\n");
 	clear_bit(IS_ST_RUN, &isp->state);
 	set_bit(IS_ST_CHANGE_MODE, &isp->state);
+
+	dbg_sensor("+mc\n");
 	fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
 	mutex_lock(&isp->lock);
 	ret = wait_event_timeout(isp->irq_queue,
@@ -2074,6 +2086,7 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 			"Mode change timeout:%s\n", __func__);
 		return -EBUSY;
 	}
+	dbg_sensor("-mc\n");
 
 	dbg("IS Stream On\n");
 	fimc_is_hw_set_stream(isp, 1);
@@ -2107,6 +2120,7 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 				"wait timeout 4: %s\n", __func__);
 			return -EBUSY;
 		}
+		dbg_sensor("-son\n");
 		clear_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state);
 	}
 	clear_bit(IS_ST_RUN, &isp->state);

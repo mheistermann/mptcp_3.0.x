@@ -1024,9 +1024,9 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 		crop_height = ALIGN(crop_height, 8);
 	}
 
-	printk("value: %d front_width: %d, front_height: %d\n",
+	dbg("value: %d front_width: %d, front_height: %d\n",
 		value, front_width,  front_height);
-	printk("value: %d dis_width: %d, dis_height: %d\n",
+	dbg("value: %d dis_width: %d, dis_height: %d\n",
 		value, dis_width, dis_height);
 
 	zoom = value + 10;
@@ -1077,8 +1077,10 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 
 	dev->scenario_id = ISS_PREVIEW_STILL;
 	set_bit(IS_ST_INIT_PREVIEW_STILL,	&dev->state);
+
 	clear_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
 	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
+
 	fimc_is_hw_set_param(dev);
 	ret = wait_event_timeout(dev->irq_queue,
 		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
@@ -1086,8 +1088,10 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	if (!ret) {
 		dev_err(&dev->pdev->dev,
 			"wait timeout : %s\n", __func__);
+		while(1);
 		return -EBUSY;
 	}
+
 	return 0;
 }
 

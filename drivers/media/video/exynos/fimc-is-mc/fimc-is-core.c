@@ -32,6 +32,7 @@
 #include <linux/scatterlist.h>
 #include <linux/videodev2_exynos_camera.h>
 #include <linux/vmalloc.h>
+#include <linux/interrupt.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-helper.h"
@@ -398,7 +399,8 @@ request_fw:
 		}
 #endif
 
-#if 0
+#ifndef SDCARD_FW
+		/*TODO: delete or not*/
 		memcpy((void *)dev->fw.fw_info,
 			(fw_blob->data + fw_blob->size - 0x1F), 0x17);
 		dev->fw.fw_info[24] = '\0';
@@ -529,10 +531,11 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height + 10;
 
 		/*start mipi*/
-		dbg_sensor("start mipi (pos:%d) (port:%d)\n",
+		dbg_sensor("start mipi (pos:%d) (port:%d) : %d x %d\n",
 			dev->sensor.id_position,
 			dev->pdata->
-			sensor_info[dev->sensor.id_position]->csi_id);
+			sensor_info[dev->sensor.id_position]->csi_id,
+			f_frame.width, f_frame.height);
 		start_mipi_csi(dev->pdata->
 				sensor_info[dev->sensor.id_position]->
 				csi_id, &f_frame);
@@ -600,8 +603,14 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 
 		/* 1. */
 		dbg("Default setting : preview_still\n");
+
+#ifndef FD_ENABLE
+		dev->is_p_region->parameter.fd.control.cmd = CONTROL_COMMAND_STOP;
+#endif
+
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		fimc_is_hw_set_init(dev);
+
 		fimc_is_hw_change_size(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
@@ -1284,17 +1293,6 @@ static struct exynos_md *fimc_is_get_md(enum mdev_node node)
 
 }
 
-static unsigned int fimc_is_get_intr_position(unsigned int intr_status)
-{
-	int i;
-
-	for (i = 0; i < 5; i++)
-		if (intr_status & (1<<i))
-			return i;
-
-	return 0;
-}
-
 static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 {
 	struct fimc_is_dev *dev = dev_id;
@@ -1302,9 +1300,8 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 	unsigned int intr_status, intr_pos;
 
 	intr_status = readl(dev->regs + INTSR1);
-	intr_pos = fimc_is_get_intr_position(intr_status);
 
-	if (intr_pos == INTR_GENERAL) {
+	if (intr_status & (1<<INTR_GENERAL)) {
 		dev->i2h_cmd.cmd = readl(dev->regs + ISSR10);
 
 		/* Read ISSR10 ~ ISSR15 */
@@ -1338,7 +1335,6 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			break;
 		}
 		/* Just clear the interrupt pending bits. */
-		fimc_is_fw_clear_irq1(dev, intr_pos);
 
 		switch (dev->i2h_cmd.cmd) {
 		case IHC_GET_SENSOR_NUMBER:
@@ -1353,6 +1349,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 			dev->i2h_cmd.arg[1]);
 			dev->fd_header.count = dev->i2h_cmd.arg[0];
 			dev->fd_header.index = dev->i2h_cmd.arg[1];
+#ifndef FW_SUPPORT_FACE_AF
 			/* Implementation of AF with face */
 			if (dev->af.mode == IS_FOCUS_MODE_CONTINUOUS &&
 					dev->af.af_state == FIMC_IS_AF_LOCK) {
@@ -1362,6 +1359,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 				fimc_is_af_face(dev);
 				dev->af.mode = IS_FOCUS_MODE_IDLE;
 			}
+#endif
 			break;
 		case IHC_AA_DONE:
 			switch (dev->i2h_cmd.arg[0]) {
@@ -1482,52 +1480,57 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 					IS_PARAM_SIZE);
 				break;
 			}
-
-			break;
+		break;
 		}
-	} else if (intr_pos == INTR_FRAME_DONE_ISP) {
+		fimc_is_fw_clear_irq1(dev, INTR_GENERAL);
+	}
+
+	if (intr_status & (1<<INTR_FRAME_DONE_ISP)) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR20);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR21);
 		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR22);
-		fimc_is_fw_clear_irq1(dev, intr_pos);
+		fimc_is_fw_clear_irq1(dev, INTR_FRAME_DONE_ISP);
 
 		buf_index =  dev->i2h_cmd.arg[2];
 		dbg("Bayer returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_BAYER].
 				vbq.bufs[buf_index], VB2_BUF_STATE_DONE);
 		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_BAYER);
-	} else if (intr_pos == INTR_FRAME_DONE_SCALERC) {
+	}
+
+	if (intr_status & (1<<INTR_FRAME_DONE_SCALERC)) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
 		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR30);
-		fimc_is_fw_clear_irq1(dev, intr_pos);
+		fimc_is_fw_clear_irq1(dev, INTR_FRAME_DONE_SCALERC);
 
 		buf_index =  dev->i2h_cmd.arg[2];
 		dbg("ScalerC returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERC].
 				vbq.bufs[buf_index], VB2_BUF_STATE_DONE);
 		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_SCALERC);
-	} else if (intr_pos == INTR_FRAME_DONE_TDNR) {
+	}
+
+	if (intr_status & (1<<INTR_FRAME_DONE_TDNR)) {
 
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR36);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR37);
 		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR38);
-		fimc_is_fw_clear_irq1(dev, intr_pos);
+		fimc_is_fw_clear_irq1(dev, INTR_FRAME_DONE_TDNR);
 
 		buf_index =  dev->i2h_cmd.arg[2];
 		dbg("3DNR returned buf index : %d\n", buf_index);
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_3DNR].
 				vbq.bufs[buf_index], VB2_BUF_STATE_DONE);
 		fimc_is_hw_update_bufmask(dev, FIMC_IS_VIDEO_NUM_3DNR);
-	} else if (intr_pos == INTR_FRAME_DONE_SCALERP) {
+	}
+
+	if (intr_status == (1<<INTR_FRAME_DONE_SCALERP)) {
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR44);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR45);
 		dev->i2h_cmd.arg[2] = readl(dev->regs + ISSR46);
-		fimc_is_fw_clear_irq1(dev, intr_pos);
+		fimc_is_fw_clear_irq1(dev, INTR_FRAME_DONE_SCALERP);
 
-#ifdef DZOOM_EVT0
-		set_bit(IS_ST_SCALERP_FRAME_DONE, &dev->state);
-#endif
 		buf_index =  dev->i2h_cmd.arg[2];
 
 		/*iky to do here*/
@@ -1542,7 +1545,36 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-/* iky to do here */
+/* TODO: Apply TASKLIT */
+
+#ifdef TASKLET
+static void fimc_is_sensor_tasklet_handler0(unsigned long data)
+{
+	struct fimc_is_dev *is = (struct fimc_is_dev *)data;
+	struct fimc_is_sensor_dev *sensor;
+	struct fimc_is_video_dev *video;
+
+	sensor = &is->sensor;
+	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
+
+	dbg_sensor("+L");
+
+	spin_lock(&is->mcu_slock);
+	dbg_sensor("++L");
+	fimc_is_hw_wait_intmsr0_intmsd0(is);
+	writel(HIC_SHOT, is->regs + ISSR0);
+	writel(sensor->id_dual, is->regs + ISSR1);
+	writel(video->buf[sensor->shot_buffer_index0][0],
+		is->regs + ISSR2);
+	fimc_is_hw_set_intgr0_gd0(is);
+	spin_unlock(&is->mcu_slock);
+
+	dbg_sensor("%d\n", sensor->shot_buffer_index0);
+}
+
+DECLARE_TASKLET(sensor0_tl, fimc_is_sensor_tasklet_handler0, (unsigned long)NULL);
+#endif
+
 static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 {
 	struct fimc_is_dev *is = dev_id;
@@ -1550,6 +1582,8 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 	struct fimc_is_video_dev *video;
 	int buf_index;
 	unsigned int status1, status2, status3;
+	u32 cfg;
+	u32 status;
 
 	sensor = &is->sensor;
 	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
@@ -1564,14 +1598,31 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 		buf_index =  status3 - 1;
 
 		if (sensor->streaming) {
-			fimc_is_hw_wait_intmsr0_intmsd0(is);
+#ifdef TASKLET
+			sensor->shot_buffer_index0 = buf_index;
+			sensor0_tl.data = (unsigned long)is;
+			tasklet_schedule(&sensor0_tl);
+#else
+			spin_lock(&is->mcu_slock);
+			/*fimc_is_hw_wait_intmsr0_intmsd0(is);*/
+
+			cfg = readl(is->regs + INTMSR0);
+			status = INTMSR0_GET_INTMSD0(cfg);
+			if (status) {
+				err("[MAIN] INTMSR1's 0 bit is not cleared.\n");
+				cfg = readl(is->regs + INTMSR0);
+				status = INTMSR0_GET_INTMSD0(cfg);
+			}
+
 			writel(HIC_SHOT, is->regs + ISSR0);
 			writel(sensor->id_dual, is->regs + ISSR1);
 			writel(video->buf[buf_index][0],
 				is->regs + ISSR2);
 			fimc_is_hw_set_intgr0_gd0(is);
+			spin_unlock(&is->mcu_slock);
 
 			dbg_sensor("L%d\n", status3);
+#endif
 		}
 
 		vb2_buffer_done(video->vbq.bufs[buf_index],
@@ -1583,26 +1634,27 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 
 	if (status1 & (0x1<<6)) {
 		/*Last Frame Capture Interrupt*/
-		dbg_sensor("[CamIF_0]Last Frame Capture\n");
+		err("[CamIF_0]Last Frame Capture\n");
 		/*Clear LastCaptureEnd bit*/
+		sensor->last_capture = true;
 		status2 &= ~(0x1 << 1);
 		flite_hw_set_status2(sensor->regs, status2);
 	}
 
 	if (status1 & (1<<8)) {
-		dbg_sensor("[CamIF_0]Overflow Cr\n");
+		err("[CamIF_0]Overflow Cr\n");
 		/*uCIWDOFST |= (0x1 << 14);*/
 	}
 
 	if (status1 & (1<<9)) {
-		dbg_sensor("[CamIF_0]Overflow Cb\n");
+		err("[CamIF_0]Overflow Cb\n");
 		/*uCIWDOFST |= (0x1 << 15);*/
 	}
 
 	if (status1 & (1<<10)) {
 		u32 ciwdofst;
 
-		dbg_sensor("[CamIF_0]Overflow Y\n");
+		err("[CamIF_0]Overflow Y\n");
 		ciwdofst = readl(sensor->regs + 0x10);
 		ciwdofst  |= (0x1 << 30);
 		writel(ciwdofst, sensor->regs + 0x10);
@@ -1619,6 +1671,8 @@ static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 	struct fimc_is_video_dev *video;
 	int buf_index;
 	unsigned int status1, status2, status3;
+	u32 cfg;
+	u32 status;
 
 	sensor = &is->sensor;
 	video = &is->video[FIMC_IS_VIDEO_NUM_BAYER];
@@ -1631,14 +1685,24 @@ static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 
 	if (status1 & (1<<4)) {
 		buf_index =  status3 - 1;
-
 		if (sensor->streaming) {
-			fimc_is_hw_wait_intmsr0_intmsd0(is);
+			spin_lock(&is->mcu_slock);
+			/*fimc_is_hw_wait_intmsr0_intmsd0(is);*/
+
+			cfg = readl(is->regs + INTMSR0);
+			status = INTMSR0_GET_INTMSD0(cfg);
+			if (status) {
+				err("[MAIN] INTMSR1's 0 bit is not cleared.\n");
+				cfg = readl(is->regs + INTMSR0);
+				status = INTMSR0_GET_INTMSD0(cfg);
+			}
+
 			writel(HIC_SHOT, is->regs + ISSR0);
 			writel(sensor->id_dual, is->regs + ISSR1);
 			writel(video->buf[buf_index][0],
 				is->regs + ISSR2);
 			fimc_is_hw_set_intgr0_gd0(is);
+			spin_unlock(&is->mcu_slock);
 
 			dbg_sensor("L%d\n", status3);
 		}
@@ -1652,26 +1716,27 @@ static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 
 	if (status1 & (0x1<<6)) {
 		/*Last Frame Capture Interrupt*/
-		dbg_sensor("[CamIF_1]Last Frame Capture\n");
+		err("[CamIF_1]Last Frame Capture\n");
 		/*Clear LastCaptureEnd bit*/
+		sensor->last_capture = true;
 		status2 &= ~(0x1 << 1);
 		flite_hw_set_status2(sensor->regs, status2);
 	}
 
 	if (status1 & (1<<8)) {
-		dbg_sensor("[CamIF_1]Overflow Cr\n");
+		err("[CamIF_1]Overflow Cr\n");
 		/*uCIWDOFST |= (0x1 << 14);*/
 	}
 
 	if (status1 & (1<<9)) {
-		dbg_sensor("[CamIF_1]Overflow Cb\n");
+		err("[CamIF_1]Overflow Cb\n");
 		/*uCIWDOFST |= (0x1 << 15);*/
 	}
 
 	if (status1 & (1<<10)) {
 		u32 ciwdofst;
 
-		dbg_sensor("[CamIF_1]Overflow Y\n");
+		err("[CamIF_1]Overflow Y\n");
 		ciwdofst = readl(sensor->regs + 0x10);
 		ciwdofst  |= (0x1 << 30);
 		writel(ciwdofst, sensor->regs + 0x10);
@@ -1710,6 +1775,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	spin_lock_init(&isp->slock);
 	mutex_init(&isp->vb_lock);
 	mutex_init(&isp->lock);
+	spin_lock_init(&isp->mcu_slock);
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem_res) {
@@ -1756,8 +1822,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 		goto p_err3;
 	}
 
-	/*iky to do here*/
-#if 1
+#ifdef FIMCLITE
+	/*TODO: modify IRQ_FIMC_LITE*/
 	{
 		unsigned long irq = IRQ_FIMC_LITE0;
 		ret = request_irq(irq, fimc_is_sensor_irq_handler0, 0,
