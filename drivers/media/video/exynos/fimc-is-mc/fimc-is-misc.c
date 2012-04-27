@@ -804,6 +804,21 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 {
 	int ret;
 
+	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
+		clear_bit(IS_ST_STREAM_OFF, &dev->state);
+		fimc_is_hw_set_stream(dev, 0); /*stream off */
+		ret = wait_event_timeout(dev->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&dev->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			if (!ret)
+				err("s_power off failed!!\n");
+			return -EBUSY;
+		}
+	}
+
 	if (value == CAMERA_DIS_ON) {
 		/* buffer addr setting */
 		dev->back.dis_on = 1;
@@ -820,21 +835,6 @@ int fimc_is_ctrl_dis(struct fimc_is_dev *dev, int value)
 	} else {
 		err("invalid DIS setting\n");
 		return -1;
-	}
-
-	if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &dev->pipe_state)) {
-		clear_bit(IS_ST_STREAM_OFF, &dev->state);
-		fimc_is_hw_set_stream(dev, 0); /*stream off */
-		ret = wait_event_timeout(dev->irq_queue,
-			test_bit(IS_ST_STREAM_OFF, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			if (!ret)
-				err("s_power off failed!!\n");
-			return -EBUSY;
-		}
 	}
 
 	IS_SET_PARAM_BIT(dev, PARAM_DIS_CONTROL);
