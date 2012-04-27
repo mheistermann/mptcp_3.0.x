@@ -12,6 +12,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/fb.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
 
 #include <video/platform_lcd.h>
 #include <video/s5p-dp.h>
@@ -662,6 +663,8 @@ static struct platform_pwm_backlight_data smdk5250_bl_data = {
 void __init exynos5_smdk5250_display_init(void)
 {
 #ifdef CONFIG_FB_MIPI_DSIM
+	struct clk *sclk_pll;
+
 	s5p_dsim_set_platdata(&dsim_platform_data);
 	s5p_device_mipi_dsim.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
 #endif
@@ -688,8 +691,13 @@ void __init exynos5_smdk5250_display_init(void)
 #ifdef CONFIG_S5P_DP
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev,
 			"sclk_fimd", "sclk_vpll", 268000000);
-#else
+#endif
+#ifdef CONFIG_FB_MIPI_DSIM
+	sclk_pll = clk_get(&s5p_device_fimd1.dev, "fout_vpll");
+	clk_set_rate(sclk_pll, 126000000);
+	clk_put(sclk_pll);
+
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev,
-			"sclk_fimd", "mout_mpll_user", 800 * MHZ);
+			"sclk_fimd", "sclk_vpll", 126000000);
 #endif
 }

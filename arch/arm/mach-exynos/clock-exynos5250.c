@@ -2371,6 +2371,7 @@ static struct clk_ops exynos5_fout_apll_ops = {
 
 static struct vpll_div_data exynos5_vpll_div[] = {
 	{268000000, 6, 268, 2, 41104, 0,  0, 0},
+	{126000000, 9, 378, 3, 41943, 0,  0, 0},
 };
 
 static unsigned long exynos5_vpll_get_rate(struct clk *clk)
