@@ -99,9 +99,9 @@ static int ion_exynos_heap_allocate(struct ion_heap *heap,
 	int copied = 0;
 	struct scatterlist *sgl;
 	struct sg_table *sgtable;
+	struct page *page = NULL;
 
 	while (size && *cur_order) {
-		struct page *page;
 
 		if (size < (1 << *cur_order)) {
 			cur_order++;
@@ -228,6 +228,9 @@ static int ion_exynos_heap_allocate(struct ion_heap *heap,
 
 	return 0;
 alloc_error:
+	if (page)
+		__free_pages(page, *cur_order - PAGE_SHIFT);
+
 	copied = 0;
 	while (copied < alloc_chunks) {
 		int i;
