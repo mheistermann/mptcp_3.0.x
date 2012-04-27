@@ -688,10 +688,12 @@ void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev)
 void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on)
 {
 	if (on) {
-		printk(KERN_INFO "Set low poweroff mode\n");
-		__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
-		__raw_writel(0x1CF82000, PMUREG_ISP_LOW_POWER_OFF);
-		dev->low_power_mode = true;
+		if (!dev->low_power_mode) {
+			printk(KERN_INFO "Set low poweroff mode\n");
+			__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
+			__raw_writel(0x1CF82000, PMUREG_ISP_LOW_POWER_OFF);
+			dev->low_power_mode = true;
+		}
 	} else {
 		if (dev->low_power_mode) {
 			printk(KERN_INFO "Clear low poweroff mode\n");
@@ -908,7 +910,10 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *isp, int on)
 	} else {
 		/* 1. A5 power down */
 		/* 1). disable A5 */
-		writel(0x0, PMUREG_ISP_ARM_OPTION);
+		if (isp->low_power_mode)
+			writel(0x0, PMUREG_ISP_ARM_OPTION);
+		else
+			writel(0x10000, PMUREG_ISP_ARM_OPTION);
 		/* 2). A5 power off*/
 		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
 		/* 3). Check A5 power off status register */
