@@ -51,12 +51,31 @@ static struct platform_device_id sechsi_id_table[] = {
 
 MODULE_DEVICE_TABLE(platform, sechsi_id_table);
 
+#ifdef CONFIG_PM
+static int samsung_hsi_suspend(struct platform_device *dev, pm_message_t pm)
+{
+	printk(KERN_ERR "MIPI-HSI will be suspended.\n");
+	return 0;
+}
+
+static int samsung_hsi_resume(struct platform_device *dev)
+{
+	printk(KERN_ERR "MIPI-HSI will be resumed.\n");
+	return 0;
+}
+#else
+#define samsung_hsi_suspend NULL
+#define samsung_hsi_resume NULL
+#endif
+
 /* Driver declaration */
 static struct platform_driver exynos_hsi_driver = {
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= EXYNOS_HSI_DRIVER_NAME,
 	},
+	.suspend        = samsung_hsi_suspend,
+	.resume         = samsung_hsi_resume,
 	.id_table = sechsi_id_table,
 };
 
@@ -207,10 +226,12 @@ unsigned int sechsi_write_register(unsigned int addr, unsigned int val)
 int check_clock(void)
 {
 	unsigned int addr, clk;
+	volatile unsigned int *mapped_addr;
 	addr = (unsigned int)ioremap_nocache(0x12180000, 0x1000);
-	clk = (*(unsigned int *)(addr+0x0040));
-	*((volatile unsigned int *)(addr+0x0040)) = clk & ~(0x01<<17);
-	*((volatile unsigned int *)(addr+0x0040)) = clk | (0x01<<17);
+	mapped_addr = (unsigned int *)(addr+0x0040);
+	clk = *mapped_addr;
+	*mapped_addr = clk & ~(0x01<<17);
+	*mapped_addr = clk | (0x01<<17);
 	iounmap((void *)addr);
 
 	return 0;
@@ -242,7 +263,7 @@ int reset_sechsi()
 	if (soc_is_exynos4212() || soc_is_exynos4412())
 		SECHSI_SET_RX_CLOCK_BUFFER(2);	/* Recommand 2 at EVT1 */
 	else if (soc_is_exynos5250())
-		SECHSI_SET_RX_CLOCK_BUFFER(6);	/* Recommand 2 at EVT1 */
+		SECHSI_SET_RX_CLOCK_BUFFER(2);	/* Recommand 2 at EVT1 */
 
 	SECHSI_SET_DATA_TIMEOUT_COUNT(14);	/* 14 */
 	SECHSI_SET_RECV_TIMEOUT_COUNT(HSI_RX_TIMEOUT_14400);
@@ -272,7 +293,7 @@ int reset_sechsi()
 	if (soc_is_exynos4212() || soc_is_exynos4412())
 		sechsi_set_clock_divider(HSI_CLK_DIV_1, 1);
 	else if (soc_is_exynos5250())
-		sechsi_set_clock_divider(HSI_CLK_DIV_8, 1);
+		sechsi_set_clock_divider(HSI_CLK_DIV_1, 1);
 
 	return 0;
 }
