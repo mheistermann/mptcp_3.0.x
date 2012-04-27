@@ -26,9 +26,14 @@ extern int debug;
 			printk(KERN_DEBUG "%s:%d: " fmt,	\
 				__func__, __LINE__, ##args);	\
 	} while(0)
+
+#define _DEBUG_IF(level) if (debug >= level) {
 #else
 #define mfc_debug(fmt, args...)
+#define _DEBUG_IF(level) if (0) {
 #endif
+
+#define _DEBUG_ENDIF }
 
 #define mfc_debug_enter() mfc_debug(5, "enter")
 #define mfc_debug_leave() mfc_debug(5, "leave")

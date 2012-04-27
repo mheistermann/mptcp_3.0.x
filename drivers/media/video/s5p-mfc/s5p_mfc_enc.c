@@ -1215,12 +1215,14 @@ static int enc_to_buf_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 		}
 	}
 
+	_DEBUG_IF(8)
 	list_for_each_entry(buf_ctrl, head, list) {
 		if (buf_ctrl->has_new)
 			mfc_debug(8, "Updated buffer control "
 					"id: 0x%08x val: %d\n",
 					buf_ctrl->id, buf_ctrl->val);
 	}
+	_DEBUG_ENDIF
 
 	return 0;
 }
@@ -1254,12 +1256,14 @@ static int enc_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 		}
 	}
 
+	_DEBUG_IF(8)
 	list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 		if (ctx_ctrl->has_new)
 			mfc_debug(8, "Updated context control "
 					"id: 0x%08x val: %d\n",
 					ctx_ctrl->id, ctx_ctrl->val);
 	}
+	_DEBUG_ENDIF
 
 	return 0;
 }
