@@ -687,7 +687,7 @@ void __init exynos5_smdk5250_display_init(void)
 
 #ifdef CONFIG_S5P_DP
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev,
-			"sclk_fimd", "mout_mpll_user", 267 * MHZ);
+			"sclk_fimd", "sclk_vpll", 268000000);
 #else
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev,
 			"sclk_fimd", "mout_mpll_user", 800 * MHZ);

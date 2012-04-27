@@ -2758,6 +2758,8 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 		clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 267000000);
 	}
 
+	clk_set_rate(&clk_fout_vpll, 268000000);
+
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_clksrcs); ptr++)
 		s3c_set_clksrc(&exynos5_clksrcs[ptr], true);
 }
