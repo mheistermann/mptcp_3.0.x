@@ -151,4 +151,7 @@
 /* Compute endpoint has a 4-deep queue of tasks, meaning a soft stop won't complete until all 4 tasks have completed */
 #define BASE_HW_ISSUE_9435 1
 
+/* HT: Tiler returns TERMINATED for command that hasn't been terminated */
+#define BASE_HW_ISSUE_9510 1
+
 #endif /* _BASE_HWCONFIG_H_ */

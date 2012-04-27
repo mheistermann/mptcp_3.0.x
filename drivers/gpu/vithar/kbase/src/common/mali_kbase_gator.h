@@ -20,6 +20,17 @@
 #define GATOR_MAKE_EVENT(type,number) (((type) << 24) | ((number) << 16))
 #define GATOR_JOB_SLOTS_START 1
 #define GATOR_JOB_SLOTS_STOP  2
+
+#define ACTIVITY_RTPM_CHANGED	3
+#define ACTIVITY_DVFS_CHANGED	4
+#define ACTIVITY_DVFS_UTILISATION_CHANGED	5
+/*we have to make sure that these are same as value of enum counters
+ * in gator_driver/gator_events_mali_t6xx.c*/
+#define ACTIVITY_RTPM			3
+#define ACTIVITY_DVFS			4
+#define ACTIVITY_DVFS_UTILISATION	5
+
 void kbase_trace_mali_job_slots_event(u32 event);
+void kbase_trace_mali_timeline_event(u32 event);
 #endif
 

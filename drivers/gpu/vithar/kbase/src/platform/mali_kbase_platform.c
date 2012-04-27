@@ -49,6 +49,8 @@
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
+#include <kbase/src/common/mali_kbase_gator.h>
+
 #define VITHAR_DEFAULT_CLOCK 533000000
 
 static struct clk *clk_g3d = NULL;
@@ -224,6 +226,10 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 			return 0;
 		}
 
+#if MALI_GATOR_SUPPORT
+		kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM));
+#endif
+
 		if(kbase_platform_power_off(dev))
 			panic("failed to turn off g3d power\n");
 		if(kbase_platform_clock_off(dev))
@@ -250,6 +256,10 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 		kbdev->pm.cmu_pmu_status = 1;
 #if MALI_RTPM_DEBUG
 		printk( KERN_ERR "3D cmu_pmu_control - on\n");
+#endif
+
+#if MALI_GATOR_SUPPORT
+		kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM) | 0x01);
 #endif
 	}
 

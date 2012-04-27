@@ -629,6 +629,11 @@ static void timer_callback(void *data)
 			}
 			else
 #endif /* !CINSTR_DUMPING_ENABLED */
+			/* NOTE: During CINSTR_DUMPING_ENABLED, we use the NSS-timeouts for *all* atoms,
+			 * which makes the hard-stop and GPU reset timeout much longer. We also ensure
+			 * that we don't soft-stop at all.
+			 *
+			 * Otherwise, this next block is only used for NSS-atoms */
 			{
 				/* Job is Non Soft-Stoppable */
 				if (ticks == js_devdata->soft_stop_ticks)
@@ -638,7 +643,7 @@ static void timer_callback(void *data)
 					 */
 					OSK_PRINT_INFO( OSK_BASE_JM, "Soft-stop" );
 
-#if KBASE_DISABLE_SCHEDULING_SOFT_STOPS == 0
+#if (KBASE_DISABLE_SCHEDULING_SOFT_STOPS == 0) && (CINSTR_DUMPING_ENABLED == 0)
 					kbase_job_slot_softstop(kbdev, s, atom);
 #endif
 				}

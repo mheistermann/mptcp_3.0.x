@@ -584,18 +584,18 @@ mali_error kbase_add_va_region(struct kbase_context *kctx,
 		{
 			/* Check alignment */
 			u64 start_pfn;
-
 			start_pfn = (tmp->start_pfn + align - 1) & ~(align - 1);
-			if ((tmp->start_pfn + tmp->nr_pages - start_pfn) < nr_pages)
-			{
-				continue;
-			}
 
-			/* It fits, let's use it */
-			
-			err = kbase_insert_va_region_nolock(kctx, reg, tmp, start_pfn, nr_pages);
-			
-			goto out;
+			if (
+			    (start_pfn >= tmp->start_pfn) &&
+			    (start_pfn <= (tmp->start_pfn + (tmp->nr_pages - 1))) &&
+			    ((start_pfn + nr_pages - 1) <= (tmp->start_pfn + tmp->nr_pages -1))
+			   )
+			{
+				/* It fits, let's use it */
+				err = kbase_insert_va_region_nolock(kctx, reg, tmp, start_pfn, nr_pages);
+				goto out;
+			}
 		}
 	}
 
@@ -1655,26 +1655,6 @@ struct kbase_va_region *kbase_tmem_alloc(struct kbase_context *kctx,
 		if ( vsize_rounded < vsize || psize_rounded < psize || extent_rounded < extent )
 		{
 			/* values too large to round */
-			return NULL;
-		}
-	}
-
-	if (flags & BASE_MEM_PROT_GPU_EX)
-	{
-		if (kbase_device_has_feature(kctx->kbdev, KBASE_FEATURE_HAS_16BIT_PC))
-		{
-			/* A 16-bit PC gives us a 64kB max size and a 64kB alignment req */
-			align = (1ul << (16 - OSK_PAGE_SHIFT));
-		}
-		else
-		{
-			/* A 32-bit PC is the default, giving a 4GB/4GB max size/alignment */
-			align = (1ul << (32 - OSK_PAGE_SHIFT));
-		}
-
-		if (vsize_rounded > align)
-		{
-			OSK_PRINT_WARN(OSK_BASE_MEM, "Executable tmem virtual size %lx is larger than the pc (%lx) (in pages)", (unsigned long)vsize_rounded, (unsigned long)align);
 			return NULL;
 		}
 	}

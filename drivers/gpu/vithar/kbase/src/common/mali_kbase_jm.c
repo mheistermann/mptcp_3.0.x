@@ -962,13 +962,12 @@ void kbase_job_slot_softstop(kbase_device *kbdev, int js, kbase_jd_atom *target_
  */
 void kbase_job_slot_hardstop(kbase_context *kctx, int js, kbase_jd_atom *target_katom)
 {
-	/* The workaround for HW issue 8401 has an issue, so instead of hard-stopping
-     * just reset the GPU. This will ensure that the jobs leave the GPU.
-     */
     kbase_device *kbdev = kctx->kbdev;
     kbasep_job_slot_soft_or_hard_stop(kctx->kbdev, kctx, js, target_katom, JSn_COMMAND_HARD_STOP);
-#if BASE_HW_ISSUE_8401
-    /* All callers of this function immediately drop the slot lock after calling this function.
+#if BASE_HW_ISSUE_8401 || BASE_HW_ISSUE_9510
+    /* The workaround for HW issue 8401 has an issue, so instead of hard-stopping
+     * just reset the GPU. This will ensure that the jobs leave the GPU.
+     * All callers of this function immediately drop the slot lock after calling this function.
      * So this is safe because the parent functions don't require atomicity regarding the job slot.
      */
     kbase_job_slot_unlock(kbdev, js);

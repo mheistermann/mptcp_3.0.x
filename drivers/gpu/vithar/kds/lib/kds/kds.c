@@ -262,6 +262,7 @@ struct kds_resource_set * kds_waitall(
 	rset->pending = number_resources;
 	rset->locked_resources = 1;
 	INIT_LIST_HEAD(&rset->callback_link);
+	INIT_WORK(&rset->callback_work, kds_queued_callback);
 
 	mutex_lock(&kds_lock);
 

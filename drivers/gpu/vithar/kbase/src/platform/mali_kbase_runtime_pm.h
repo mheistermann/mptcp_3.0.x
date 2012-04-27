@@ -30,6 +30,10 @@ void kbase_device_runtime_put_sync(struct device *dev);
 void kbase_device_runtime_init(struct device *dev);
 void kbase_device_runtime_allow_rp_control(void);
 
+#ifdef CONFIG_VITHAR_RTPM_DEBUG
+#define MALI_RTPM_DEBUG 1
+#else
 #define MALI_RTPM_DEBUG 0
+#endif
 
 #endif /* _KBASE_RUNTIME_PM_H_ */
