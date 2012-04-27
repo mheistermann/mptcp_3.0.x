@@ -42,6 +42,11 @@ enum usb_phy_type {
 	USB_PHY_HSIC1	= (0x1 << 2),
 };
 
+enum usb_phy30_clk_type {
+	DEFAULT_CLK,
+	EXYNOS5250_REV0_CLK, /* diff clock */
+};
+
 struct exynos_usb_phy {
 	u8 lpa_entered;
 	unsigned long flags;
@@ -224,6 +229,52 @@ static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 	clk_put(ref_clk);
 
 	return refclk_freq;
+}
+
+static u32 exynos_usb_phy30_set_clock(struct platform_device *pdev,
+				      enum usb_phy30_clk_type clk_type)
+{
+	u32 reg, refclk;
+
+	switch (clk_type) {
+	case EXYNOS5250_REV0_CLK:
+		/* 100MHz diff pad clock */
+		reg = (EXYNOS_USB3_PHYCLKRST_REFCLKSEL(2) |
+			EXYNOS_USB3_PHYCLKRST_FSEL(0x27) |
+			EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x19) |
+			EXYNOS_USB3_PHYCLKRST_SSC_REF_CLK_SEL(0x00));
+		break;
+
+	case DEFAULT_CLK:
+	default:
+		refclk = exynos_usb_phy_set_clock(pdev);
+		reg = EXYNOS_USB3_PHYCLKRST_REFCLKSEL(3) |
+		      EXYNOS_USB3_PHYCLKRST_FSEL(refclk);
+
+		switch(refclk){
+			case EXYNOS5_CLKSEL_50M:
+				reg |= (EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x02) |
+					EXYNOS_USB3_PHYCLKRST_SSC_REF_CLK_SEL(0x00));
+				break;
+			case EXYNOS5_CLKSEL_20M:
+				reg |= (EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x7d) |
+					EXYNOS_USB3_PHYCLKRST_SSC_REF_CLK_SEL(0x00));
+				break;
+			case EXYNOS5_CLKSEL_19200K:
+				reg |= (EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x02) |
+					EXYNOS_USB3_PHYCLKRST_SSC_REF_CLK_SEL(0x88));
+				break;
+			case EXYNOS5_CLKSEL_24M:
+			default:
+				reg |= (EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x68) |
+					EXYNOS_USB3_PHYCLKRST_SSC_REF_CLK_SEL(0x88));
+				break;
+		}
+
+		break;
+	}
+
+	return reg;
 }
 
 static void exynos_usb_phy_control(enum usb_phy_type phy_type , int on)
@@ -841,56 +892,52 @@ static int __maybe_unused exynos_usb_hsic_exit(struct platform_device *pdev)
 static int exynos5_usb_phy30_init(struct platform_device *pdev)
 {
 	u32 reg;
-	bool use_ext_clk = true;
+	enum usb_phy30_clk_type clk_type = DEFAULT_CLK;
 
 	exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
 
 	/* Reset USB 3.0 PHY */
 	writel(0x00000000, EXYNOS_USB3_PHYREG0);
 	writel(0x24d4e6e4, EXYNOS_USB3_PHYPARAM0);
-	writel(0x03fff820, EXYNOS_USB3_PHYPARAM1);
 	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
 
 	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
+		clk_type = EXYNOS5250_REV0_CLK;
+
 		writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
+		writel(0x03fff820, EXYNOS_USB3_PHYPARAM1);
 		writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 		/* Over-current pin is inactive on SMDK5250 rev 0.0 */
 		writel((readl(EXYNOS_USB3_LINKPORT) & ~(0x3<<4)) |
 			(0x3<<2), EXYNOS_USB3_LINKPORT);
 	} else {
 		writel(0x08000000, EXYNOS_USB3_LINKSYSTEM);
+		writel(0x03fff81C, EXYNOS_USB3_PHYPARAM1);
 		writel(0x00000004, EXYNOS_USB3_PHYBATCHG);
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 		writel(readl(EXYNOS_USB3_LINKPORT) |
 			(0xf<<2), EXYNOS_USB3_LINKPORT);
 #endif
-		/* REVISIT :use externel clock 100MHz */
-		if (use_ext_clk)
-			writel(readl(EXYNOS_USB3_PHYPARAM0) | (0x1<<31),
-				EXYNOS_USB3_PHYPARAM0);
-		else
-			writel(readl(EXYNOS_USB3_PHYPARAM0) & ~(0x1<<31),
-				EXYNOS_USB3_PHYPARAM0);
+		/* uncomment to test 100MHz clock */
+#if 0
+		clk_type = EXYNOS5250_REV0_CLK;
+		writel(readl(EXYNOS_USB3_PHYPARAM0) | (0x1<<31),
+			EXYNOS_USB3_PHYPARAM0);
+#endif
 	}
 
 	/* UTMI Power Control */
 	writel(EXYNOS_USB3_PHYUTMI_OTGDISABLE, EXYNOS_USB3_PHYUTMI);
 
-	/* Set 100MHz external clock */
-	reg = EXYNOS_USB3_PHYCLKRST_PORTRESET |
-		/* HS PLL uses ref_pad_clk{p,m} or ref_alt_clk_{p,m}
-		* as reference */
-		EXYNOS_USB3_PHYCLKRST_REFCLKSEL(2) |
+	reg = exynos_usb_phy30_set_clock(pdev, clk_type);
+
+	reg |= (EXYNOS_USB3_PHYCLKRST_PORTRESET |
 		/* Digital power supply in normal operating mode */
 		EXYNOS_USB3_PHYCLKRST_RETENABLEN |
-		/* 0x27-100MHz, 0x2a-24MHz, 0x31-20MHz, 0x38-19.2MHz */
-		EXYNOS_USB3_PHYCLKRST_FSEL(0x27) |
-		/* 0x19-100MHz, 0x68-24MHz, 0x7d-20Mhz */
-		EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x19) |
 		/* Enable ref clock for SS function */
 		EXYNOS_USB3_PHYCLKRST_REF_SSP_EN |
 		/* Enable spread spectrum */
-		EXYNOS_USB3_PHYCLKRST_SSC_EN;
+		EXYNOS_USB3_PHYCLKRST_SSC_EN);
 
 	if (!(soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0))
 		reg |= EXYNOS_USB3_PHYCLKRST_COMMONONN;
