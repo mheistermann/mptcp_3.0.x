@@ -358,10 +358,12 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 
 	exynos5_sys_powerdown_conf(SYS_LPA);
 
-	/* Disable USE_RETENTION of JPEG_MEM_OPTION */
-	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
-	tmp |= EXYNOS5_OPTION_USE_RETENTION;
-	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		/* Disable USE_RETENTION of JPEG_MEM_OPTION */
+		tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
+		tmp |= EXYNOS5_OPTION_USE_RETENTION;
+		__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+	}
 
 	do {
 		/* Waiting for flushing UART fifo */
