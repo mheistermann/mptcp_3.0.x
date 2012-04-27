@@ -139,7 +139,8 @@ int exynos_pd_disable(struct device *dev)
 		__raw_writel(0, EXYNOS5_CMU_CLKSTOP_MAU_SYS_PWR_REG);
 		__raw_writel(0, EXYNOS5_CMU_RESET_MAU_SYS_PWR_REG);
 		__raw_writel(0, EXYNOS5_PAD_RETENTION_MAU_SYS_PWR_REG);
-	}
+	} else if (soc_is_exynos5250() && pdata->base == EXYNOS5_ISP_CONFIGURATION)
+		__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
 
 	__raw_writel(0, pdata->base);
 
