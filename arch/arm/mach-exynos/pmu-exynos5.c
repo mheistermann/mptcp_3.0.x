@@ -106,19 +106,19 @@ static struct exynos4_pmu_conf exynos52xx_pmu_config[] = {
 	{ EXYNOS5_DISP1_SYS_PWR_REG,				{ 0x7, 0x0, 0x0} },
 	{ EXYNOS5_MAU_SYS_PWR_REG,				{ 0x7, 0x7, 0x0} },
 	{ EXYNOS5_CMU_CLKSTOP_GSCL_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
-	{ EXYNOS5_CMU_CLKSTOP_ISP_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_CMU_CLKSTOP_ISP_SYS_PWR_REG,			{ 0x0, 0x0, 0x0} },
 	{ EXYNOS5_CMU_CLKSTOP_MFC_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_CLKSTOP_G3D_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_CLKSTOP_DISP1_SYS_PWR_REG,		{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_CLKSTOP_MAU_SYS_PWR_REG,			{ 0x1, 0x1, 0x0} },
 	{ EXYNOS5_CMU_SYSCLK_GSCL_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
-	{ EXYNOS5_CMU_SYSCLK_ISP_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_CMU_SYSCLK_ISP_SYS_PWR_REG,			{ 0x0, 0x0, 0x0} },
 	{ EXYNOS5_CMU_SYSCLK_MFC_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_SYSCLK_G3D_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_SYSCLK_DISP1_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_SYSCLK_MAU_SYS_PWR_REG,			{ 0x1, 0x1, 0x0} },
 	{ EXYNOS5_CMU_RESET_GSCL_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
-	{ EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG,			{ 0x0, 0x0, 0x0} },
 	{ EXYNOS5_CMU_RESET_MFC_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_RESET_G3D_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 	{ EXYNOS5_CMU_RESET_DISP1_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
@@ -170,6 +170,12 @@ void __iomem *list_diable_wfi_wfe[] = {
 	EXYNOS5_ARM_CORE1_OPTION,
 	EXYNOS5_FSYS_ARM_OPTION,
 	EXYNOS5_ISP_ARM_OPTION,
+};
+
+void __iomem *list_disable_pmu_reg[] = {
+	EXYNOS5_CMU_CLKSTOP_ISP_SYS_PWR_REG,
+	EXYNOS5_CMU_SYSCLK_ISP_SYS_PWR_REG,
+	EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG,
 };
 
 static void exynos5_init_pmu(void)
@@ -246,10 +252,18 @@ void exynos5_sys_powerdown_conf(enum sys_powerdown mode)
 
 static int __init exynos5_pmu_init(void)
 {
+	unsigned int i;
+
 	exynos5_pmu_config = exynos52xx_pmu_config;
 	entry_cnt = ARRAY_SIZE(exynos52xx_pmu_config);
 	printk(KERN_INFO "%s: PMU supports 52XX(%d)\n"
 				, __func__, entry_cnt);
+
+	/*
+	 * Follow register should be set with 0x0
+	 */
+	for (i = 0 ; i < ARRAY_SIZE(list_disable_pmu_reg) ; i++)
+		__raw_writel(0x0, list_disable_pmu_reg[i]);
 
 	return 0;
 }
