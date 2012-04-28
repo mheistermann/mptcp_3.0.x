@@ -269,16 +269,17 @@ void exynos_sysmmu_set_fault_handler(struct device *dev,
 	__set_fault_handler(data, handler);
 }
 
-static int default_fault_handler(enum exynos_sysmmu_inttype itype,
-		     unsigned long pgtable_base, unsigned long fault_addr)
+static int default_fault_handler(const char *mmuname,
+			enum exynos_sysmmu_inttype itype,
+			unsigned long pgtable_base, unsigned long fault_addr)
 {
 	unsigned long *ent;
 
 	if ((itype >= SYSMMU_FAULTS_NUM) || (itype < SYSMMU_PAGEFAULT))
 		itype = SYSMMU_FAULT_UNKNOWN;
 
-	pr_err("%s occured at 0x%lx(Page table base: 0x%lx)\n",
-			sysmmu_fault_name[itype], fault_addr, pgtable_base);
+	pr_err("%s occured at 0x%lx by '%s' (Page table base: 0x%lx)\n",
+		sysmmu_fault_name[itype], fault_addr, mmuname, pgtable_base);
 
 	ent = section_entry(__va(pgtable_base), fault_addr);
 	pr_err("\tLv1 entry: 0x%lx\n", *ent);
@@ -303,6 +304,7 @@ static irqreturn_t exynos_sysmmu_irq(int irq, void *dev_id)
 	struct platform_device *pdev;
 	enum exynos_sysmmu_inttype itype;
 	unsigned long addr = -1;
+	const char *mmuname = NULL;
 
 	int i, ret = -ENOSYS;
 
@@ -313,8 +315,11 @@ static irqreturn_t exynos_sysmmu_irq(int irq, void *dev_id)
 	pdev = to_platform_device(data->sysmmu);
 	for (i = 0; i < (pdev->num_resources / 2); i++) {
 		irqres = platform_get_resource(pdev, IORESOURCE_IRQ, i);
-		if (irqres && ((int)irqres->start == irq))
+		if (irqres && ((int)irqres->start == irq)) {
+			if (irqres->name)
+				mmuname = irqres->name;
 			break;
+		}
 	}
 
 	if (i == pdev->num_resources) {
@@ -338,7 +343,8 @@ static irqreturn_t exynos_sysmmu_irq(int irq, void *dev_id)
 		if (itype != SYSMMU_FAULT_UNKNOWN)
 			base = __raw_readl(
 					data->sfrbases[i] + REG_PT_BASE_ADDR);
-		ret = data->fault_handler(itype, base, addr);
+		ret = data->fault_handler(mmuname ? mmuname : data->dbgname,
+					itype, base, addr);
 	}
 
 	if (!ret && (itype != SYSMMU_FAULT_UNKNOWN))

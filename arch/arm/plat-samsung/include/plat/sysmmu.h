@@ -30,13 +30,15 @@ enum exynos_sysmmu_inttype {
 };
 
 /*
+ * @mmuname: Name of the System MMU that generates fault
  * @itype: type of fault.
  * @pgtable_base: the physical address of page table base. This is 0 if @itype
  *                is SYSMMU_BUSERROR.
  * @fault_addr: the device (virtual) address that the System MMU tried to
  *             translated. This is 0 if @itype is SYSMMU_BUSERROR.
  */
-typedef int (*sysmmu_fault_handler_t)(enum exynos_sysmmu_inttype itype,
+typedef int (*sysmmu_fault_handler_t)(const char *mmuname,
+			enum exynos_sysmmu_inttype itype,
 			unsigned long pgtable_base, unsigned long fault_addr);
 
 #ifdef CONFIG_EXYNOS_IOMMU
