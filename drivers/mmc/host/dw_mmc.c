@@ -564,7 +564,7 @@ static int dw_mci_submit_data_dma(struct dw_mci *host, struct mmc_data *data)
 	host->using_dma = 0;
 
 	/* If we don't have a channel, we can't do DMA */
-	if (!host->use_dma)
+	if (!host->use_dma || host->quirks & DW_MCI_QUIRK_IDMAC_DATA_CORRUPTION)
 		return -ENODEV;
 
 	sg_len = dw_mci_pre_dma_transfer(host, data, 0);

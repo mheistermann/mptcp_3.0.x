@@ -162,7 +162,7 @@ static void exynos_dwmci2_cfg_gpio(int width)
 
 static struct dw_mci_board smdk5250_dwmci2_pdata __initdata = {
 	.num_slots		= 1,
-	.quirks			= DW_MCI_QUIRK_HIGHSPEED,
+	.quirks			= DW_MCI_QUIRK_HIGHSPEED | DW_MCI_QUIRK_IDMAC_DATA_CORRUPTION,
 	.bus_hz			= 100 * 1000 * 1000,
 	.caps			= MMC_CAP_CMD23,
 	.fifo_depth             = 0x80,

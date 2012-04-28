@@ -185,6 +185,8 @@ struct dw_mci_dma_ops {
 /* Unreliable card detection */
 #define DW_MCI_QUIRK_BROKEN_CARD_DETECTION	BIT(3)
 
+#define DW_MCI_QUIRK_IDMAC_DATA_CORRUPTION	BIT(31)
+
 
 struct dma_pdata;
 
