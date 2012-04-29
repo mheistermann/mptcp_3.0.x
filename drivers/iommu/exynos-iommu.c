@@ -137,7 +137,6 @@ struct exynos_iommu_domain {
 	unsigned long *pgtable; /* lv1 page table, 16KB */
 	short *lv2entcnt; /* free lv2 entry counter for each section */
 	spinlock_t lock; /* lock for this structure */
-	spinlock_t pgtablelock; /* lock for modifying page table @ pgtable */
 };
 
 static bool set_sysmmu_active(struct sysmmu_drvdata *data)
@@ -706,7 +705,6 @@ static int exynos_iommu_domain_init(struct iommu_domain *domain)
 	pgtable_flush(priv->pgtable, priv->pgtable + NUM_LV1ENTRIES);
 
 	spin_lock_init(&priv->lock);
-	spin_lock_init(&priv->pgtablelock);
 	INIT_LIST_HEAD(&priv->clients);
 
 	domain->priv = priv;
@@ -901,12 +899,9 @@ static int exynos_iommu_map(struct iommu_domain *domain, unsigned long iova,
 {
 	struct exynos_iommu_domain *priv = domain->priv;
 	unsigned long *entry;
-	unsigned long flags;
 	int ret = -ENOMEM;
 
 	BUG_ON(priv->pgtable == NULL);
-
-	spin_lock_irqsave(&priv->pgtablelock, flags);
 
 	entry = section_entry(priv->pgtable, iova);
 
@@ -931,8 +926,6 @@ static int exynos_iommu_map(struct iommu_domain *domain, unsigned long iova,
 							__func__, iova, size);
 	}
 
-	spin_unlock_irqrestore(&priv->pgtablelock, flags);
-
 	return ret;
 }
 
@@ -940,12 +933,9 @@ static size_t exynos_iommu_unmap(struct iommu_domain *domain,
 					       unsigned long iova, size_t size)
 {
 	struct exynos_iommu_domain *priv = domain->priv;
-	unsigned long flags;
 	unsigned long *ent;
 
 	BUG_ON(priv->pgtable == NULL);
-
-	spin_lock_irqsave(&priv->pgtablelock, flags);
 
 	ent = section_entry(priv->pgtable, iova);
 
@@ -954,30 +944,23 @@ static size_t exynos_iommu_unmap(struct iommu_domain *domain,
 
 		*ent = 0;
 		pgtable_flush(ent, ent + 1);
-		size = SECT_SIZE;
-		goto done;
+		return SECT_SIZE;
 	}
 
-	if (unlikely(lv1ent_fault(ent))) {
-		if (size > SECT_SIZE)
-			size = SECT_SIZE;
-		goto done;
-	}
+	if (unlikely(lv1ent_fault(ent)))
+		return (size > SECT_SIZE) ? SECT_SIZE : size;
 
 	/* lv1ent_page(sent) == true here */
 
 	ent = page_entry(ent, iova);
 
-	if (unlikely(lv2ent_fault(ent))) {
-		size = SPAGE_SIZE;
-		goto done;
-	}
+	if (unlikely(lv2ent_fault(ent)))
+		return SPAGE_SIZE;
 
 	if (lv2ent_small(ent)) {
 		*ent = 0;
-		size = SPAGE_SIZE;
 		priv->lv2entcnt[lv1ent_offset(iova)] += 1;
-		goto done;
+		return SPAGE_SIZE;
 	}
 
 	/* lv1ent_large(ent) == true here */
@@ -985,40 +968,9 @@ static size_t exynos_iommu_unmap(struct iommu_domain *domain,
 
 	memset(ent, 0, sizeof(*ent) * SPAGES_PER_LPAGE);
 
-	size = LPAGE_SIZE;
 	priv->lv2entcnt[lv1ent_offset(iova)] += SPAGES_PER_LPAGE;
-done:
-	spin_unlock_irqrestore(&priv->pgtablelock, flags);
 
-	return size;
-}
-
-static phys_addr_t exynos_iommu_iova_to_phys(struct iommu_domain *domain,
-					  unsigned long iova)
-{
-	struct exynos_iommu_domain *priv = domain->priv;
-	unsigned long *entry;
-	unsigned long flags;
-	phys_addr_t phys = 0;
-
-	spin_lock_irqsave(&priv->pgtablelock, flags);
-
-	entry = section_entry(priv->pgtable, iova);
-
-	if (lv1ent_section(entry)) {
-		phys = section_phys(entry) + section_offs(iova);
-	} else if (lv1ent_page(entry)) {
-		entry = page_entry(entry, iova);
-
-		if (lv2ent_large(entry))
-			phys = lpage_phys(entry) + lpage_offs(iova);
-		else if (lv2ent_small(entry))
-			phys = spage_phys(entry) + spage_offs(iova);
-	}
-
-	spin_unlock_irqrestore(&priv->pgtablelock, flags);
-
-	return phys;
+	return LPAGE_SIZE;
 }
 
 static struct iommu_ops exynos_iommu_ops = {
@@ -1028,7 +980,6 @@ static struct iommu_ops exynos_iommu_ops = {
 	.detach_dev = &exynos_iommu_detach_device,
 	.map = &exynos_iommu_map,
 	.unmap = &exynos_iommu_unmap,
-	.iova_to_phys = &exynos_iommu_iova_to_phys,
 	.pgsize_bitmap = SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
 };
 
