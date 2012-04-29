@@ -121,8 +121,7 @@ static void exynos_xhci_phy_set(struct platform_device *pdev)
 
 	/* Global core init */
 	writel(EXYNOS_USB3_GSBUSCFG0_INCR16BrstEna |
-		EXYNOS_USB3_GSBUSCFG0_INCR8BrstEna |
-		EXYNOS_USB3_GSBUSCFG0_INCR4BrstEna,
+		EXYNOS_USB3_GSBUSCFG0_INCRBrstEna,
 		hcd->regs + EXYNOS_USB3_GSBUSCFG0);
 
 	writel(EXYNOS_USB3_GSBUSCFG1_BREQLIMIT(0x3),
@@ -338,6 +337,11 @@ static int exynos_xhci_setup(struct usb_hcd *hcd)
 	retval = xhci_gen_setup(hcd, exynos_xhci_quirks);
 	if (retval)
 		return retval;
+
+	/* Global core DMA re-init */
+	writel(EXYNOS_USB3_GSBUSCFG0_INCR16BrstEna |
+		EXYNOS_USB3_GSBUSCFG0_INCRBrstEna,
+		hcd->regs + EXYNOS_USB3_GSBUSCFG0);
 
 	xhci = hcd_to_xhci(hcd);
 	if (!usb_hcd_is_primary_hcd(hcd))
@@ -562,6 +566,7 @@ static int __devinit exynos_xhci_probe(struct platform_device *pdev)
 		goto dealloc_usb2_hcd;
 	}
 
+	xhci->shared_hcd->regs = hcd->regs;
 	exynos_xhci_dbg = xhci;
 	/* Set the xHCI pointer before exynos_xhci_setup() (aka hcd_driver.reset)
 	 * is called by usb_add_hcd().
