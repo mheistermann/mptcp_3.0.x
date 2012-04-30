@@ -348,7 +348,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	ret = gpio_request(EXYNOS5_GPE0(2), "GPE0");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPE0_2 ####\n");
-	s3c_gpio_cfgpin(EXYNOS5_GPE0(2), (0x3<<8));
+	s3c_gpio_cfgpin(EXYNOS5_GPE0(2), (0x2<<8));
 	s3c_gpio_setpull(EXYNOS5_GPE0(2), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS5_GPE0(2));
 
@@ -423,7 +423,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_setpull(EXYNOS5_GPF0(2), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS5_GPF0(2));
 
-	ret = gpio_request(EXYNOS5_GPF0(0), "GPF0");
+	ret = gpio_request(EXYNOS5_GPF0(3), "GPF0");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPF0_3 ####\n");
 	s3c_gpio_cfgpin(EXYNOS5_GPF0(3), (0x2<<12));
@@ -471,7 +471,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_setpull(EXYNOS5_GPF0(2), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS5_GPF0(2));
 
-	ret = gpio_request(EXYNOS5_GPF0(3), "GPF1");
+	ret = gpio_request(EXYNOS5_GPF0(3), "GPF0");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPF0_3 ####\n");
 	s3c_gpio_cfgpin(EXYNOS5_GPF0(3), (0x2<<12));
@@ -528,8 +528,8 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	if (IS_ERR(aclk_mcuisp_div1))
 		return PTR_ERR(aclk_mcuisp_div1);
 
-	clk_set_rate(aclk_mcuisp_div0, 400 * 1000000);
-	clk_set_rate(aclk_mcuisp_div1, 400 * 1000000);
+	clk_set_rate(aclk_mcuisp_div0, 200 * 1000000);
+	clk_set_rate(aclk_mcuisp_div1, 100 * 1000000);
 
 	mcu_isp_400 = clk_get_rate(aclk_mcuisp);
 	printk(KERN_DEBUG "mcu_isp_400 : %ld\n", mcu_isp_400);
@@ -560,6 +560,8 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 
 	clk_set_rate(aclk_266_div0, 134 * 1000000);
 	clk_set_rate(aclk_266_div1, 68 * 1000000);
+	/* FIXME */
+	__raw_writel(0x00000001, EXYNOS5_CLKDIV_ISP2);
 
 	isp_266 = clk_get_rate(aclk_266);
 	printk(KERN_DEBUG "isp_266 : %ld\n", isp_266);
@@ -587,6 +589,7 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	if (IS_ERR(sclk_uart_isp_div))
 		return PTR_ERR(sclk_uart_isp_div);
 
+	clk_set_parent(sclk_uart_isp, clk_get(&pdev->dev, "mout_mpll_user"));
 	clk_set_parent(sclk_uart_isp_div, sclk_uart_isp);
 	clk_set_rate(sclk_uart_isp_div, 50 * 1000000);
 
@@ -727,6 +730,7 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 
 	clk_enable(cam_A_clk);
 	clk_put(cam_A_clk);
+
 	return 0;
 }
 

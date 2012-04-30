@@ -605,7 +605,8 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		dbg("Default setting : preview_still\n");
 
 #ifndef FD_ENABLE
-		dev->is_p_region->parameter.fd.control.cmd = CONTROL_COMMAND_STOP;
+		dev->is_p_region->parameter.fd.control.cmd =
+						CONTROL_COMMAND_STOP;
 #endif
 
 		dev->scenario_id = ISS_PREVIEW_STILL;
@@ -1225,6 +1226,14 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	int ret = 0;
 
 	printk(KERN_INFO "FIMC_IS runtime suspend\n");
+
+	if (isp->pdata->clk_off) {
+		isp->pdata->clk_off(isp->pdev);
+	} else {
+		err("#### failed to Clock On ####\n");
+		return -EINVAL;
+	}
+
 #if defined(CONFIG_VIDEOBUF2_ION)
 	if (isp->alloc_ctx)
 		fimc_is_mem_suspend(isp->alloc_ctx);
@@ -1241,6 +1250,13 @@ static int fimc_is_runtime_resume(struct device *dev)
 	int ret = 0;
 
 	printk(KERN_INFO "FIMC_IS runtime resume\n");
+
+	if (isp->pdata->cfg_gpio) {
+		isp->pdata->cfg_gpio(isp->pdev);
+	} else {
+		err("failed to init GPIO config\n");
+		return -EINVAL;
+	}
 
 	/* 1. Enable MIPI */
 	enable_mipi();
@@ -1572,7 +1588,8 @@ static void fimc_is_sensor_tasklet_handler0(unsigned long data)
 	dbg_sensor("%d\n", sensor->shot_buffer_index0);
 }
 
-DECLARE_TASKLET(sensor0_tl, fimc_is_sensor_tasklet_handler0, (unsigned long)NULL);
+DECLARE_TASKLET(sensor0_tl, fimc_is_sensor_tasklet_handler0,
+						(unsigned long)NULL);
 #endif
 
 static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
