@@ -285,8 +285,14 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	clkrate = clk_get_rate(kbdev->sclk_g3d);
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
+#if (MALI_DVFS_STEP == 7)
 	/* To be revised  */
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 350, 266, 160, 100Mhz");
+#elif (MALI_DVFS_STEP == 6)
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 266, 160, 100Mhz");
+#else
+#error
+#endif
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -315,6 +321,10 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 		freq=450;
 	} else if (sysfs_streq("400", buf)) {
 		freq=400;
+#if (MALI_DVFS_STEP == 7)
+	} else if (sysfs_streq("350", buf)) {
+		freq=350;
+#endif
 	} else if (sysfs_streq("266", buf)) {
 		freq=266;
 	} else if (sysfs_streq("160", buf)) {

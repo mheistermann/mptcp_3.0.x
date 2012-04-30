@@ -52,7 +52,8 @@
 
 #ifdef MALI_DVFS_ASV_ENABLE
 #include <mach/asv.h>
-#define MALI_DVFS_ASV_GROUP_NUM 10
+#define MALI_DVFS_ASV_GROUP_SPECIAL_NUM 10
+#define MALI_DVFS_ASV_GROUP_NUM 12
 #endif
 
 #ifdef CONFIG_REGULATOR
@@ -73,16 +74,21 @@ typedef struct _mali_dvfs_info{
 
 static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
-#if (MALI_DVFS_STEP == 6)
+#if (MALI_DVFS_STEP == 7)
 	{912500, 100, 0, 80},
 	{925000, 160, 60, 80},
-	{1025000, 266, 70, 80},
+	{1025000, 266, 60, 80},
+	{1075000, 350, 60, 80},
 	{1125000, 400, 70, 80},
-	{1150000, 450, 70, 80},
-	{1250000, 533, 80, 100}
-#elif (MALI_DVFS_STEP == 2)
-	{937500, 266, 0, 55},
-	{1250000, 533, 45, 100}
+	{1150000, 450, 70, 96},
+	{1250000, 533, 90, 100}
+#elif (MALI_DVFS_STEP == 6)
+	{912500, 100, 0, 80},
+	{925000, 160, 60, 80},
+	{1025000, 266, 60, 80},
+	{1125000, 400, 70, 80},
+	{1150000, 450, 70, 96},
+	{1250000, 533, 90, 100}
 #else
 #error no table
 #endif
@@ -111,12 +117,13 @@ int mali_dvfs_control=0;
 osk_spinlock mali_dvfs_spinlock;
 
 #ifdef MALI_DVFS_ASV_ENABLE
-#if (MALI_DVFS_STEP != 6)
+#if (MALI_DVFS_STEP != 7) && (MALI_DVFS_STEP != 6)
 #error DVFS_ASV support only 6steps
 #endif
-static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DVFS_STEP]=
+#if (MALI_DVFS_STEP == 6)
+static const unsigned int mali_dvfs_asv_vol_tbl_special[MALI_DVFS_ASV_GROUP_SPECIAL_NUM][MALI_DVFS_STEP]=
 {
-	/*  100Mh	160Mh	   266Mh	400Mh	450Mh	533Mh*/
+	/*  100Mh   160Mh      266Mh    400Mh   450Mh   533Mh*/
 	{/*Group 1*/
 		912500, 925000, 1025000, 1100000, 1150000, 1225000,
 	},
@@ -148,16 +155,104 @@ static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DV
 		887500, 900000, 962500, 1087500, 1125000, 1212500,
 	},
 };
+
+static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DVFS_STEP]=
+{
+	/*  100Mh	160Mh	   266Mh	400Mh	450Mh	533Mh*/
+	{/*Group 1*/
+		925000, 925000, 1025000, 1125000, 1150000, 1200000,
+	},
+	{/*Group 2*/
+		900000, 900000, 1000000, 1087500, 1137500, 1187500,
+	},
+	{/*Group 3*/
+		900000, 900000, 950000, 1075000, 1125000, 1187500,
+	},
+	{/*Group 4*/
+		900000, 900000, 950000, 1075000, 1125000, 1187500,
+	},
+	{/*Group 5*/
+		900000, 900000, 937500, 1075000, 1112500, 1175000,
+	},
+	{/*Group 6*/
+		900000, 900000, 937500, 1050000, 1100000, 1150000,
+	},
+	{/*Group 7*/
+		900000, 900000, 925000, 1037500, 1087500, 1137500,
+	},
+	{/*Group 8*/
+		900000, 900000, 912500, 1025000, 1075000, 1125000,
+	},
+	{/*Group 9*/
+		900000, 900000, 912500, 1012500, 1075000, 1125000,
+	},
+	{/*Group 10*/
+		900000, 900000, 900000, 1012500, 1050000, 1125000,
+	},
+	{/*Group 11*/
+		875000, 900000, 900000, 1000000, 1050000, 1112500,
+	},
+	{/*Group 12*/
+		875000, 900000, 900000, 1000000, 1050000, 1112500,
+	},
+};
+#elif (MALI_DVFS_STEP == 7)
+static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DVFS_STEP]=
+{
+	/*  100Mh	160Mh	   266Mh	350Mh, 	400Mh	450Mh	533Mh*/
+	{/*Group 1*/
+		925000, 925000, 1025000, 1075000, 1125000, 1150000, 1200000,
+	},
+	{/*Group 2*/
+		900000, 900000, 1000000, 1037500, 1087500, 1137500, 1187500,
+	},
+	{/*Group 3*/
+		900000, 900000, 950000, 1037500, 1075000, 1125000, 1187500,
+	},
+	{/*Group 4*/
+		900000, 900000, 950000, 1037500, 1075000, 1125000, 1187500,
+	},
+	{/*Group 5*/
+		900000, 900000, 937500, 1025000, 1075000, 1112500, 1175000,
+	},
+	{/*Group 6*/
+		900000, 900000, 937500, 1000000, 1050000, 1100000, 1150000,
+	},
+	{/*Group 7*/
+		900000, 900000, 925000, 987500, 1037500, 1087500, 1137500,
+	},
+	{/*Group 8*/
+		900000, 900000, 912500, 987500, 1025000, 1075000, 1125000,
+	},
+	{/*Group 9*/
+		900000, 900000, 912500, 975000, 1012500, 1075000, 1125000,
+	},
+	{/*Group 10*/
+		900000, 900000, 900000, 975000, 1012500, 1050000, 1125000,
+	},
+	{/*Group 11*/
+		875000, 900000, 900000, 962500, 1000000, 1050000, 1112500,
+	},
+	{/*Group 12*/
+		875000, 900000, 900000, 962500, 1000000, 1050000, 1112500,
+	},
+};
+#endif
 #endif
 
 /*dvfs status*/
 static mali_dvfs_status mali_dvfs_status_current;
 #ifdef MALI_DVFS_ASV_ENABLE
+#if (MALI_DVFS_STEP == 7)
+static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
+	{ 925000, 925000, 1025000, 1075000, 1125000, 1150000, 1200000};
+#elif (MALI_DVFS_STEP == 6)
 static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
 	{ 912500, 925000, 1025000, 1125000, 1150000, 1250000};
+#else
+#error
 #endif
 
-#ifdef MALI_DVFS_ASV_ENABLE
 static int mali_dvfs_update_asv(int group)
 {
 	int i;
@@ -178,7 +273,10 @@ static int mali_dvfs_update_asv(int group)
 	}
 	for (i=0; i<MALI_DVFS_STEP; i++)
 	{
-		mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group-1][i];
+		if (exynos_lot_id)
+			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl_special[group-1][i];
+		else
+			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group-1][i];
 	}
 	return 0;
 }
@@ -205,16 +303,17 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 
 #if MALI_DVFS_START_MAX_STEP
 	/*If no input is keeping for longtime, first step will be max step. */
-	if (dvfs_status.utilisation > 10 && dvfs_status.noutilcnt > 20) {
-		dvfs_status.step=MALI_DVFS_STEP-2;
-		dvfs_status.utilisation = 100;
+	if (dvfs_status.noutilcnt > 20 && dvfs_status.utilisation > 0) {
+		dvfs_status.step=MALI_DVFS_STEP-3;
+		dvfs_status.utilisation = mali_dvfs_infotbl[dvfs_status.step].max_threshold;
+		dvfs_status.util_avg = mali_dvfs_infotbl[dvfs_status.step].min_threshold;
 	}
 #endif
 
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
 		OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
-		if (dvfs_status.step==MALI_DVFS_STEP-2) {
+		if (dvfs_status.step >= MALI_DVFS_STEP-3) {
 			if (dvfs_status.util_avg >  mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 			{
 				dvfs_status.step++;
@@ -545,6 +644,12 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 			gpll_rate = 800000000;
 			aclk_400_rate = 400000000;
 			break;
+#if (MALI_DVFS_STEP == 7)
+		case 350:
+			gpll_rate = 1400000000;
+			aclk_400_rate = 350000000;
+			break;
+#endif
 		case 266:
 			gpll_rate = 800000000;
 			aclk_400_rate = 267000000;
@@ -644,7 +749,7 @@ int kbase_platform_dvfs_sprint_avs_table(char *buf)
 	if (buf==NULL)
 		return 0;
 
-	cnt+=sprintf(buf,"asv group:%d\n",exynos_result_of_asv&0xf);
+	cnt+=sprintf(buf,"asv group:%d exynos_lot_id:%d\n",exynos_result_of_asv&0xf, exynos_lot_id);
 	for (i=MALI_DVFS_STEP-1; i >= 0; i--) {
 		cnt+=sprintf(buf+cnt,"%dMhz:%d\n",
 				mali_dvfs_infotbl[i].clock, mali_dvfs_infotbl[i].voltage);
