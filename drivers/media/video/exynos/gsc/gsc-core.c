@@ -1493,7 +1493,6 @@ static int gsc_suspend(struct device *dev)
 		return -EINVAL;
 	}
 
-	pm_runtime_put_sync(dev);
 
 	return ret;
 }
@@ -1510,7 +1509,6 @@ static int gsc_resume(struct device *dev)
 	drv_data = (struct gsc_driverdata *)
 		platform_get_device_id(pdev)->driver_data;
 
-	pm_runtime_get_sync(dev);
 	if (gsc_m2m_opened(gsc)) {
 		ctx = v4l2_m2m_get_curr_priv(gsc->m2m.m2m_dev);
 		if (ctx != NULL) {
