@@ -68,18 +68,19 @@ static inline phys_addr_t *get_imbufs_and_free(int idx,
 	} else if (idx < MAX_IMBUFS) {
 		int baseidx;
 		phys_addr_t *imbufs;
+		phys_addr_t **pcur_bufs;
+
 		baseidx = idx - MAX_LV1IMBUFS;
-		imbufs = lv2ppimbufs[LV2IDX1(baseidx)][LV2IDX2(baseidx)];
+		pcur_bufs = lv2ppimbufs[LV2IDX1(baseidx)];
+		imbufs = pcur_bufs[LV2IDX2(baseidx)];
 		if ((LV2IDX2(baseidx) == (IMBUFS_ENTRIES - 1)) ||
-			(lv2ppimbufs[LV2IDX1(baseidx)][LV2IDX2(baseidx) + 1]
-				== NULL)) {
+			(pcur_bufs[LV2IDX2(baseidx) + 1] == NULL)) {
 			kfree(lv2ppimbufs[LV2IDX1(baseidx)]);
 			if ((LV2IDX1(baseidx) == (IMBUFS_ENTRIES - 1)) ||
 				(lv2ppimbufs[LV2IDX1(baseidx) + 1] == NULL))
 				kfree(lv2ppimbufs);
 		}
 		return imbufs;
-
 	}
 	return NULL;
 }
