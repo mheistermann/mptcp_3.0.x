@@ -22,12 +22,17 @@
 #include <linux/libata.h>
 #include <linux/ahci_platform.h>
 #include "ahci.h"
+#include <linux/suspend.h>
+
+static struct notifier_block exynos_sata_notifier;
+static int exynos_sata_notifier_event(struct notifier_block *this,
+		unsigned long event, void *ptr);
 
 static struct scsi_host_template ahci_platform_sht = {
 	AHCI_SHT("ahci_platform"),
 };
 
-static int __init ahci_probe(struct platform_device *pdev)
+static int ahci_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct ahci_platform_data *pdata = dev->platform_data;
@@ -181,8 +186,15 @@ static struct platform_driver ahci_driver = {
 
 static int __init ahci_init(void)
 {
+	register_pm_notifier(&exynos_sata_notifier);
 	return platform_driver_probe(&ahci_driver, ahci_probe);
 }
+
+static int sata_resume(void)
+{
+	return platform_driver_probe(&ahci_driver, ahci_probe);
+}
+
 module_init(ahci_init);
 
 static void __exit ahci_exit(void)
@@ -190,6 +202,25 @@ static void __exit ahci_exit(void)
 	platform_driver_unregister(&ahci_driver);
 }
 module_exit(ahci_exit);
+
+static int exynos_sata_notifier_event(struct notifier_block *this,
+	unsigned long event, void *ptr) {
+	switch(event) {
+	case PM_POST_RESTORE:
+		break;
+	case PM_SUSPEND_PREPARE:
+		platform_driver_unregister(&ahci_driver);
+		break;
+	case PM_POST_SUSPEND:
+		sata_resume();
+		break;
+	}
+	return 0;
+}
+
+static struct notifier_block exynos_sata_notifier = {
+	.notifier_call = exynos_sata_notifier_event,
+};
 
 MODULE_DESCRIPTION("AHCI SATA platform driver");
 MODULE_AUTHOR("Anton Vorontsov <avorontsov@ru.mvista.com>");
