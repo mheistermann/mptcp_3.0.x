@@ -82,6 +82,7 @@
 static LIST_HEAD(fbm_list);
 static LIST_HEAD(bts_list);
 
+/* contains informations for a physical BTS device  */
 struct exynos_bts_local_data {
 	enum exynos_bts_id id;
 	void __iomem	*base;
@@ -89,6 +90,10 @@ struct exynos_bts_local_data {
 	bool changable_prior;
 };
 
+/* Structure for a BTS driver.
+  * It contains a logical BTS device than has several physical BTS devices.
+  * the physical device list contains bts_local_data.
+  */
 struct exynos_bts_data {
 	struct list_head node;
 	struct device *dev;
@@ -99,11 +104,56 @@ struct exynos_bts_data {
 	u32 listnum;
 };
 
+/* Structure for FBM devices */
 struct exynos_fbm_data {
 	struct exynos_fbm_resource fbm;
 	struct list_head node;
 };
 
+/*
+  * FBM controls
+  */
+ /* fimd FBM group based on requested priority */
+static enum bts_fbm_group find_fbm_group(enum bts_priority prior)
+{
+	struct exynos_fbm_data *fbm_data;
+	enum bts_fbm_group fbm_group = 0;
+
+	list_for_each_entry(fbm_data, &fbm_list, node) {
+		if (prior == BTS_BE) {
+			if (fbm_data->fbm.priority == BTS_HARDTIME)
+				fbm_group |= fbm_data->fbm.fbm_group;
+		} else if (prior == BTS_HARDTIME) {
+			if ((fbm_data->fbm.priority == BTS_BE) ||
+				(fbm_data->fbm.priority == BTS_HARDTIME))
+				fbm_group |= fbm_data->fbm.fbm_group;
+		}
+	}
+
+	return fbm_group;
+}
+
+ /* init a FBM device */
+static void fbm_init_config(void __iomem *base, enum bts_priority prior)
+{
+	switch (prior) {
+	case BTS_BE:
+		writel(RD_COUNTER, base + FBM_MODESEL0);
+		writel(FBM_THR_BE, base + FBM_THRESHOLDSEL0);
+		break;
+	case BTS_HARDTIME:
+		writel(RDWT_COUNTER, base + FBM_MODESEL0);
+		writel(FBM_THR_HARDTIME, base + FBM_THRESHOLDSEL0);
+		break;
+	default:
+		break;
+	}
+}
+
+/*
+  * BTS (bus traffic shaper) controls
+  */
+/* set basic control of a BTS device */
 static void bts_set_control(void __iomem *base, enum bts_priority prior)
 {
 	u32 val = BTS_ON_OFF;
@@ -113,6 +163,7 @@ static void bts_set_control(void __iomem *base, enum bts_priority prior)
 	writel(val, base + BTS_CONTROL);
 }
 
+/* on/off a BTS device */
 static void bts_onoff(void __iomem *base, bool on)
 {
 	u32 val = readl(base + BTS_CONTROL);
@@ -124,6 +175,7 @@ static void bts_onoff(void __iomem *base, bool on)
 	writel(val, base + BTS_CONTROL);
 }
 
+/* set priority */
 static void bts_set_master_priority(void __iomem *base, enum bts_priority prior)
 {
 	u32 val;
@@ -136,12 +188,14 @@ static void bts_set_master_priority(void __iomem *base, enum bts_priority prior)
 	writel(val, base + BTS_MASTER_PRIORITY);
 }
 
+/* set the shaping value for best effort IPs */
 static void bts_set_besteffort_shaping(void __iomem *base)
 {
 	writel(LOW_SHAPING_VAL0, base + BTS_SHAPING_ON_OFF_REG0);
 	writel(LOW_SHAPING_VAL1, base + BTS_SHAPING_ON_OFF_REG1);
 }
 
+/* set deblocking source according to deblocking group */
 static void bts_set_deblocking(void __iomem *base,
 	enum bts_fbm_group deblocking)
 {
@@ -162,42 +216,7 @@ static void bts_set_deblocking(void __iomem *base,
 	writel(val, base + BTS_DEBLOCKING_SOURCE_SELECTION);
 }
 
-
-static enum bts_fbm_group find_fbm_group(enum bts_priority prior)
-{
-	struct exynos_fbm_data *fbm_data;
-	enum bts_fbm_group fbm_group = 0;
-
-	list_for_each_entry(fbm_data, &fbm_list, node) {
-		if (prior == BTS_BE) {
-			if (fbm_data->fbm.priority == BTS_HARDTIME)
-				fbm_group |= fbm_data->fbm.fbm_group;
-		} else if (prior == BTS_HARDTIME) {
-			if ((fbm_data->fbm.priority == BTS_BE) ||
-				(fbm_data->fbm.priority == BTS_HARDTIME))
-				fbm_group |= fbm_data->fbm.fbm_group;
-		}
-	}
-
-	return fbm_group;
-}
-
-static void fbm_init_config(void __iomem *base, enum bts_priority prior)
-{
-	switch (prior) {
-	case BTS_BE:
-		writel(RD_COUNTER, base + FBM_MODESEL0);
-		writel(FBM_THR_BE, base + FBM_THRESHOLDSEL0);
-		break;
-	case BTS_HARDTIME:
-		writel(RDWT_COUNTER, base + FBM_MODESEL0);
-		writel(FBM_THR_HARDTIME, base + FBM_THRESHOLDSEL0);
-		break;
-	default:
-		break;
-	}
-}
-
+/* initialize a bts device in default setting */
 static void bts_init_config(void __iomem *base, enum bts_priority prior)
 {
 	switch (prior) {
@@ -216,6 +235,7 @@ static void bts_init_config(void __iomem *base, enum bts_priority prior)
 	}
 }
 
+/* change fbm setting  */
 static void bts_change_fbm_priority(bool on)
 {
 	struct exynos_bts_data *bts_data;
@@ -242,6 +262,7 @@ static void bts_change_fbm_priority(bool on)
 	}
 }
 
+/* turn physical bts devices on/off */
 static void bts_devs_onoff(struct exynos_bts_data *bts_data, bool on)
 {
 	struct exynos_bts_local_data *bts_local_data;
@@ -261,6 +282,7 @@ static void bts_devs_onoff(struct exynos_bts_data *bts_data, bool on)
 		clk_disable(bts_data->clk);
 }
 
+/* init physical bts devices */
 static void bts_devs_init(struct exynos_bts_data *bts_data)
 {
 	struct exynos_bts_local_data *bts_local_data;
