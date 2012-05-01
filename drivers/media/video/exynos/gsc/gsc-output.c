@@ -28,6 +28,7 @@
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <media/v4l2-ioctl.h>
+#include <plat/bts.h>
 
 #include "gsc-core.h"
 
@@ -279,6 +280,7 @@ static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable) {
 		pm_runtime_get_sync(&gsc->pdev->dev);
+		bts_set_priority(&gsc->pdev->dev, 1);
 		ret = gsc_out_hw_set(gsc->out.ctx);
 		if (ret) {
 			gsc_err("GSC H/W setting is failed");
@@ -287,6 +289,7 @@ static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	} else {
 		INIT_LIST_HEAD(&gsc->out.active_buf_q);
 		clear_bit(ST_OUTPUT_STREAMON, &gsc->state);
+		bts_set_priority(&gsc->pdev->dev, 0);
 		pm_runtime_put_sync(&gsc->pdev->dev);
 	}
 
