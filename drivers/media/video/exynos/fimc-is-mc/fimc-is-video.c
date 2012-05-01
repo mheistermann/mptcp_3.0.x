@@ -22,6 +22,7 @@
 #if defined(CONFIG_BUSFREQ_OPP) && defined(CONFIG_CPU_EXYNOS5250)
 #include <mach/dev.h>
 #endif
+#include <plat/bts.h>
 #include <media/exynos_mc.h>
 #include <linux/cma.h>
 #include <asm/cacheflush.h>
@@ -859,6 +860,7 @@ static int fimc_is_scalerp_video_open(struct file *file)
 		printk(KERN_INFO "++++ IS load fw (Scaler P open)\n");
 		mutex_unlock(&isp->lock);
 		fimc_is_load_fw(isp);
+		bts_set_priority(&isp->pdev->dev, 1);
 
 		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		clear_bit(FIMC_IS_STATE_SENSOR_INITIALIZED, &isp->pipe_state);
@@ -911,6 +913,7 @@ static int fimc_is_scalerp_video_close(struct file *file)
 			sensor_info[isp->sensor.id_position]->csi_id);
 
 		fimc_is_hw_a5_power(isp, 0);
+		bts_set_priority(&isp->pdev->dev, 0);
 		clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 		printk(KERN_INFO "---- IS local power off (Scaler P close)\n");
 	} else {
