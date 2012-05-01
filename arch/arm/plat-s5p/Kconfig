@@ -206,7 +206,7 @@ config S5P_DEV_MIPI_DSI
 	  Compile in platform device definitions for MIPI_DSI
 
 config S5P_BTS
-	bool "S5P BTS driver"
+	bool
 	default n
 	help
 	  Use Bus Traffic Shaper Driver
