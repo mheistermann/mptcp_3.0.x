@@ -2253,8 +2253,6 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_pclk_acp,
 	&exynos5_clk_aclk_266_isp,
 	&exynos5_clk_sclk_uart_isp,
-	&exynos5_clk_sclk_c2c,
-	&exynos5_clk_aclk_c2c,
 	&exynos5_clk_sclk_spi0,
 	&exynos5_clk_sclk_spi1,
 	&exynos5_clk_sclk_spi2,
@@ -2816,6 +2814,9 @@ void __init exynos5_register_clocks(void)
 	if (samsung_rev() < EXYNOS5250_REV_1_0) {
 		s3c_register_clksrc(&exynos5_clk_sclk_c2c_rev0, 1);
 		s3c_register_clksrc(&exynos5_clk_aclk_c2c_rev0, 1);
+	} else {
+		s3c_register_clksrc(&exynos5_clk_sclk_c2c, 1);
+		s3c_register_clksrc(&exynos5_clk_aclk_c2c, 1);
 	}
 
 #ifndef CONFIG_SAMSUNG_C2C
