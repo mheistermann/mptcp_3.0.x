@@ -23,17 +23,12 @@
 
 #include <plat/devs.h>
 #include <plat/irqs.h>
-#ifdef CONFIG_EXYNOS_DEV_PD
-#include <plat/pd.h>
-#endif
+#include <plat/cpu.h>
+#include <plat/bts.h>
 
 #include <mach/map.h>
 #include <mach/irqs.h>
-
-#include <plat/cpu.h>
-#include <plat/bts.h>
 #include <mach/map-exynos5.h>
-
 
 static struct resource exynos_bts_cpu_resource[] = {
 	[0] = {
@@ -120,6 +115,7 @@ static struct resource exynos_bts_g3dacp_resource[] = {
 	},
 };
 
+#if defined(CONFIG_EXYNOS4_DEV_FIMC_IS)
 static struct resource exynos_bts_isp0_resource[] = {
 	[0] = {
 		.start  = EXYNOS5_PA_BTS_FIMC_ISP,
@@ -165,6 +161,7 @@ static struct resource exynos_bts_isp1_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 };
+#endif
 
 static struct resource exynos_bts_disp_resource[] = {
 	[0] = {
@@ -192,6 +189,7 @@ static struct resource exynos_bts_tv_resource[] = {
 	},
 };
 
+#if defined(CONFIG_EXYNOS_C2C)
 static struct resource exynos_bts_c2c_resource[] = {
 	[0] = {
 		.start  = EXYNOS5_PA_BTS_C2C,
@@ -199,6 +197,7 @@ static struct resource exynos_bts_c2c_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 };
+#endif
 
 struct exynos_fbm_resource fbm_res[] = {
 	{
@@ -217,315 +216,69 @@ struct exynos_fbm_pdata fbm_pdata = {
 	.res_num = ARRAY_SIZE(fbm_res),
 };
 
-struct exynos_bts_pdata bts_cpu_res = {
-	.id = BTS_CPU,
-	.def_priority = BTS_BE,
-	.pd_block = PD_TOP,
-	.clk_name = NULL,
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_cpu_resource),
-	.changable_prior = 1,
-};
+#define EXYNOS_BTS_PDATA(_name, _id, _prio, _block, _clkname, _changable, _act)\
+static struct exynos_bts_pdata bts_##_name##_res = {			\
+		.id = _id,						\
+		.def_priority = _prio,					\
+		.pd_block = _block,					\
+		.clk_name = _clkname,					\
+		.fbm = &fbm_pdata,					\
+		.res_num = ARRAY_SIZE(exynos_bts_##_name##_resource),	\
+		.changable_prior = _changable,	\
+		.change_act = _act,	\
+}
 
-struct exynos_bts_pdata bts_jpeg_res = {
-	.id = BTS_JPEG,
-	.def_priority = BTS_BE,
-	.pd_block = PD_GSCL,
-	.clk_name = "jpeg",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_jpeg_resource),
-};
-
-struct exynos_bts_pdata bts_mdma1_res = {
-	.id = BTS_MDMA1,
-	.def_priority = BTS_BE,
-	.clk_name = "pdma",
-	.pd_block = PD_TOP,
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_mdma1_resource),
-};
-
-struct exynos_bts_pdata bts_rotator_res = {
-	.id = BTS_ROTATOR,
-	.def_priority = BTS_BE,
-	.pd_block = PD_DISP1,
-	.clk_name = "rotator",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_rotator_resource),
-	.changable_prior = 1,
-};
-
-struct exynos_bts_pdata bts_gscl0_res = {
-	.id = BTS_GSCL,
-	.def_priority = BTS_BE,
-	.pd_block = PD_GSCL,
-	.clk_name = "gscl",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_gscl0_resource),
-	.change_act = BTS_ACT_OFF,
-};
-
-struct exynos_bts_pdata bts_gscl1_res = {
-	.id = BTS_GSCL,
-	.def_priority = BTS_BE,
-	.pd_block = PD_GSCL,
-	.clk_name = "gscl",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_gscl1_resource),
-	.change_act = BTS_ACT_OFF,
-};
-
-struct exynos_bts_pdata bts_gscl2_res = {
-	.id = BTS_GSCL,
-	.def_priority = BTS_BE,
-	.pd_block = PD_GSCL,
-	.clk_name = "gscl",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_gscl2_resource),
-	.change_act = BTS_ACT_OFF,
-};
-
-struct exynos_bts_pdata bts_gscl3_res = {
-	.id = BTS_GSCL,
-	.def_priority = BTS_BE,
-	.pd_block = PD_GSCL,
-	.clk_name = "gscl",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_gscl3_resource),
-	.change_act = BTS_ACT_OFF,
-};
-
-struct exynos_bts_pdata bts_mfc_res = {
-	.id = BTS_MFC,
-	.def_priority = BTS_BE,
-	.pd_block = PD_MFC,
-	.clk_name = "mfc",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_mfc_resource),
-};
-
-struct exynos_bts_pdata bts_g3dacp_res = {
-	.id = BTS_G3D_ACP,
-	.def_priority = BTS_BE,
-	.pd_block = PD_G3D,
-	.clk_name = "g3d",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_g3dacp_resource),
-	.changable_prior = 1,
-};
-
-struct exynos_bts_pdata bts_isp0_res = {
-	.id = BTS_ISP0,
-	.def_priority = BTS_DISABLE,
-	.pd_block = PD_ISP,
-	.clk_name = "isp0",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_isp0_resource),
-	.change_act = BTS_ACT_CHANGE_FBM_PRIOR,
-};
-
-struct exynos_bts_pdata bts_isp1_res = {
-	.id = BTS_ISP1,
-	.def_priority = BTS_DISABLE,
-	.pd_block = PD_ISP,
-	.clk_name = "isp1",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_isp1_resource),
-	.change_act = BTS_ACT_CHANGE_FBM_PRIOR,
-};
-
-struct exynos_bts_pdata bts_disp_res = {
-	.id = BTS_DISP,
-	.def_priority = BTS_HARDTIME,
-	.pd_block = PD_DISP1,
-	.clk_name = "lcd",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_disp_resource),
-};
-
-struct exynos_bts_pdata bts_tv_res = {
-	.id = BTS_TV,
-	.def_priority = BTS_HARDTIME,
-	.pd_block = PD_DISP1,
-	.clk_name = "mixer",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_tv_resource),
-};
-
-struct exynos_bts_pdata bts_c2c_res = {
-	.id = BTS_C2C,
-	.def_priority = BTS_HARDTIME,
-	.clk_name = "c2c",
-	.fbm = &fbm_pdata,
-	.res_num = ARRAY_SIZE(exynos_bts_c2c_resource),
-};
+EXYNOS_BTS_PDATA(cpu, BTS_CPU, BTS_BE, PD_TOP, NULL, 1, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(jpeg, BTS_JPEG, BTS_BE, PD_GSCL, "jpeg", 0, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(mdma1, BTS_MDMA1, BTS_BE, PD_TOP, "pdma", 0, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(rotator, BTS_ROTATOR, BTS_BE, PD_DISP1, "rotator", 1, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(gscl0, BTS_GSCL, BTS_BE, PD_GSCL, "gscl", 0, BTS_ACT_OFF);
+EXYNOS_BTS_PDATA(gscl1, BTS_GSCL, BTS_BE, PD_GSCL, "gscl", 0, BTS_ACT_OFF);
+EXYNOS_BTS_PDATA(gscl2, BTS_GSCL, BTS_BE, PD_GSCL, "gscl", 0, BTS_ACT_OFF);
+EXYNOS_BTS_PDATA(gscl3, BTS_GSCL, BTS_BE, PD_GSCL, "gscl", 0, BTS_ACT_OFF);
+EXYNOS_BTS_PDATA(mfc, BTS_MFC, BTS_BE, PD_MFC, "mfc", 0, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(g3dacp, BTS_G3D_ACP, BTS_BE, PD_G3D, "g3d", 1, BTS_ACT_NONE);
+#if defined(CONFIG_EXYNOS4_DEV_FIMC_IS)
+EXYNOS_BTS_PDATA(isp0, BTS_ISP0, BTS_BE, PD_ISP, "isp0", 0, BTS_ACT_CHANGE_FBM_PRIOR);
+EXYNOS_BTS_PDATA(isp1, BTS_ISP1, BTS_BE, PD_ISP, "isp1", 0, BTS_ACT_CHANGE_FBM_PRIOR);
+#endif
+EXYNOS_BTS_PDATA(disp, BTS_DISP, BTS_DISABLE, PD_DISP1, "lcd", 0, BTS_ACT_NONE);
+EXYNOS_BTS_PDATA(tv, BTS_TV, BTS_DISABLE, PD_DISP1, "mixer", 0, BTS_ACT_NONE);
+#if defined(CONFIG_EXYNOS_C2C)
+EXYNOS_BTS_PDATA(c2c, BTS_C2C, BTS_HARDTIME, 0, "c2c", 0, BTS_ACT_NONE);
+#endif
 
 /* bts platform device lists */
-struct platform_device exynos_device_bts_disp = {
-	.name		= "exynos-bts",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(exynos_bts_disp_resource),
-	.resource	= exynos_bts_disp_resource,
-	.dev		= {
-		.platform_data = &bts_disp_res,
-		.parent = &s5p_device_fimd1.dev,
-	},
-};
+#define EXYNOS_BTS_DEVICE(_name, _parent)				\
+static struct platform_device exynos_device_bts_##_name = {		\
+		.name		= "exynos-bts",				\
+		.num_resources	= ARRAY_SIZE(exynos_bts_##_name##_resource),\
+		.resource	= exynos_bts_##_name##_resource,	\
+		.dev		= {					\
+			.platform_data = &bts_##_name##_res,		\
+			.parent = _parent,				\
+		}							\
+}
 
-struct platform_device exynos_device_bts_tv = {
-	.name		= "exynos-bts",
-	.id		= 1,
-	.num_resources	= ARRAY_SIZE(exynos_bts_tv_resource),
-	.resource	= exynos_bts_tv_resource,
-	.dev		= {
-		.platform_data = &bts_tv_res,
-		.parent = &s5p_device_mixer.dev,
-	},
-};
-
+EXYNOS_BTS_DEVICE(disp, &s5p_device_fimd1.dev);
+EXYNOS_BTS_DEVICE(tv, &s5p_device_mixer.dev);
 #if defined(CONFIG_EXYNOS_C2C)
-struct platform_device exynos_device_bts_c2c = {
-	.name		= "exynos-bts",
-	.id		= 2,
-	.num_resources	= ARRAY_SIZE(exynos_bts_c2c_resource),
-	.resource	= exynos_bts_c2c_resource,
-	.dev		= {
-		.platform_data = &bts_c2c_res,
-		.parent = &exynos_device_c2c.dev,
-	},
-};
+EXYNOS_BTS_DEVICE(c2c, &exynos_device_c2c.dev);
 #endif
-
-struct platform_device exynos_device_bts_g3dacp = {
-	.name		= "exynos-bts",
-	.id		= 3,
-	.num_resources	= ARRAY_SIZE(exynos_bts_g3dacp_resource),
-	.resource	= exynos_bts_g3dacp_resource,
-	.dev		= {
-		.platform_data = &bts_g3dacp_res,
-	},
-};
-
-struct platform_device exynos_device_bts_rotator = {
-	.name		= "exynos-bts",
-	.id		= 4,
-	.num_resources	= ARRAY_SIZE(exynos_bts_rotator_resource),
-	.resource	= exynos_bts_rotator_resource,
-	.dev		= {
-		.platform_data = &bts_rotator_res,
-		.parent = &exynos_device_rotator.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_jpeg = {
-	.name		= "exynos-bts",
-	.id		= 5,
-	.num_resources	= ARRAY_SIZE(exynos_bts_jpeg_resource),
-	.resource	= exynos_bts_jpeg_resource,
-	.dev		= {
-		.platform_data = &bts_jpeg_res,
-	},
-};
-
-struct platform_device exynos_device_bts_mdma1 = {
-	.name		= "exynos-bts",
-	.id		= 6,
-	.num_resources	= ARRAY_SIZE(exynos_bts_mdma1_resource),
-	.resource	= exynos_bts_mdma1_resource,
-	.dev		= {
-		.platform_data = &bts_mdma1_res,
-		.parent = &exynos_device_mdma.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_gscl0 = {
-	.name		= "exynos-bts",
-	.id		= 7,
-	.num_resources	= ARRAY_SIZE(exynos_bts_gscl0_resource),
-	.resource	= exynos_bts_gscl0_resource,
-	.dev		= {
-		.platform_data = &bts_gscl0_res,
-		.parent = &exynos5_device_gsc0.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_gscl1 = {
-	.name		= "exynos-bts",
-	.id		= 8,
-	.num_resources	= ARRAY_SIZE(exynos_bts_gscl1_resource),
-	.resource	= exynos_bts_gscl1_resource,
-	.dev		= {
-		.platform_data = &bts_gscl1_res,
-		.parent = &exynos5_device_gsc1.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_gscl2 = {
-	.name		= "exynos-bts",
-	.id		= 9,
-	.num_resources	= ARRAY_SIZE(exynos_bts_gscl2_resource),
-	.resource	= exynos_bts_gscl2_resource,
-	.dev		= {
-		.platform_data = &bts_gscl2_res,
-		.parent = &exynos5_device_gsc2.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_gscl3 = {
-	.name		= "exynos-bts",
-	.id		= 10,
-	.num_resources	= ARRAY_SIZE(exynos_bts_gscl3_resource),
-	.resource	= exynos_bts_gscl3_resource,
-	.dev		= {
-		.platform_data = &bts_gscl3_res,
-		.parent = &exynos5_device_gsc3.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_mfc = {
-	.name		= "exynos-bts",
-	.id		= 11,
-	.num_resources	= ARRAY_SIZE(exynos_bts_mfc_resource),
-	.resource	= exynos_bts_mfc_resource,
-	.dev		= {
-		.platform_data = &bts_mfc_res,
-		.parent = &s5p_device_mfc.dev,
-	},
-};
-
+EXYNOS_BTS_DEVICE(g3dacp, NULL);
+EXYNOS_BTS_DEVICE(rotator, &exynos_device_rotator.dev);
+EXYNOS_BTS_DEVICE(jpeg, NULL);
+EXYNOS_BTS_DEVICE(mdma1, &exynos_device_mdma.dev);
+EXYNOS_BTS_DEVICE(gscl0, &exynos5_device_gsc0.dev);
+EXYNOS_BTS_DEVICE(gscl1, &exynos5_device_gsc1.dev);
+EXYNOS_BTS_DEVICE(gscl2, &exynos5_device_gsc2.dev);
+EXYNOS_BTS_DEVICE(gscl3, &exynos5_device_gsc3.dev);
+EXYNOS_BTS_DEVICE(mfc, &s5p_device_mfc.dev);
 #if defined(CONFIG_EXYNOS4_DEV_FIMC_IS)
-struct platform_device exynos_device_bts_isp0 = {
-	.name		= "exynos-bts",
-	.id		= 12,
-	.num_resources	= ARRAY_SIZE(exynos_bts_isp0_resource),
-	.resource	= exynos_bts_isp0_resource,
-	.dev		= {
-		.platform_data = &bts_isp0_res,
-		.parent = &exynos5_device_fimc_is.dev,
-	},
-};
-
-struct platform_device exynos_device_bts_isp1 = {
-	.name		= "exynos-bts",
-	.id		= 13,
-	.num_resources	= ARRAY_SIZE(exynos_bts_isp1_resource),
-	.resource	= exynos_bts_isp1_resource,
-	.dev		= {
-		.platform_data = &bts_isp1_res,
-		.parent = &exynos5_device_fimc_is.dev,
-	},
-};
+EXYNOS_BTS_DEVICE(isp0, &exynos5_device_fimc_is.dev);
+EXYNOS_BTS_DEVICE(isp1, &exynos5_device_fimc_is.dev);
 #endif
-
-struct platform_device exynos_device_bts_cpu = {
-	.name		= "exynos-bts",
-	.id		= 14,
-	.num_resources	= ARRAY_SIZE(exynos_bts_cpu_resource),
-	.resource	= exynos_bts_cpu_resource,
-	.dev		= {
-		.platform_data = &bts_cpu_res,
-	},
-};
+EXYNOS_BTS_DEVICE(cpu, NULL);
 
 static struct platform_device *exynos_bts[] __initdata = {
 	&exynos_device_bts_disp,
@@ -533,6 +286,7 @@ static struct platform_device *exynos_bts[] __initdata = {
 #if defined(CONFIG_EXYNOS_C2C)
 	&exynos_device_bts_c2c,
 #endif
+	&exynos_device_bts_cpu,
 	&exynos_device_bts_g3dacp,
 	&exynos_device_bts_rotator,
 	&exynos_device_bts_jpeg,
@@ -542,9 +296,10 @@ static struct platform_device *exynos_bts[] __initdata = {
 	&exynos_device_bts_gscl2,
 	&exynos_device_bts_gscl3,
 	&exynos_device_bts_mfc,
-	&exynos_device_bts_cpu,
+#if defined(CONFIG_EXYNOS4_DEV_FIMC_IS)
 	&exynos_device_bts_isp0,
 	&exynos_device_bts_isp1,
+#endif
 };
 
 static int __init exynos_bts_init(void)
