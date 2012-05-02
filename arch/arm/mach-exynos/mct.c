@@ -443,6 +443,7 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 			setup_irq(IRQ_MCT_L1, &mct_tick1_event_irq);
 			irq_set_affinity(IRQ_MCT_L1, cpumask_of(cpu));
 			break;
+#ifdef CONFIG_CPU_EXYNOS5410
 		case 2:
 			mct_tick2_event_irq.dev_id = &mct_tick[cpu];
 			setup_irq(IRQ_MCT_L2, &mct_tick2_event_irq);
@@ -453,6 +454,7 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 			setup_irq(IRQ_MCT_L3, &mct_tick3_event_irq);
 			irq_set_affinity(IRQ_MCT_L3, cpumask_of(cpu));
 			break;
+#endif
 		}
 	} else {
 		gic_enable_ppi(IRQ_PPI_MCT_L);
