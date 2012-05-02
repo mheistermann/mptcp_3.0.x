@@ -394,6 +394,18 @@ static struct irqaction mct_tick1_event_irq = {
 	.handler	= exynos4_mct_tick_isr,
 };
 
+static struct irqaction mct_tick2_event_irq = {
+	.name		= "mct_tick2_irq",
+	.flags		= IRQF_TIMER | IRQF_NOBALANCING,
+	.handler	= exynos4_mct_tick_isr,
+};
+
+static struct irqaction mct_tick3_event_irq = {
+	.name		= "mct_tick3_irq",
+	.flags		= IRQF_TIMER | IRQF_NOBALANCING,
+	.handler	= exynos4_mct_tick_isr,
+};
+
 static void exynos4_mct_tick_init(struct clock_event_device *evt)
 {
 	unsigned int cpu = smp_processor_id();
@@ -421,13 +433,26 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 	exynos4_mct_write(TICK_BASE_CNT, mct_tick[cpu].base + MCT_L_TCNTB_OFFSET);
 
 	if (mct_int_type == MCT_INT_SPI) {
-		if (cpu == 0) {
+		switch (cpu) {
+		case 0:
 			mct_tick0_event_irq.dev_id = &mct_tick[cpu];
 			setup_irq(IRQ_MCT_L0, &mct_tick0_event_irq);
-		} else {
+			break;
+		case 1:
 			mct_tick1_event_irq.dev_id = &mct_tick[cpu];
 			setup_irq(IRQ_MCT_L1, &mct_tick1_event_irq);
-			irq_set_affinity(IRQ_MCT_L1, cpumask_of(1));
+			irq_set_affinity(IRQ_MCT_L1, cpumask_of(cpu));
+			break;
+		case 2:
+			mct_tick2_event_irq.dev_id = &mct_tick[cpu];
+			setup_irq(IRQ_MCT_L2, &mct_tick2_event_irq);
+			irq_set_affinity(IRQ_MCT_L2, cpumask_of(cpu));
+			break;
+		case 3:
+			mct_tick3_event_irq.dev_id = &mct_tick[cpu];
+			setup_irq(IRQ_MCT_L3, &mct_tick3_event_irq);
+			irq_set_affinity(IRQ_MCT_L3, cpumask_of(cpu));
+			break;
 		}
 	} else {
 		gic_enable_ppi(IRQ_PPI_MCT_L);
