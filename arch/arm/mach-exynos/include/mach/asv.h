@@ -37,12 +37,11 @@ static inline void exynos4x12_set_abb_member(enum exynos4x12_abb_member abb_targ
 {
 	unsigned int tmp;
 
-	if (abb_mode_value != ABB_MODE_BYPASS)
+	if (abb_mode_value != ABB_MODE_BYPASS) {
 		tmp = S5P_ABB_INIT;
-	else
+		tmp |= abb_mode_value;
+	} else
 		tmp = S5P_ABB_INIT_BYPASS;
-
-	tmp |= abb_mode_value;
 
 	if (!soc_is_exynos5250())
 		__raw_writel(tmp, S5P_ABB_MEMBER(abb_target));
