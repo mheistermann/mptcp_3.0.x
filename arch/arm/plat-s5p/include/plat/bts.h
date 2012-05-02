@@ -47,7 +47,7 @@ enum exynos_bts_id {
 };
 
 enum bts_priority {
-	BTS_LOW,
+	BTS_DISABLE,
 	BTS_BE,
 	BTS_HARDTIME,
 };
@@ -59,6 +59,12 @@ enum bts_fbm_group {
 	BTS_FBM_G1_R = (1<<4),
 	BTS_FBM_G2_L = (1<<5),
 	BTS_FBM_G2_R = (1<<6),
+};
+
+enum bts_prior_change_action {
+	BTS_ACT_NONE,
+	BTS_ACT_OFF,
+	BTS_ACT_CHANGE_FBM_PRIOR,
 };
 
 struct exynos_fbm_resource {
@@ -79,17 +85,21 @@ struct exynos_bts_pdata {
 	char *clk_name;
 	struct exynos_fbm_pdata *fbm;
 	int res_num;
+	bool changable_prior;
+	enum bts_prior_change_action change_act;
 };
 
-extern int isp_pd_enabled;
-extern int gscl_local_out_path_enabled;
-
 /* BTS functions */
+/* Enable BTS driver included in pd_block */
 void exynos_bts_enable(enum exynos_pd_block pd_block);
-void exynos_bts_set_priority(enum bts_priority prior);
+/* Set priority on BTS drivers */
+void exynos_bts_set_priority(struct device *dev, bool on);
+
 #ifdef CONFIG_S5P_BTS
 #define bts_enable(a) exynos_bts_enable(a);
+#define bts_set_priority(a, b) exynos_bts_set_priority(a, b);
 #else
 #define bts_enable(a) do {} while (0)
+#define bts_set_priority(a, b) do {} while (0)
 #endif
 #endif	/* __EXYNOS_BTS_H_ */

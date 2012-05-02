@@ -224,6 +224,7 @@ struct exynos_bts_pdata bts_cpu_res = {
 	.clk_name = NULL,
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_cpu_resource),
+	.changable_prior = 1,
 };
 
 struct exynos_bts_pdata bts_jpeg_res = {
@@ -251,6 +252,7 @@ struct exynos_bts_pdata bts_rotator_res = {
 	.clk_name = "rotator",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_rotator_resource),
+	.changable_prior = 1,
 };
 
 struct exynos_bts_pdata bts_gscl0_res = {
@@ -260,6 +262,7 @@ struct exynos_bts_pdata bts_gscl0_res = {
 	.clk_name = "gscl",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_gscl0_resource),
+	.change_act = BTS_ACT_OFF,
 };
 
 struct exynos_bts_pdata bts_gscl1_res = {
@@ -269,6 +272,7 @@ struct exynos_bts_pdata bts_gscl1_res = {
 	.clk_name = "gscl",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_gscl1_resource),
+	.change_act = BTS_ACT_OFF,
 };
 
 struct exynos_bts_pdata bts_gscl2_res = {
@@ -278,6 +282,7 @@ struct exynos_bts_pdata bts_gscl2_res = {
 	.clk_name = "gscl",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_gscl2_resource),
+	.change_act = BTS_ACT_OFF,
 };
 
 struct exynos_bts_pdata bts_gscl3_res = {
@@ -287,6 +292,7 @@ struct exynos_bts_pdata bts_gscl3_res = {
 	.clk_name = "gscl",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_gscl3_resource),
+	.change_act = BTS_ACT_OFF,
 };
 
 struct exynos_bts_pdata bts_mfc_res = {
@@ -305,24 +311,27 @@ struct exynos_bts_pdata bts_g3dacp_res = {
 	.clk_name = "g3d",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_g3dacp_resource),
+	.changable_prior = 1,
 };
 
 struct exynos_bts_pdata bts_isp0_res = {
 	.id = BTS_ISP0,
-	.def_priority = BTS_BE,
+	.def_priority = BTS_DISABLE,
 	.pd_block = PD_ISP,
 	.clk_name = "isp0",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_isp0_resource),
+	.change_act = BTS_ACT_CHANGE_FBM_PRIOR,
 };
 
 struct exynos_bts_pdata bts_isp1_res = {
 	.id = BTS_ISP1,
-	.def_priority = BTS_BE,
+	.def_priority = BTS_DISABLE,
 	.pd_block = PD_ISP,
 	.clk_name = "isp1",
 	.fbm = &fbm_pdata,
 	.res_num = ARRAY_SIZE(exynos_bts_isp1_resource),
+	.change_act = BTS_ACT_CHANGE_FBM_PRIOR,
 };
 
 struct exynos_bts_pdata bts_disp_res = {
@@ -534,6 +543,8 @@ static struct platform_device *exynos_bts[] __initdata = {
 	&exynos_device_bts_gscl3,
 	&exynos_device_bts_mfc,
 	&exynos_device_bts_cpu,
+	&exynos_device_bts_isp0,
+	&exynos_device_bts_isp1,
 };
 
 static int __init exynos_bts_init(void)

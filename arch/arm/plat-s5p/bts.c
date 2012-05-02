@@ -76,6 +76,9 @@
 #define LOW_SHAPING_VAL1 0x3ff
 #define MASTER_PRIOR_NUMBER (1<<16)
 
+#define BTS_OFF 0
+#define BTS_ON 1
+
 static LIST_HEAD(fbm_list);
 static LIST_HEAD(bts_list);
 
@@ -83,14 +86,16 @@ struct exynos_bts_local_data {
 	enum exynos_bts_id id;
 	void __iomem	*base;
 	enum bts_priority def_priority;
+	bool changable_prior;
 };
 
 struct exynos_bts_data {
 	struct list_head node;
 	struct device *dev;
-	struct exynos_bts_local_data *bts_local_data;
 	struct clk *clk;
+	struct exynos_bts_local_data *bts_local_data;
 	enum exynos_pd_block pd_block;
+	enum bts_prior_change_action change_act;
 	u32 listnum;
 };
 
@@ -105,13 +110,17 @@ static void bts_set_control(void __iomem *base, enum bts_priority prior)
 
 	if (prior == BTS_BE)
 		val |= BLOCKING_ON_OFF|DEBLOCKING_ON_OFF;
-
 	writel(val, base + BTS_CONTROL);
 }
 
-static void bts_disable(void __iomem *base)
+static void bts_onoff(void __iomem *base, bool on)
 {
-	u32 val = ~BTS_ON_OFF;
+	u32 val = readl(base + BTS_CONTROL);
+	if (on)
+		val |= BTS_ON_OFF;
+	else
+		val &= ~BTS_ON_OFF;
+
 	writel(val, base + BTS_CONTROL);
 }
 
@@ -152,6 +161,7 @@ static void bts_set_deblocking(void __iomem *base,
 		val |= SEL_GRP2 | SEL_RIGHT2;
 	writel(val, base + BTS_DEBLOCKING_SOURCE_SELECTION);
 }
+
 
 static enum bts_fbm_group find_fbm_group(enum bts_priority prior)
 {
@@ -206,7 +216,52 @@ static void bts_init_config(void __iomem *base, enum bts_priority prior)
 	}
 }
 
-static void __exynos_bts_enable(struct exynos_bts_data *bts_data)
+static void bts_change_fbm_priority(bool on)
+{
+	struct exynos_bts_data *bts_data;
+	struct exynos_bts_local_data *bts_local_data;
+	enum bts_priority prior = (on) ? BTS_HARDTIME : BTS_BE;
+	int i;
+
+	list_for_each_entry(bts_data, &bts_list, node) {
+		bts_local_data = bts_data->bts_local_data;
+		for (i = 0; i < bts_data->listnum; i++) {
+			bts_local_data = bts_data->bts_local_data;
+			if (bts_local_data->changable_prior) {
+				if (bts_data->clk)
+					clk_enable(bts_data->clk);
+				bts_onoff(bts_local_data->base, BTS_OFF);
+				bts_set_deblocking(bts_local_data->base,
+						find_fbm_group(prior));
+				bts_onoff(bts_local_data->base, BTS_ON);
+				if (bts_data->clk)
+					clk_disable(bts_data->clk);
+			}
+			bts_local_data++;
+		}
+	}
+}
+
+static void bts_devs_onoff(struct exynos_bts_data *bts_data, bool on)
+{
+	struct exynos_bts_local_data *bts_local_data;
+	int i;
+	int onoff = on ? BTS_OFF : BTS_ON;
+
+	if (bts_data->clk)
+		clk_enable(bts_data->clk);
+
+	bts_local_data = bts_data->bts_local_data;
+	for (i = 0; i < bts_data->listnum; i++) {
+		bts_onoff(bts_local_data->base, onoff);
+		bts_local_data++;
+	}
+
+	if (bts_data->clk)
+		clk_disable(bts_data->clk);
+}
+
+static void bts_devs_init(struct exynos_bts_data *bts_data)
 {
 	struct exynos_bts_local_data *bts_local_data;
 	int i;
@@ -225,30 +280,23 @@ static void __exynos_bts_enable(struct exynos_bts_data *bts_data)
 		clk_disable(bts_data->clk);
 }
 
-void exynos_bts_set_priority(enum bts_priority prior)
+void exynos_bts_set_priority(struct device *dev, bool on)
 {
 	struct exynos_bts_data *bts_data;
-	struct exynos_bts_local_data *bts_local_data;
-	int i;
 
 	list_for_each_entry(bts_data, &bts_list, node) {
-		bts_local_data = bts_data->bts_local_data;
-		for (i = 0; i < bts_data->listnum; i++) {
-			bts_local_data = bts_data->bts_local_data;
-			if ((bts_local_data->id == BTS_CPU) |
-					(bts_local_data->id == BTS_G3D_ACP) |
-					(bts_local_data->id == BTS_ROTATOR)) {
-				if (bts_data->clk)
-					clk_enable(bts_data->clk);
-				bts_disable(bts_local_data->base);
-				bts_set_deblocking(bts_local_data->base,
-						find_fbm_group(prior));
-				bts_set_control(bts_local_data->base,
-						bts_local_data->def_priority);
-				if (bts_data->clk)
-					clk_disable(bts_data->clk);
+		if (bts_data->dev->parent == dev) {
+			switch (bts_data->change_act) {
+			case BTS_ACT_OFF:
+				bts_devs_onoff(bts_data, on);
+				break;
+			case BTS_ACT_CHANGE_FBM_PRIOR:
+				bts_change_fbm_priority(on);
+				break;
+			default:
+				dev_err(bts_data->dev, "unregisted case to change priority!\n");
+				break;
 			}
-			bts_local_data++;
 		}
 	}
 }
@@ -266,7 +314,7 @@ void exynos_bts_enable(enum exynos_pd_block pd_block)
 
 	list_for_each_entry(bts_data, &bts_list, node) {
 		if (bts_data->pd_block == pd_block)
-			__exynos_bts_enable(bts_data);
+			bts_devs_init(bts_data);
 	}
 }
 
@@ -293,8 +341,10 @@ static int bts_probe(struct platform_device *pdev)
 	if (list_empty(&fbm_list)) {
 		for (i = 0; i < bts_pdata->fbm->res_num; i++) {
 			base = ioremap(fbm_res->base, FBM_THRESHOLDSEL0);
-			if (!base)
+			if (!base) {
+				dev_err(&pdev->dev, "failed to get ioremap for fbm\n");
 				return -ENXIO;
+			}
 			fbm_init_config(base, fbm_res->priority);
 			fbm_data = kzalloc(sizeof(struct exynos_fbm_data),
 						GFP_KERNEL);
@@ -313,6 +363,14 @@ static int bts_probe(struct platform_device *pdev)
 		goto probe_err1;
 	}
 
+	pm_runtime_enable(pdev->dev.parent);
+	if (pm_runtime_get_sync(pdev->dev.parent)) {
+		dev_err(&pdev->dev, "failed to get runtime pm\n");
+		ret = -ENODEV;
+		pm_runtime_disable(pdev->dev.parent);
+		goto probe_err1;
+	}
+
 	if (bts_pdata->clk_name) {
 		clk = clk_get(pdev->dev.parent, bts_pdata->clk_name);
 		if (IS_ERR(clk)) {
@@ -324,6 +382,7 @@ static int bts_probe(struct platform_device *pdev)
 
 	bts_data = kzalloc(sizeof(struct exynos_bts_data), GFP_KERNEL);
 	bts_data->listnum = bts_pdata->res_num;
+	bts_data->change_act = bts_pdata->change_act;
 	bts_local_data_h = bts_local_data =
 		kzalloc(sizeof(struct exynos_bts_local_data)*bts_data->listnum,
 				GFP_KERNEL);
@@ -336,6 +395,7 @@ static int bts_probe(struct platform_device *pdev)
 			goto probe_err2;
 		}
 		bts_local_data->def_priority = bts_pdata->def_priority;
+		bts_local_data->changable_prior = bts_pdata->changable_prior;
 		bts_init_config(bts_local_data->base,
 				bts_local_data->def_priority);
 		bts_local_data++;
@@ -346,11 +406,14 @@ static int bts_probe(struct platform_device *pdev)
 	bts_data->pd_block = bts_pdata->pd_block;
 	bts_data->clk = clk;
 	bts_data->dev = &pdev->dev;
+
 	list_add_tail(&bts_data->node, &bts_list);
 	pdev->dev.platform_data = bts_data;
 
 	if (bts_pdata->clk_name)
 		clk_disable(clk);
+
+	pm_runtime_put(pdev->dev.parent);
 
 	return 0;
 
@@ -400,6 +463,8 @@ static int bts_remove(struct platform_device *pdev)
 			list_del(&fbm_data->node);
 			kfree(fbm_data);
 		}
+
+	pm_runtime_disable(pdev->dev.parent);
 
 	return 0;
 }
