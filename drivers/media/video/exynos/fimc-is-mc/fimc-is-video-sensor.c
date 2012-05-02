@@ -115,6 +115,8 @@ static int fimc_is_bayer_video_close(struct file *file)
 	dbg_sensor("stop flite & mipi (pos:%d) (port:%d)\n",
 		sensor_id, flite_ch);
 
+	sensor->last_capture = false;
+
 	stop_fimc_lite(flite_ch);
 	stop_mipi_csi(csi_ch);
 
@@ -131,7 +133,6 @@ static int fimc_is_bayer_video_close(struct file *file)
 		msleep(60);
 	}
 
-	sensor->last_capture = false;
 	dbg_sensor("last capture done\n");
 
 	vb2_queue_release(&is->video[FIMC_IS_VIDEO_NUM_BAYER].vbq);
