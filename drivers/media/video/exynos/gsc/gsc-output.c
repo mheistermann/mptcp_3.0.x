@@ -47,12 +47,6 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 	}
 
 	gsc_hw_enable_control(gsc, false);
-	ret = gsc_wait_stop(gsc);
-	if (ret < 0) {
-		gsc_err("gscaler stop timeout");
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -643,6 +637,11 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 	ret = gsc_pipeline_s_stream(gsc, false);
 	if (ret)
 		return ret;
+	ret = gsc_wait_stop(gsc);
+	if (ret < 0) {
+		gsc_err("gscaler stop timeout");
+		return ret;
+	}
 
 	ret = gsc_out_video_s_stream(gsc, 0);
 	if (ret) {

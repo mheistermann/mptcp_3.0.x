@@ -105,7 +105,7 @@ int gsc_wait_stop(struct gsc_dev *dev)
 		cfg = readl(dev->regs + GSC_ENABLE);
 		if (!(cfg & GSC_ENABLE_OP_STATUS))
 			return 0;
-		udelay(10);
+		usleep_range(10, 20);
 	}
 	gsc_dbg("wait time : %d ms", jiffies_to_msecs(jiffies - timeo + 20));
 
