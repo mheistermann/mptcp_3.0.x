@@ -853,11 +853,12 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
 	register_early_suspend(&data->busfreq_early_suspend_handler);
 #endif
-
-	tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
-	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
-	tmp |= ((8 + INT_RBB) | (1 << 31) | (1 << 7));
-	__raw_writel(tmp, EXYNOS5_ABBG_INT_CONTROL);
+	if (samsung_rev() < EXYNOS5250_REV_1_0) {
+		tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
+		tmp &= ~(0x1f | (1 << 31) | (1 << 7));
+		tmp |= ((8 + INT_RBB) | (1 << 31) | (1 << 7));
+		__raw_writel(tmp, EXYNOS5_ABBG_INT_CONTROL);
+	}
 
 	return 0;
 }
