@@ -1475,7 +1475,7 @@ static int enc_post_seq_start(struct s5p_mfc_ctx *ctx)
 		queue_work(dev->irq_workqueue, &dev->work_struct);
 	}
 	if (IS_MFCV6(dev))
-		ctx->dpb_count = s5p_mfc_get_enc_dpb_count();
+		ctx->dpb_count = 4;
 
 	return 0;
 }
