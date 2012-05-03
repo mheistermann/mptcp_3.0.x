@@ -93,7 +93,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		enc->tmv_buffer_size = ENC_TMV_SIZE(mb_width, mb_height);
 		enc->tmv_buffer_size = ALIGN(enc->tmv_buffer_size, 32) * 2;
 		enc->luma_dpb_size = ALIGN((mb_width * mb_height) * 256, 256);
-		enc->chroma_dpb_size = ALIGN((mb_width * mb_height) * 128, 256);
+		enc->chroma_dpb_size = ALIGN((mb_width * mb_height) * 256, 256);
 		enc->me_buffer_size =
 			(ENC_ME_SIZE(ctx->img_width, ctx->img_height, mb_width, mb_height));
 		enc->me_buffer_size = ALIGN(enc->me_buffer_size, 256);
