@@ -125,6 +125,11 @@ static struct exynos4_pmu_conf exynos52xx_pmu_config[] = {
 	{ EXYNOS5_CMU_RESET_MAU_SYS_PWR_REG,			{ 0x1, 0x1, 0x0} },
 };
 
+static struct exynos4_pmu_conf exynos52xx_pmu_config_rev1[] = {
+	/* { .reg = address, .val = { AFTR, LPA, SLEEP } */
+	{ EXYNOS5_GPLL_SYSCLK_SYS_PWR_REG,                      { 0x1, 0x0, 0x0} },
+};
+
 static struct exynos4_pmu_conf exynos52xx_pmu_config_gps[] = {
 	/* { .reg = address, .val = { AFTR, LPA, SLEEP } */
 	{ EXYNOS5_CMU_ACLKSTOP_SYS_PWR_REG,			{ 0x1, 0x0, 0x1} },
@@ -237,6 +242,11 @@ void exynos5_sys_powerdown_conf(enum sys_powerdown mode)
 					exynos52xx_pmu_config_gps[i].reg);
 		}
 
+	} else {
+		for (i = 0; i < ARRAY_SIZE(exynos52xx_pmu_config_rev1); i++) {
+			__raw_writel(exynos52xx_pmu_config_rev1[i].val[mode],
+			exynos52xx_pmu_config_rev1[i].reg);
+		}
 	}
 
 	if ((mode != SYS_AFTR) && (exynos4_is_c2c_use())) {
