@@ -43,8 +43,46 @@ enum exynos5_sensor_id {
 	SENSOR_NAME_S5K6A3	= 2,
 	SENSOR_NAME_S5K4E5	= 3,
 	SENSOR_NAME_S5K3H7	= 4,
-	SENSOR_NAME_CUSTOM	= 5,
+	SENSOR_NAME_CUSTOM	= 100,
 	SENSOR_NAME_END
+};
+
+enum actuator_name {
+	ACTUATOR_NAME_AD5823	= 1,
+	ACTUATOR_NAME_DWXXXX	= 2,
+	ACTUATOR_NAME_AK7343	= 3,
+	ACTUATOR_NAME_HYBRIDVCA	= 4,
+	ACTUATOR_NAME_NOTHING	= 100,
+	ACTUATOR_NAME_END
+};
+
+enum flash_drv_name {
+	FLADRV_NAME_GPIO0	= 1,
+	FLADRV_NAME_GPIO1	= 2,
+	FLADRV_NAME_GPIO2	= 3,
+	FLADRV_NAME_GPIO3	= 4,
+	FLADRV_NAME_GPIO4	= 5,
+	FLADRV_NAME_GPIO5	= 6,
+	FLADRV_NAME_GPIO6	= 7,
+	FLADRV_NAME_GPIO7	= 8,
+	FLADRV_NAME_GPIO8	= 9,
+	FLADRV_NAME_GPIO9	= 10,
+	FLADRV_NAME_GPIO10	= 11,
+	FLADRV_NAME_GPIO11	= 12,
+	FLADRV_NAME_GPIO12	= 13,
+	FLADRV_NAME_GPIO13	= 14,
+	FLADRV_NAME_GPIO14	= 15,
+	FLADRV_NAME_GPIO15	= 16,
+	FLADRV_NAME_GPIO16	= 17,
+	FLADRV_NAME_GPIO17	= 18,
+	FLADRV_NAME_NOTHING	= 100,
+	FLADRV_NAME_END
+};
+
+enum from_name {
+	FROMDRV_NAME_SPI0	= 1,
+	FROMDRV_NAME_SPI1	= 2,
+	FROMDRV_NAME_NOTHING
 };
 
 enum exynos5_sensor_channel {
@@ -77,6 +115,20 @@ struct exynos5_fimc_is_sensor_info {
 	int mipi_settle;    /* MIPI settle */
 	int mipi_align;     /* MIPI data align: 24/32 */
 };
+
+struct sensor_open_extended {
+	u32 actuator_type;
+	u32 flash_type;
+	u32 from_type;
+	u32 mclk;
+	u32 mipi_lane_num;
+	u32 mipi_speed;
+	/* Skip setfile loading when fast_open_sensor is not 0 */
+	u32 fast_open_sensor;
+	/* Activatiing sensor self calibration mode (6A3) */
+	u32 self_calibration_mode;
+};
+
 #endif
 /**
  * struct exynos4_platform_fimc_is - camera host interface platform data

@@ -2070,5 +2070,4 @@ struct is_debug_control {
 	u32 drc_frame_drop;	/* Frame Drop Count.*/
 	u32 dis_frame_drop;	/* Frame Drop Count.*/
 };
-
 #endif
