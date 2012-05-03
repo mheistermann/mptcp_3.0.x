@@ -487,6 +487,22 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	gpio_direction_output(EXYNOS5_GPX1(0), 0);
 	gpio_direction_output(EXYNOS5_GPX1(0), 1);
 	gpio_free(EXYNOS5_GPX1(0));
+
+	/* Flash */
+	ret = gpio_request(EXYNOS5_GPE0(17), "GPIO_CAM_FLASH_EN");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPIO_CAM_FLASH_EN ####\n");
+
+	s3c_gpio_cfgpin(EXYNOS5_GPE0(17), (0x2<<12));
+	s3c_gpio_setpull(EXYNOS5_GPE0(17), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS5_GPE0(17));
+
+	ret = gpio_request(EXYNOS5_GPE0(16), "GPIO_CAM_FLASH_SET");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPIO_CAM_FLASH_SET ####\n");
+	s3c_gpio_cfgpin(EXYNOS5_GPE0(16), (0x2<<16));
+	s3c_gpio_setpull(EXYNOS5_GPE0(16), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS5_GPE0(16));
 }
 
 int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
