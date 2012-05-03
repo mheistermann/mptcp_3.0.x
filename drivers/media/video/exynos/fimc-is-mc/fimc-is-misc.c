@@ -2528,7 +2528,9 @@ int fimc_is_v4l2_isp_flash_mode(struct fimc_is_dev *dev, int value)
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_DISABLE);
 		break;
 	case FLASH_MODE_TORCH:
-		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_TORCH);
+		/* HACK : currently ISP_FLASH_COMMAND_TORCH is not supported */
+		/* IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_TORCH); */
+		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_MANUALON);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_DISABLE);
 		break;
 	default:
