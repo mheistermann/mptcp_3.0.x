@@ -1227,17 +1227,17 @@ static int fimc_is_runtime_suspend(struct device *dev)
 
 	printk(KERN_INFO "FIMC_IS runtime suspend\n");
 
-	if (isp->pdata->clk_off) {
-		isp->pdata->clk_off(isp->pdev);
-	} else {
-		err("#### failed to Clock On ####\n");
-		return -EINVAL;
-	}
-
 #if defined(CONFIG_VIDEOBUF2_ION)
 	if (isp->alloc_ctx)
 		fimc_is_mem_suspend(isp->alloc_ctx);
 #endif
+
+	if (isp->pdata->clk_off) {
+		isp->pdata->clk_off(isp->pdev);
+	} else {
+		err("failed to clock on\n");
+		return -EINVAL;
+	}
 
 	return ret;
 }
