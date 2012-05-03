@@ -23,6 +23,7 @@
 #define LOOP_CNT			10
 
 extern unsigned int exynos_result_of_asv;
+extern unsigned int exynos_result_mif_asv;
 extern bool exynos_lot_id;
 
 enum exynos4x12_abb_member {

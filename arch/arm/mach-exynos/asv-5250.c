@@ -40,20 +40,48 @@
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
 #define LOT_ID_REG		(S5P_VA_CHIPID + 0x14)
 
+/* Original ASV table has 10 level */
+struct asv_judge_table exynos5250_limit_orig[] = {
+	/* HPM, IDS */
+	{ 0, 0},		/* Reserved Group */
+	{ 9, 7},
+	{ 10, 9},
+	{ 12, 11},
+	{ 14, 14},
+	{ 15, 17},
+	{ 16, 20},
+	{ 17, 23},
+	{ 18, 27},
+	{ 19, 30},
+	{ 100, 100},
+	{ 999, 999},		/* Reserved Group */
+};
+
+/* New ASV table has 12 level */
 struct asv_judge_table exynos5250_limit[] = {
 	/* HPM, IDS */
-	{  0,   0},		/* Reserved Group */
-	{  9,   7},
-	{ 10,   9},
-	{ 12,  11},
-	{ 14,  14},
-	{ 15,  17},
-	{ 16,  20},
-	{ 17,  23},
-	{ 18,  27},
-	{ 19,  30},
-	{100, 100},
-	{999, 999},		/* Reserved Group */
+	{ 0, 0},		/* Reserved Group */
+	{ 6, 7},
+	{ 8, 9},
+	{ 9, 10},
+	{ 10, 11},
+	{ 12, 13},
+	{ 13, 15},
+	{ 14, 17},
+	{ 16, 21},
+	{ 17, 25},
+	{ 19, 32},
+	{ 20, 39},
+	{ 100, 100},
+	{ 999, 999},		/* Reserved Group */
+};
+
+struct asv_judge_table exynos5250_mif_limit[] = {
+	/* HPM, LOCK */
+	{ 0, 0},		/* Reserved Group */
+	{ 12, 100},
+	{ 15, 112},
+	{ 100, 512},
 };
 
 static int exynos5250_get_hpm(struct samsung_asv *asv_info)
@@ -70,10 +98,15 @@ static int exynos5250_get_ids(struct samsung_asv *asv_info)
 	return 0;
 }
 
+char *special_lot_id_list[] = {
+	"NZVPU",
+	"NZVR7",
+};
+
 /*
  * If lot id is "NZVPU", it is need to modify for ARM_IDS value
  */
-static int exynos5250_check_lot_id(void)
+static int exynos5250_check_lot_id(struct samsung_asv *asv_info)
 {
 	unsigned int lid_reg = 0;
 	unsigned int rev_lid = 0;
@@ -97,24 +130,56 @@ static int exynos5250_check_lot_id(void)
 		lot_id[i] = (tmp < 10) ? (tmp + '0') : ((tmp - 10) + 'A');
 	}
 
-	return strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id));
+	/* NZVPU lot is incorrect ids value  */
+	if ((!strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id)))) {
+		asv_info->ids_result -= 16;
+		return 0;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(special_lot_id_list); i++) {
+		if (!strncmp(lot_id, special_lot_id_list[i], ARRAY_SIZE(lot_id))) {
+			pr_info("Exynos5250 : Lot ID is %s\n", lot_id);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
 }
 
 static void exynos5250_pre_set_abb(void)
 {
-	switch (exynos_result_of_asv) {
-	case 0:
-	case 1:
-	case 2:
-		exynos4x12_set_abb(ABB_MODE_080V);
-		break;
-	case 3:
-	case 4:
-		exynos4x12_set_abb(ABB_MODE_BYPASS);
-		break;
-	default:
-		exynos4x12_set_abb(ABB_MODE_130V);
-		break;
+	if (!exynos_lot_id) {
+		switch (exynos_result_of_asv) {
+		case 0:
+		case 1:
+		case 2:
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_080V);
+			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_080V);
+			exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_080V);
+			break;
+		default:
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_BYPASS);
+			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_BYPASS);
+			exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_BYPASS);
+			break;
+		}
+
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
+	} else {
+		switch (exynos_result_of_asv) {
+		case 0:
+		case 1:
+		case 2:
+			exynos4x12_set_abb(ABB_MODE_080V);
+			break;
+		case 3:
+		case 4:
+			exynos4x12_set_abb(ABB_MODE_BYPASS);
+			break;
+		default:
+			exynos4x12_set_abb(ABB_MODE_130V);
+			break;
+		}
 	}
 }
 
@@ -122,21 +187,37 @@ static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
 
-	if (!exynos5250_check_lot_id()) {
+	if (!exynos5250_check_lot_id(asv_info))
 		exynos_lot_id = true;
-		asv_info->ids_result -= 15;
-	}
 
 	if (soc_is_exynos5250()) {
-		for (i = 0; i < ARRAY_SIZE(exynos5250_limit); i++) {
-			if ((asv_info->ids_result <= exynos5250_limit[i].ids_limit) ||
-			    (asv_info->hpm_result <= exynos5250_limit[i].hpm_limit)) {
-				exynos_result_of_asv = i;
-				break;
+		/* New ASV table */
+		if (!exynos_lot_id) {
+			for (i = 0; i < ARRAY_SIZE(exynos5250_limit); i++) {
+				if ((asv_info->ids_result <= exynos5250_limit[i].ids_limit) ||
+				    (asv_info->hpm_result <= exynos5250_limit[i].hpm_limit)) {
+					exynos_result_of_asv = i;
+					break;
+				}
+			}
+			for (i = 0; i < ARRAY_SIZE(exynos5250_mif_limit); i++) {
+				if (asv_info->hpm_result <= exynos5250_mif_limit[i].hpm_limit) {
+					exynos_result_mif_asv = i;
+					break;
+				}
+			}
+		/* Original ASV table */
+		} else {
+			for (i = 0; i < ARRAY_SIZE(exynos5250_limit_orig); i++) {
+				if ((asv_info->ids_result <= exynos5250_limit_orig[i].ids_limit) ||
+				    (asv_info->hpm_result <= exynos5250_limit_orig[i].hpm_limit)) {
+					exynos_result_of_asv = i;
+					exynos_result_mif_asv = i;
+					break;
+				}
 			}
 		}
 	}
-
 	/*
 	 * If ASV result value is lower than default value
 	 * Fix with default value.
@@ -144,8 +225,9 @@ static int exynos5250_asv_store_result(struct samsung_asv *asv_info)
 	if (exynos_result_of_asv < DEFAULT_ASV_GROUP)
 		exynos_result_of_asv = DEFAULT_ASV_GROUP;
 
-	pr_info("EXYNOS5250(NO SG): IDS : %d HPM : %d RESULT : %d\n",
-		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
+	pr_info("EXYNOS5250(NO SG): IDS : %d HPM : %d RESULT : %d MIF : %d\n",
+		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv,
+		exynos_result_mif_asv);
 
 	exynos5250_pre_set_abb();
 
