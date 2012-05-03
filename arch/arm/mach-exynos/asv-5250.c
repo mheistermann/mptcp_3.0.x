@@ -132,6 +132,8 @@ static int exynos5250_check_lot_id(struct samsung_asv *asv_info)
 
 	/* NZVPU lot is incorrect ids value  */
 	if ((!strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id)))) {
+		pr_info("Exynos5250 : Lot ID is %s\n", lot_id);
+		exynos_lot_is_nzvpu = true;
 		asv_info->ids_result -= 16;
 		return 0;
 	}
@@ -243,6 +245,7 @@ int exynos5250_asv_init(struct samsung_asv *asv_info)
 
 	exynos_result_of_asv = 0;
 	exynos_lot_id = false;
+	exynos_lot_is_nzvpu = false;
 
 	pr_info("EXYNOS5250: Adaptive Support Voltage init\n");
 

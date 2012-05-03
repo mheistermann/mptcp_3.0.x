@@ -105,10 +105,15 @@ static struct busfreq_table exynos5_busfreq_table_for400[] = {
 	{LV_3, 100000, 1000000, 0, 0, 0},
 	{LV_4, 100000, 1000000, 0, 0, 0},
 };
-#define ASV_GROUP	10
-static unsigned int asv_group_index;
+#define ASV_GROUP_10	10
+#define ASV_GROUP_12	12
 
-static unsigned int exynos5_mif_volt_for800[ASV_GROUP+1][LV_MIF_END] = {
+#define MIF_ASV_GROUP	3
+
+static unsigned int asv_group_index;
+static unsigned int mif_asv_group_index;
+
+static unsigned int exynos5_mif_volt_for800_orig[ASV_GROUP_10+1][LV_MIF_END] = {
 	/* L0        L1      L2      L3      L4 */
 	{      0,       0,      0,      0,      0}, /* ASV0 */
 	{1200000, 1000000, 1000000,  950000, 950000}, /* ASV1 */
@@ -123,7 +128,15 @@ static unsigned int exynos5_mif_volt_for800[ASV_GROUP+1][LV_MIF_END] = {
 	{1100000, 1000000,  950000,  900000, 900000}, /* ASV10 */
 };
 
-static unsigned int exynos5_mif_volt_for667[ASV_GROUP+1][LV_MIF_END] = {
+static unsigned int exynos5_mif_volt_for800[MIF_ASV_GROUP+1][LV_MIF_END] = {
+	/* L0        L1      L2      L3      L4 */
+	{1150000, 1100000, 1050000, 1050000, 1050000}, /* ASV0 */
+	{1100000, 1050000, 1000000, 1000000, 1000000}, /* ASV1 */
+	{1050000, 1000000, 1000000,  950000,  950000}, /* ASV2 */
+	{1000000,  950000,  950000,  900000,  900000}, /* ASV3 */
+};
+
+static unsigned int exynos5_mif_volt_for667[ASV_GROUP_10+1][LV_MIF_END] = {
 	/* L0        L1       L2       L3       L4 */
 	{      0,       0,       0,       0,       0}, /* ASV0 */
 	{1100000, 1000000,  950000,  950000,  950000}, /* ASV1 */
@@ -138,7 +151,7 @@ static unsigned int exynos5_mif_volt_for667[ASV_GROUP+1][LV_MIF_END] = {
 	{1050000, 1000000,  900000,  900000,  900000}, /* ASV10 */
 };
 
-static unsigned int exynos5_mif_volt_for533[ASV_GROUP+1][LV_MIF_END] = {
+static unsigned int exynos5_mif_volt_for533[ASV_GROUP_10+1][LV_MIF_END] = {
 	/* L0        L1       L2       L3       L4 */
 	{      0,       0,       0,       0,       0}, /* ASV0 */
 	{1050000, 1000000,  950000,  950000,  950000}, /* ASV1 */
@@ -153,7 +166,7 @@ static unsigned int exynos5_mif_volt_for533[ASV_GROUP+1][LV_MIF_END] = {
 	{1000000,  950000,  900000,  900000,  900000}, /* ASV10 */
 };
 
-static unsigned int exynos5_mif_volt_for400[ASV_GROUP+1][LV_MIF_END] = {
+static unsigned int exynos5_mif_volt_for400[ASV_GROUP_10+1][LV_MIF_END] = {
 	/* L0        L1      L2      L3      L4 */
 	{      0,       0,      0,      0,      0}, /* ASV0 */
 	{1000000, 1000000, 950000, 950000, 950000}, /* ASV1 */
@@ -179,7 +192,24 @@ static struct busfreq_table exynos5_busfreq_table_int[] = {
 	{LV_3, 133000, 1000000, 0, 0, 0},
 };
 
-static unsigned int exynos5_int_volt[ASV_GROUP+1][LV_INT_END] = {
+static unsigned int exynos5_int_volt[ASV_GROUP_12+1][LV_INT_END] = {
+	/* L0        L1       L2       L3 */
+	{      0,       0,      0,      0}, /* ASV0 */
+	{1025000, 1000000, 975000, 950000}, /* ASV1 */
+	{1000000,  975000, 962500, 937500}, /* ASV2 */
+	{1012500,  987500, 975000, 950000}, /* ASV3 */
+	{1000000,  975000, 962500, 937500}, /* ASV4 */
+	{ 987500,  962500, 950000, 925000}, /* ASV5 */
+	{ 975000,  950000, 937500, 912500}, /* ASV6 */
+	{ 962500,  937500, 925000, 900000}, /* ASV7 */
+	{ 950000,  925000, 912500, 900000}, /* ASV8 */
+	{ 950000,  925000, 912500, 900000}, /* ASV9 */
+	{ 937500,  912500, 900000, 900000}, /* ASV10 */
+	{ 937500,  912500, 900000, 900000}, /* ASV11 */
+	{ 925000,  900000, 900000, 887500}, /* ASV12 */
+};
+
+static unsigned int exynos5_int_volt_orig[ASV_GROUP_10+1][LV_INT_END] = {
 	/* L0        L1       L2       L3 */
 	{      0,      0,      0,      0}, /* ASV0 */
 	{1025000, 987500, 975000, 950000}, /* ASV1 */
@@ -193,7 +223,6 @@ static unsigned int exynos5_int_volt[ASV_GROUP+1][LV_INT_END] = {
 	{ 962500, 937500, 925000, 900000}, /* ASV9 */
 	{ 962500, 937500, 925000, 900000}, /* ASV10 */
 };
-
 
 /* For CMU_LEX */
 static unsigned int clkdiv_lex[LV_INT_END][2] = {
@@ -370,28 +399,38 @@ static void exynos5250_set_bus_volt(void)
 {
 	unsigned int i;
 
-	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0)
+	if (soc_is_exynos5250() && samsung_rev() < EXYNOS5250_REV_1_0) {
 		asv_group_index = 0;
-	else
+		mif_asv_group_index = 0;
+	} else {
 		asv_group_index = exynos_result_of_asv;
+		mif_asv_group_index = exynos_result_mif_asv;
+	}
 
-	if (asv_group_index == 0xff)
+	if (asv_group_index == 0xff) {
 		asv_group_index = 0;
-
-	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
-	printk(KERN_INFO "DVFS : VDD_INT Voltage of L0 level is %d \n", exynos5_mif_volt[asv_group_index][0]);
+		mif_asv_group_index = 0;
+	}
 
 	for (i = LV_0; i < LV_MIF_END; i++)
 		exynos5_busfreq_table_mif[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
 	for (i = LV_0; i < LV_INT_END; i++) {
-		if (!exynos_lot_id)
+		if (exynos_lot_is_nzvpu)
+			exynos5_busfreq_table_int[i].volt = 1025000;
+		else if (exynos_lot_id)
+			exynos5_busfreq_table_int[i].volt =
+				exynos5_int_volt_orig[asv_group_index][i];
+		else
 			exynos5_busfreq_table_int[i].volt =
 				exynos5_int_volt[asv_group_index][i];
-		else
-			exynos5_busfreq_table_int[i].volt = 1025000;
 	}
+
+	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
+	printk(KERN_INFO "DVFS : VDD_INT Voltage of L0 level is %d \n", exynos5_busfreq_table_int[LV_0].volt);
+	printk(KERN_INFO "DVFS : VDD_MIF Voltage table set with %d Group\n", mif_asv_group_index);
+	printk(KERN_INFO "DVFS : VDD_MIF Voltage of L0 level is %d \n",	exynos5_busfreq_table_mif[LV_0].volt);
 
 	return;
 }
@@ -693,7 +732,10 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	if (cdrexfreq == 800000) {
 		clkdiv_cdrex = clkdiv_cdrex_for800;
 		exynos5_busfreq_table_mif = exynos5_busfreq_table_for800;
-		exynos5_mif_volt = exynos5_mif_volt_for800;
+		if (!exynos_lot_id)
+			exynos5_mif_volt = exynos5_mif_volt_for800;
+		else
+			exynos5_mif_volt = exynos5_mif_volt_for800_orig;
 	} else if (cdrexfreq == 666857) {
 		clkdiv_cdrex = clkdiv_cdrex_for667;
 		exynos5_busfreq_table_mif = exynos5_busfreq_table_for667;
