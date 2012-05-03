@@ -336,7 +336,8 @@ static int __init exynos5_l2_cache_init(void)
 {
 	unsigned int val;
 
-	if (soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0)) {
+	if ((soc_is_exynos5250() && (samsung_rev() < EXYNOS5250_REV_1_0))
+			|| soc_is_exynos5410()) {
 		asm volatile(
 			"mrc p15, 0, %0, c1, c0, 0\n"
 			"bic %0, %0, #(1 << 2)\n"	/* cache disable */
