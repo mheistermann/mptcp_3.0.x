@@ -348,12 +348,13 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	}
 #endif
 
+	if (mali_dvfs_control==1)
+		kbase_platform_dvfs_set_level(dvfs_status.kbdev, dvfs_status.step);
+
 #if MALI_GATOR_SUPPORT
-	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_CHANGED, ACTIVITY_DVFS) | mali_dvfs_infotbl[dvfs_status.step].clock);
+	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_CHANGED, ACTIVITY_DVFS) |((unsigned int)clk_get_rate(dvfs_status.kbdev->sclk_g3d)/1000000));
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_UTILISATION_CHANGED, ACTIVITY_DVFS_UTILISATION) | dvfs_status.utilisation);
 #endif
-
-	kbase_platform_dvfs_set_level(dvfs_status.kbdev, dvfs_status.step);
 
 #if MALI_DVFS_START_MAX_STEP
 	if (dvfs_status.utilisation == 0) {
@@ -389,9 +390,32 @@ int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation)
 	return MALI_TRUE;
 }
 
+int kbase_platform_dvfs_get_utilisation(void)
+{
+	int utilisation = 0;
+
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	utilisation = mali_dvfs_status_current.utilisation;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+
+	return utilisation;
+}
+
 int kbase_platform_dvfs_get_control_status(void)
 {
 	return mali_dvfs_control;
+}
+
+int kbase_platform_dvfs_set_control_status(int onoff)
+{
+	switch(onoff)
+	{
+	case 0:case 1:
+		mali_dvfs_control = onoff;
+		printk("mali_dvfs_control is changed to %d\n", mali_dvfs_control);
+		return MALI_TRUE;
+	}
+	return MALI_FALSE;
 }
 
 int kbase_platform_dvfs_init(struct device *dev)
@@ -419,6 +443,7 @@ int kbase_platform_dvfs_init(struct device *dev)
 #ifdef MALI_DVFS_ASV_ENABLE
 	mali_dvfs_status_current.asv_need_update=1;
 #endif
+	mali_dvfs_control=1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
 	return MALI_TRUE;

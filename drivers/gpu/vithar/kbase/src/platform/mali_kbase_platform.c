@@ -218,6 +218,9 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 
 	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
 
+#if MALI_GATOR_SUPPORT
+	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM) | control);
+#endif
 	if(control == 0) // off
 	{
 		if(kbdev->pm.cmu_pmu_status == 0)
@@ -225,10 +228,6 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 			osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
 			return 0;
 		}
-
-#if MALI_GATOR_SUPPORT
-		kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM));
-#endif
 
 		if(kbase_platform_power_off(dev))
 			panic("failed to turn off g3d power\n");
@@ -258,9 +257,6 @@ int kbase_platform_cmu_pmu_control(struct device *dev, int control)
 		printk( KERN_ERR "3D cmu_pmu_control - on\n");
 #endif
 
-#if MALI_GATOR_SUPPORT
-		kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM) | 0x01);
-#endif
 	}
 
 	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
@@ -724,10 +720,10 @@ static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR_DVFS
-	if(kbdev->pm.metrics.timer_active == MALI_FALSE )
+	if(kbase_platform_dvfs_get_control_status()==0)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is off");
 	else
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is on");
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is on\nutilisation:%d",kbase_platform_dvfs_get_utilisation());
 #else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled");
 #endif
@@ -746,10 +742,6 @@ static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char
 
 static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-#ifdef CONFIG_VITHAR_DVFS
-	osk_error ret;
-	int vol;
-#endif
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
 
@@ -758,32 +750,11 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 
 #ifdef CONFIG_VITHAR_DVFS
 	if (sysfs_streq("off", buf)) {
-		if(kbdev->pm.metrics.timer_active == MALI_FALSE )
-			return count;
 
-		osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
-		kbdev->pm.metrics.timer_active = MALI_FALSE;
-		osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
-
-		osk_timer_stop(&kbdev->pm.metrics.timer);
-
-		kbase_platform_get_default_voltage(dev, &vol);
-		if(vol != 0)
-			kbase_platform_set_voltage(dev, vol);
-		kbase_platform_dvfs_set_clock(kbdev,VITHAR_DEFAULT_CLOCK / 1000000);
+		kbase_platform_dvfs_set_control_status(0);
+		kbase_platform_dvfs_set_level(kbdev, kbase_platform_dvfs_get_level(VITHAR_DEFAULT_CLOCK / 1000000));
 	} else if (sysfs_streq("on", buf)) {
-		if(kbdev->pm.metrics.timer_active == MALI_TRUE )
-			return count;
-
-		osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
-		kbdev->pm.metrics.timer_active = MALI_TRUE;
-		osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
-
-		ret = osk_timer_start(&kbdev->pm.metrics.timer, KBASE_PM_DVFS_FREQUENCY);
-		if (ret != OSK_ERR_NONE)
-		{
-			printk("osk_timer_start failed\n");
-		}
+		kbase_platform_dvfs_set_control_status(1);
 	} else {
 		printk("invalid val -only [on, off] is accepted\n");
 	}

@@ -30,7 +30,9 @@
 
 #ifdef CONFIG_VITHAR_DVFS
 #define CONFIG_VITHAR_FREQ_LOCK
+#ifdef CONFIG_CPU_FREQ
 #define MALI_DVFS_ASV_ENABLE
+#endif
 #endif
 
 struct regulator *kbase_platform_get_regulator(void);
@@ -51,7 +53,9 @@ int kbase_platform_dvfs_init(struct device *dev);
 void kbase_platform_dvfs_term(void);
 int kbase_platform_dvfs_event(kbase_device *kbdev, u32 utilisation);
 int kbase_platform_dvfs_get_control_status(void);
+int kbase_platform_dvfs_set_control_status(int onoff);
 int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
+int kbase_platform_dvfs_get_utilisation(void);
 #endif
 
 int mali_get_dvfs_upper_locked_freq(void);
