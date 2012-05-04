@@ -1126,6 +1126,7 @@ static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 
 	spin_lock(&sfb->slock);
 
+#ifdef CONFIG_FB_EXYNOS_FIMD_MC
 	if (sfb->windows[0]->end_stream) {
 		u32 data = 0;
 		struct s3c_fb_win *win = sfb->windows[0];
@@ -1159,6 +1160,7 @@ static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 
 		sfb->windows[0]->end_stream = 0;
 	}
+#endif
 
 	irq_sts_reg = readl(regs + VIDINTCON1);
 
