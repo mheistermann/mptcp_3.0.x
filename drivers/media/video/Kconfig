@@ -419,27 +419,6 @@ config S5K3H2_CSI_D
 	  This enables support for CSI B port
 endchoice
 
-config VIDEO_S5K3H7
-        tristate "S5K3H7 supporting camera driver"
-	depends on VIDEO_V4L2 && (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) && VIDEO_EXYNOS_FIMC_IS
-        ---help---
-          This driver supports S5K3H7 sensor.
-choice
-depends on VIDEO_S5K3H7
-prompt "MIPI Camera port for S5K3H7"
-default S5K3H7_CSI_C
-config S5K3H7_CSI_C
-	bool "CSI Camera A port"
-	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
-	help
-	  This enables support for CSI A port
-config S5K3H7_CSI_D
-	bool "CSI Camera B port"
-	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
-	help
-	  This enables support for CSI B port
-endchoice
-
 config VIDEO_S5K4E5
         tristate "S5K4E5 supporting camera driver"
 	depends on VIDEO_V4L2 && ((VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) && VIDEO_EXYNOS_FIMC_IS) || VIDEO_EXYNOS5_FIMC_IS 
@@ -506,6 +485,42 @@ config S5K6A3_POSITION_FRONT
 	help
 	  This set as front camera
 config S5K6A3_POSITION_REAR
+	bool "rear camera"
+	depends on VIDEO_EXYNOS5_FIMC_IS
+	help
+	  This set as rear camera
+endchoice
+
+config VIDEO_S5K3H7
+        tristate "S5K3H7 supporting camera driver"
+	depends on VIDEO_V4L2 && ((VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) && VIDEO_EXYNOS_FIMC_IS) || VIDEO_EXYNOS5_FIMC_IS
+        ---help---
+          This driver supports S5K3H7 sensor.
+choice
+depends on VIDEO_S5K3H7
+prompt "MIPI Camera port for S5K3H7"
+default S5K3H7_CSI_C
+config S5K3H7_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS || VIDEO_EXYNOS5_FIMC_IS)
+	help
+	  This enables support for CSI A port
+config S5K3H7_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS || VIDEO_EXYNOS5_FIMC_IS)
+	help
+	  This enables support for CSI B port
+endchoice
+choice
+depends on (VIDEO_S5K3H7 && VIDEO_EXYNOS5_FIMC_IS)
+prompt "Camera position for S5K3H7"
+default S5K3H7_POSITION_REAR
+config S5K3H7_POSITION_FRONT
+	bool "front camera"
+	depends on VIDEO_EXYNOS5_FIMC_IS
+	help
+	  This set as front camera
+config S5K3H7_POSITION_REAR
 	bool "rear camera"
 	depends on VIDEO_EXYNOS5_FIMC_IS
 	help
