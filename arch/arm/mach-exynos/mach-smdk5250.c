@@ -198,6 +198,35 @@ static struct exynos5_fimc_is_sensor_info s5k4e5= {
 };
 #endif
 
+#if defined CONFIG_VIDEO_S5K3H7
+static struct exynos5_fimc_is_sensor_info s5k3h7= {
+	.sensor_name = "S5K3H7",
+	.sensor_id = SENSOR_NAME_S5K3H7,
+#if defined CONFIG_S5K3H7_POSITION_FRONT
+	.sensor_position = SENSOR_POSITION_FRONT,
+#elif  defined CONFIG_S5K3H7_POSITION_REAR
+	.sensor_position = SENSOR_POSITION_REAR,
+#endif
+#if defined CONFIG_S5K3H7_CSI_C
+	.csi_id = CSI_ID_A,
+	.flite_id = FLITE_ID_A,
+	.i2c_channel = SENSOR_CONTROL_I2C0,
+#elif  defined CONFIG_S5K3H7_CSI_D
+	.csi_id = CSI_ID_B,
+	.flite_id = FLITE_ID_B,
+	.i2c_channel = SENSOR_CONTROL_I2C1,
+#endif
+
+	.max_width = 3248,
+	.max_height = 2438,
+	.max_frame_rate = 30,
+
+	.mipi_lanes = 4,
+	.mipi_settle = 12,
+	.mipi_align = 24,
+};
+#endif
+
 #if defined CONFIG_VIDEO_S5K6A3
 static struct exynos5_fimc_is_sensor_info s5k6a3= {
 	.sensor_name = "S5K6A3",
@@ -1030,6 +1059,10 @@ static void __init smdk5250_machine_init(void)
 #if defined CONFIG_VIDEO_S5K4E5
 	exynos5_fimc_is_data.sensor_info[s5k4e5.sensor_position] = &s5k4e5;
 	printk("add s5k4e5 sensor info(pos : %d)\n", s5k4e5.sensor_position);
+#endif
+#if defined CONFIG_VIDEO_S5K3H7
+	exynos5_fimc_is_data.sensor_info[s5k3h7.sensor_position] = &s5k3h7;
+	printk("add s5k3h7 sensor info(pos : %d)\n", s5k3h7.sensor_position);
 #endif
 
 	exynos5_fimc_is_set_platdata(&exynos5_fimc_is_data);
