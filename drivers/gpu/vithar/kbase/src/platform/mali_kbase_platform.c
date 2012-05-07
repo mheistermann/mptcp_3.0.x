@@ -281,14 +281,8 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	clkrate = clk_get_rate(kbdev->sclk_g3d);
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
-#if (MALI_DVFS_STEP == 7)
 	/* To be revised  */
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 350, 266, 160, 100Mhz");
-#elif (MALI_DVFS_STEP == 6)
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 266, 160, 100Mhz");
-#else
-#error
-#endif
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -317,10 +311,8 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 		freq=450;
 	} else if (sysfs_streq("400", buf)) {
 		freq=400;
-#if (MALI_DVFS_STEP == 7)
 	} else if (sysfs_streq("350", buf)) {
 		freq=350;
-#endif
 	} else if (sysfs_streq("266", buf)) {
 		freq=266;
 	} else if (sysfs_streq("160", buf)) {
@@ -811,12 +803,13 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR_DVFS
-#if (MALI_DVFS_STEP == 6)
 	if (sysfs_streq("533", buf)) {
 		mali_dvfs_freq_unlock();
 	} else if (sysfs_streq("450", buf)) {
-		mali_dvfs_freq_lock(4);
+		mali_dvfs_freq_lock(5);
 	} else if (sysfs_streq("400", buf)) {
+		mali_dvfs_freq_lock(4);
+	} else if (sysfs_streq("350", buf)) {
 		mali_dvfs_freq_lock(3);
 	} else if (sysfs_streq("266", buf)) {
 		mali_dvfs_freq_lock(2);
@@ -829,17 +822,6 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533\n");
 		return -ENOENT;
 	}
-#elif (MALI_DVFS_STEP == 2)
-	if (sysfs_streq("533", buf)) {
-		mali_dvfs_freq_unlock();
-	} else if (sysfs_streq("266", buf)) {
-		mali_dvfs_freq_lock(0);
-	} else {
-		dev_err(dev, "set_clock: invalid value\n");
-		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533\n");
-		return -ENOENT;
-	}
-#endif
 #else // CONFIG_VITHAR_DVFS
 	printk("G3D DVFS is disabled. You can not setting the Upper Lock level.\n");
 #endif
