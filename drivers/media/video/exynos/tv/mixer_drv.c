@@ -255,10 +255,32 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		}
 		if (local == 2)
 			mxr_layer_sync(mdev, MXR_DISABLE);
+
+		/* stop gscaler --> waiting for frame done */
+		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
+		pad = media_entity_remote_source(pad);
+		if (pad) {
+			gsc_sd = media_entity_to_v4l2_subdev(
+					pad->entity);
+			mxr_dbg(mdev, "stop from %s\n", gsc_sd->name);
+			md_data = (struct exynos_entity_data *)
+				gsc_sd->dev_priv;
+			md_data->media_ops->power_off(gsc_sd);
+		}
+
+		/* disable video layer */
+		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+			sub_mxr = &mdev->sub_mxr[i];
+			if (sub_mxr->local) {
+				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+				layer->ops.stream_set(layer, 0);
+				layer->pipe.state = MXR_PIPELINE_IDLE;
+			}
+		}
 	}
 
 	if ((mdev->n_streamer == 0 && local == 1) ||
-	    (mdev->n_streamer == 1 && local == 2)) {
+			(mdev->n_streamer == 1 && local == 2)) {
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
@@ -287,24 +309,8 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 					ret);
 			return ret;
 		}
-	}
-	/* When using local path between gscaler and mixer, below stop sequence
-	 * must be processed */
-	if (mdev->mxr_data_from == FROM_GSC_SD) {
-		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
-		pad = media_entity_remote_source(pad);
-		if (pad) {
-			gsc_sd = media_entity_to_v4l2_subdev(
-					pad->entity);
-			mxr_dbg(mdev, "stop from %s\n", gsc_sd->name);
-			md_data = (struct exynos_entity_data *)
-				gsc_sd->dev_priv;
-			md_data->media_ops->power_off(gsc_sd);
-		}
-	}
 
-	if ((mdev->n_streamer == 0 && local == 1) ||
-	    (mdev->n_streamer == 1 && local == 2)) {
+		/* stop hdmi */
 		ret = v4l2_subdev_call(hdmi_sd, video, s_stream, 0);
 		if (ret) {
 			mxr_err(mdev, "stopping stream failed for output %s\n",
@@ -312,25 +318,14 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			return ret;
 		}
 	}
-	/* turn off connected output device through link
-	 * with mixer */
 	if (mdev->mxr_data_from == FROM_GSC_SD) {
-		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
-			sub_mxr = &mdev->sub_mxr[i];
-			if (sub_mxr->local) {
-				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
-				layer->ops.stream_set(layer, 0);
-				layer->pipe.state = MXR_PIPELINE_IDLE;
-			}
-		}
-		mxr_reg_local_path_clear(mdev);
 		mxr_output_put(mdev);
 
 		/* disable mixer clock */
 		mxr_power_put(mdev);
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",
-		mdev->n_streamer);
+			mdev->n_streamer);
 	mutex_unlock(&mdev->s_mutex);
 	mxr_reg_dump(mdev);
 
@@ -653,6 +648,7 @@ static int mxr_runtime_suspend(struct device *dev)
 	struct mxr_resources *res = &mdev->res;
 	mxr_dbg(mdev, "suspend - start\n");
 	mutex_lock(&mdev->mutex);
+	mxr_reg_sw_reset(mdev);
 	/* disable system mmu for tv. It must be disabled before disabling
 	 * mixer's clock. Because of system mmu limitation. */
 	mdev->vb2->suspend(mdev->alloc_ctx);

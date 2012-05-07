@@ -140,6 +140,15 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 
 static void mxr_reg_vp_default_filter(struct mxr_device *mdev);
 
+void mxr_reg_sw_reset(struct mxr_device *mdev)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_write_mask(mdev, MXR_STATUS, ~0, MXR_STATUS_SOFT_RESET);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
+}
+
 void mxr_reg_reset(struct mxr_device *mdev)
 {
 	int i;
@@ -728,16 +737,6 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 
 	mxr_vsync_set_update(mdev, MXR_ENABLE);
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
-}
-
-void mxr_reg_local_path_clear(struct mxr_device *mdev)
-{
-	u32 val;
-
-	val = readl(SYSREG_DISP1BLK_CFG);
-	val &= ~(DISP1BLK_CFG_MIXER0_VALID | DISP1BLK_CFG_MIXER1_VALID);
-	writel(val, SYSREG_DISP1BLK_CFG);
-	mxr_dbg(mdev, "SYSREG_DISP1BLK_CFG = 0x%x\n", readl(SYSREG_DISP1BLK_CFG));
 }
 
 void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,

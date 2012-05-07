@@ -504,6 +504,7 @@ void mxr_get_mbus_fmt(struct mxr_device *mdev,
 
 void mxr_layer_sync(struct mxr_device *mdev, int en);
 void mxr_vsync_set_update(struct mxr_device *mdev, int en);
+void mxr_reg_sw_reset(struct mxr_device *mdev);
 void mxr_reg_reset(struct mxr_device *mdev);
 void mxr_reg_set_layer_prio(struct mxr_device *mdev);
 void mxr_reg_set_layer_blend(struct mxr_device *mdev, int sub_mxr, int num,
@@ -520,7 +521,6 @@ void mxr_reg_streamoff(struct mxr_device *mdev);
 int mxr_reg_wait4vsync(struct mxr_device *mdev);
 void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	struct v4l2_mbus_framefmt *fmt, u32 dvi_mode);
-void mxr_reg_local_path_clear(struct mxr_device *mdev);
 void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,
 		u32 flags);
 void mxr_reg_graph_layer_stream(struct mxr_device *mdev, int idx, int en);

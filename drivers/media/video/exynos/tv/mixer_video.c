@@ -496,6 +496,7 @@ static int mxr_s_dv_preset(struct file *file, void *fh,
 	struct mxr_device *mdev = layer->mdev;
 	int ret;
 
+	mxr_dbg(mdev, "%s start\n", __func__);
 	/* lock protects from changing sd_out */
 	mutex_lock(&mdev->mutex);
 

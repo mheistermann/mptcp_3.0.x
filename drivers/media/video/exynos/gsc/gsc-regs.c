@@ -735,6 +735,7 @@ void gsc_hw_set_mixer(void)
 	u32 cfg = readl(SYSREG_DISP1BLK_CFG);
 
 	cfg |= (GSC_OUT_MIXER0_GSC3);
+	cfg |= GSC_OUT_MIXER0;
 
 	writel(cfg, SYSREG_DISP1BLK_CFG);
 }
