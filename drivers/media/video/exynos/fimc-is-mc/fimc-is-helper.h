@@ -52,6 +52,8 @@
 #define DEFAULT_PREVIEW_VIDEO_FRAMERATE		(30)
 #define DEFAULT_CAPTURE_VIDEO_FRAMERATE		(30)
 
+#define DEFAULT_DIS_MAX_HEIGHT			(1080)
+
 int  fimc_is_fw_clear_irq2(struct fimc_is_dev *dev);
 int  fimc_is_fw_clear_irq1_all(struct fimc_is_dev *dev);
 int  fimc_is_fw_clear_irq1(struct fimc_is_dev *dev, unsigned int intr_pos);

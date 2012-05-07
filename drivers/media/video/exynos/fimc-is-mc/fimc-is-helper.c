@@ -2188,6 +2188,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	front_crop_ratio = front_width * 1000 / front_height;
 	back_crop_ratio = back_width * 1000 / back_height;
 
+	/*set crop size*/
 	if (front_crop_ratio == back_crop_ratio) {
 		crop_width = front_width;
 		crop_height = front_height;
@@ -2202,11 +2203,27 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	} else if (front_crop_ratio > back_crop_ratio) {
 		crop_height = front_height;
 		crop_width = (front_height
-				* (back_crop_ratio * 100 / 1000)) / 100 ;
+				* (back_crop_ratio * 100 / 1000)) / 100;
 		crop_width = ALIGN(crop_width, 8);
 		crop_height = ALIGN(crop_height, 8);
 	}
 
+	/*set back size*/
+	if (front_height > DEFAULT_DIS_MAX_HEIGHT) {
+		back_height = DEFAULT_DIS_MAX_HEIGHT;
+		back_width = (DEFAULT_DIS_MAX_HEIGHT
+				* (back_crop_ratio * 100 / 1000)) / 100;
+		back_width = ALIGN(back_width, 8);
+		back_height = ALIGN(back_height, 8);
+	} else if (front_height < DEFAULT_DIS_MAX_HEIGHT) {
+		back_height = front_height;
+		back_width = (front_height
+				* (back_crop_ratio * 100 / 1000)) / 100;
+		back_width = ALIGN(back_width, 8);
+		back_height = ALIGN(back_height, 8);
+	}
+
+	/*set dis size*/
 	if (dev->back.dis_on) {
 		dis_width = back_width * 125 / 100;
 		dis_height = back_height * 125 / 100;
