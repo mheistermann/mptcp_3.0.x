@@ -738,7 +738,9 @@ static struct platform_device *smdk5250_power_devices[] __initdata = {
 	&exynos5_device_pd[PD_ISP],
 	&exynos5_device_pd[PD_GSCL],
 	&exynos5_device_pd[PD_DISP1],
+#ifdef CONFIG_SND_SAMSUNG_I2S
 	&exynos5_device_pd[PD_MAUDIO],
+#endif
 	&s3c_device_i2c0,
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
