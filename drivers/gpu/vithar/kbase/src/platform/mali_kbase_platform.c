@@ -133,14 +133,14 @@ out:
 	return -EPERM;
 }
 
-static int kbase_platform_clock_on(struct device *dev)
+int kbase_platform_clock_on(struct device *dev)
 {
 	UNUSED(dev);
 	(void) clk_enable(clk_g3d);
 	return 0;
 }
 
-static int kbase_platform_clock_off(struct device *dev)
+int kbase_platform_clock_off(struct device *dev)
 {
 	UNUSED(dev);
 	(void)clk_disable(clk_g3d);

@@ -62,6 +62,8 @@
 #ifdef CONFIG_VITHAR
 #include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#include <plat/devs.h>
+#include <plat/pd.h>
 #endif
 
 #define	JOB_IRQ_TAG	0
@@ -2071,11 +2073,6 @@ static struct dev_pm_ops kbase_pm_ops =
 {
 	.suspend	= kbase_device_suspend,
 	.resume		= kbase_device_resume,
-#ifdef CONFIG_VITHAR_RT_PM
-	.runtime_suspend	= kbase_device_runtime_suspend,
-	.runtime_resume		= kbase_device_runtime_resume,
-	.runtime_idle		= kbase_device_runtime_idle,
-#endif
 };
 
 static struct platform_driver kbase_platform_driver =
@@ -2254,6 +2251,9 @@ static int __init kbase_driver_init(void)
 	{
 		return -ENOMEM;
 	}
+#ifdef CONFIG_VITHAR_RT_PM
+	mali_device->dev.parent = &exynos5_device_pd[PD_G3D].dev;
+#endif
 
 	kbasep_config_parse_io_resources(config->io_resources, resources);
 	err = platform_device_add_resources(mali_device, resources, PLATFORM_CONFIG_RESOURCE_COUNT);
@@ -2295,10 +2295,6 @@ static int __init kbase_driver_init(void)
 		return err;
 	}
 #endif
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_allow_rp_control();
-#endif
-
 	return 0;
 }
 #else

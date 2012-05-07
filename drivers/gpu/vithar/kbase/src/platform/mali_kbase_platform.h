@@ -24,4 +24,8 @@ void kbase_platform_remove_sysfs_file(struct device *dev);
 int kbase_platform_init(struct device *dev);
 int kbase_platform_is_power_on(void);
 void kbase_platform_term(struct device *dev);
+
+int kbase_platform_clock_on(struct device *dev);
+int kbase_platform_clock_off(struct device *dev);
+
 #endif /* _KBASE_PLATFORM_H_ */
