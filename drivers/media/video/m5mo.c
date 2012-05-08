@@ -1451,7 +1451,7 @@ static int m5mo_set_af(struct v4l2_subdev *sd, int val)
 
 	state->focus.status = 0;
 
-	if (state->focus.mode != FOCUS_MODE_CONTINOUS) {
+	if (state->focus.mode != FOCUS_MODE_CONTINUOUS) {
 		err = m5mo_writeb(sd, M5MO_CATEGORY_LENS,
 			M5MO_LENS_AF_START, val);
 		CHECK_ERR(err);
@@ -1518,7 +1518,7 @@ retry:
 		mode = 0x01;
 		break;
 
-	case FOCUS_MODE_CONTINOUS:
+	case FOCUS_MODE_CONTINUOUS:
 		mode = 0x02;
 		cancel = 0;
 		break;

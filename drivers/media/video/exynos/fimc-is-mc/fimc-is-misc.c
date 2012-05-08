@@ -2025,7 +2025,7 @@ int fimc_is_v4l2_af_mode(struct fimc_is_dev *dev, int value)
 			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		break;
-	case FOCUS_MODE_CONTINOUS:
+	case FOCUS_MODE_CONTINUOUS:
 		dev->af.mode = IS_FOCUS_MODE_CONTINUOUS;
 		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
 		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
