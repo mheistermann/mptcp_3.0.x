@@ -22,10 +22,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
-#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-#include <linux/pm_runtime.h>
-#include <plat/pd.h>
-#endif
 #include <plat/devs.h>
 #include <plat/cpu.h>
 #include <plat/bts.h>
@@ -385,14 +381,6 @@ static int bts_probe(struct platform_device *pdev)
 		goto probe_err1;
 	}
 
-	pm_runtime_enable(pdev->dev.parent);
-	if (pm_runtime_get_sync(pdev->dev.parent)) {
-		dev_err(&pdev->dev, "failed to get runtime pm\n");
-		ret = -ENODEV;
-		pm_runtime_disable(pdev->dev.parent);
-		goto probe_err1;
-	}
-
 	if (bts_pdata->clk_name) {
 		clk = clk_get(pdev->dev.parent, bts_pdata->clk_name);
 		if (IS_ERR(clk)) {
@@ -434,8 +422,6 @@ static int bts_probe(struct platform_device *pdev)
 
 	if (bts_pdata->clk_name)
 		clk_disable(clk);
-
-	pm_runtime_put(pdev->dev.parent);
 
 	return 0;
 
@@ -486,8 +472,6 @@ static int bts_remove(struct platform_device *pdev)
 			kfree(fbm_data);
 		}
 
-	pm_runtime_disable(pdev->dev.parent);
-
 	return 0;
 }
 
@@ -504,15 +488,4 @@ static int __init bts_init(void)
 {
 	return platform_driver_register(&bts_driver);
 }
-module_init(bts_init);
-
-static void __exit bts_exit(void)
-{
-	platform_driver_unregister(&bts_driver);
-	return;
-}
-module_exit(bts_exit);
-
-MODULE_AUTHOR("Boojin Kim <boojin.kim@samsung.com>");
-MODULE_DESCRIPTION("BTS Driver");
-MODULE_LICENSE("GPL");
+arch_initcall(bts_init);
