@@ -76,10 +76,11 @@ static unsigned int drex2_pause_ctrl;
 
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
-	{LV_1, 400000, 1000000, 0, 0, 0},
-	{LV_2, 267000, 1000000, 0, 0, 0},
-	{LV_3, 160000, 1000000, 0, 0, 0},
-	{LV_4, 100000, 1000000, 0, 0, 0},
+	{LV_1, 667000, 1000000, 0, 0, 0},
+	{LV_2, 400000, 1000000, 0, 0, 0},
+	{LV_3, 267000, 1000000, 0, 0, 0},
+	{LV_4, 160000, 1000000, 0, 0, 0},
+	{LV_5, 100000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for667[] = {
@@ -88,6 +89,7 @@ static struct busfreq_table exynos5_busfreq_table_for667[] = {
 	{LV_2, 111000, 1000000, 0, 0, 0},
 	{LV_3, 111000, 1000000, 0, 0, 0},
 	{LV_4, 111000, 1000000, 0, 0, 0},
+	{LV_5, 111000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for533[] = {
@@ -96,6 +98,7 @@ static struct busfreq_table exynos5_busfreq_table_for533[] = {
 	{LV_2, 107000, 1000000, 0, 0, 0},
 	{LV_3, 107000, 1000000, 0, 0, 0},
 	{LV_4, 107000, 1000000, 0, 0, 0},
+	{LV_5, 107000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for400[] = {
@@ -104,6 +107,7 @@ static struct busfreq_table exynos5_busfreq_table_for400[] = {
 	{LV_2, 100000, 1000000, 0, 0, 0},
 	{LV_3, 100000, 1000000, 0, 0, 0},
 	{LV_4, 100000, 1000000, 0, 0, 0},
+	{LV_5, 100000, 1000000, 0, 0, 0},
 };
 #define ASV_GROUP_10	10
 #define ASV_GROUP_12	12
@@ -114,71 +118,71 @@ static unsigned int asv_group_index;
 static unsigned int mif_asv_group_index;
 
 static unsigned int exynos5_mif_volt_for800_orig[ASV_GROUP_10+1][LV_MIF_END] = {
-	/* L0        L1      L2      L3      L4 */
-	{      0,       0,      0,      0,      0}, /* ASV0 */
-	{1200000, 1000000, 1000000,  950000, 950000}, /* ASV1 */
-	{1200000, 1000000,  950000,  950000, 900000}, /* ASV2 */
-	{1200000, 1050000, 1000000,  950000, 950000}, /* ASV3 */
-	{1150000, 1000000,  950000,  950000, 900000}, /* ASV4 */
-	{1150000, 1050000, 1000000, 1000000, 950000}, /* ASV5 */
-	{1150000, 1050000,  950000,  950000, 950000}, /* ASV6 */
-	{1100000, 1000000,  950000,  900000, 900000}, /* ASV7 */
-	{1100000, 1000000,  950000,  900000, 900000}, /* ASV8 */
-	{1100000, 1000000,  950000,  900000, 900000}, /* ASV9 */
-	{1100000, 1000000,  950000,  900000, 900000}, /* ASV10 */
+	/* L0        L1       L2       L3      L4      L5 */
+	{      0,       0,       0,       0,       0,      0}, /* ASV0 */
+	{1200000, 1100000, 1000000, 1000000,  950000, 950000}, /* ASV1 */
+	{1200000, 1050000, 1000000,  950000,  950000, 900000}, /* ASV2 */
+	{1200000, 1050000, 1050000, 1000000,  950000, 950000}, /* ASV3 */
+	{1150000, 1050000, 1000000,  950000,  950000, 900000}, /* ASV4 */
+	{1150000, 1050000, 1050000, 1000000, 1000000, 950000}, /* ASV5 */
+	{1150000, 1050000, 1050000,  950000,  950000, 950000}, /* ASV6 */
+	{1100000, 1050000, 1000000,  950000,  900000, 900000}, /* ASV7 */
+	{1100000, 1050000, 1000000,  950000,  900000, 900000}, /* ASV8 */
+	{1100000, 1050000, 1000000,  950000,  900000, 900000}, /* ASV9 */
+	{1100000, 1050000, 1000000,  950000,  900000, 900000}, /* ASV10 */
 };
 
 static unsigned int exynos5_mif_volt_for800[MIF_ASV_GROUP+1][LV_MIF_END] = {
-	/* L0        L1      L2      L3      L4 */
-	{1150000, 1100000, 1050000, 1050000, 1050000}, /* ASV0 */
-	{1100000, 1050000, 1000000, 1000000, 1000000}, /* ASV1 */
-	{1050000, 1000000, 1000000,  950000,  950000}, /* ASV2 */
-	{1000000,  950000,  950000,  900000,  900000}, /* ASV3 */
+	/* L0        L1       L2       L3       L4       L5 */
+	{1150000, 1150000, 1100000, 1050000, 1050000, 1050000}, /* ASV0 */
+	{1100000, 1050000, 1050000, 1000000, 1000000, 1000000}, /* ASV1 */
+	{1050000, 1000000, 1000000, 1000000,  950000,  950000}, /* ASV2 */
+	{1000000,  950000,  950000,  950000,  900000,  900000}, /* ASV3 */
 };
 
 static unsigned int exynos5_mif_volt_for667[ASV_GROUP_10+1][LV_MIF_END] = {
-	/* L0        L1       L2       L3       L4 */
-	{      0,       0,       0,       0,       0}, /* ASV0 */
-	{1100000, 1000000,  950000,  950000,  950000}, /* ASV1 */
-	{1050000, 1000000,  950000,  950000,  950000}, /* ASV2 */
-	{1050000, 1050000,  950000,  950000,  950000}, /* ASV3 */
-	{1050000, 1000000,  950000,  950000,  950000}, /* ASV4 */
-	{1050000, 1050000, 1000000, 1000000, 1000000}, /* ASV5 */
-	{1050000, 1050000,  950000,  950000,  950000}, /* ASV6 */
-	{1050000, 1000000,  900000,  900000,  900000}, /* ASV7 */
-	{1050000, 1000000,  900000,  900000,  900000}, /* ASV8 */
-	{1050000, 1000000,  900000,  900000,  900000}, /* ASV9 */
-	{1050000, 1000000,  900000,  900000,  900000}, /* ASV10 */
+	/* L0        L1       L2       L3       L4       L5 */
+	{      0,       0,       0,       0,       0,       0}, /* ASV0 */
+	{1100000, 1000000,  950000,  950000,  950000,  950000}, /* ASV1 */
+	{1050000, 1000000,  950000,  950000,  950000,  950000}, /* ASV2 */
+	{1050000, 1050000,  950000,  950000,  950000,  950000}, /* ASV3 */
+	{1050000, 1000000,  950000,  950000,  950000,  950000}, /* ASV4 */
+	{1050000, 1050000, 1000000, 1000000, 1000000, 1000000}, /* ASV5 */
+	{1050000, 1050000,  950000,  950000,  950000,  950000}, /* ASV6 */
+	{1050000, 1000000,  900000,  900000,  900000,  900000}, /* ASV7 */
+	{1050000, 1000000,  900000,  900000,  900000,  900000}, /* ASV8 */
+	{1050000, 1000000,  900000,  900000,  900000,  900000}, /* ASV9 */
+	{1050000, 1000000,  900000,  900000,  900000,  900000}, /* ASV10 */
 };
 
 static unsigned int exynos5_mif_volt_for533[ASV_GROUP_10+1][LV_MIF_END] = {
-	/* L0        L1       L2       L3       L4 */
-	{      0,       0,       0,       0,       0}, /* ASV0 */
-	{1050000, 1000000,  950000,  950000,  950000}, /* ASV1 */
-	{1000000,  950000,  950000,  950000,  950000}, /* ASV2 */
-	{1050000, 1000000,  950000,  950000,  950000}, /* ASV3 */
-	{1000000,  950000,  950000,  950000,  950000}, /* ASV4 */
-	{1050000, 1000000, 1000000, 1000000, 1000000}, /* ASV5 */
-	{1050000,  950000,  950000,  950000,  950000}, /* ASV6 */
-	{1000000,  950000,  900000,  900000,  900000}, /* ASV7 */
-	{1000000,  950000,  900000,  900000,  900000}, /* ASV8 */
-	{1000000,  950000,  900000,  900000,  900000}, /* ASV9 */
-	{1000000,  950000,  900000,  900000,  900000}, /* ASV10 */
+	/* L0        L1       L2       L3        L4      L5 */
+	{      0,       0,       0,       0,       0,       0}, /* ASV0 */
+	{1050000, 1000000,  950000,  950000,  950000,  950000}, /* ASV1 */
+	{1000000,  950000,  950000,  950000,  950000,  950000}, /* ASV2 */
+	{1050000, 1000000,  950000,  950000,  950000,  950000}, /* ASV3 */
+	{1000000,  950000,  950000,  950000,  950000,  950000}, /* ASV4 */
+	{1050000, 1000000, 1000000, 1000000, 1000000, 1000000}, /* ASV5 */
+	{1050000,  950000,  950000,  950000,  950000,  950000}, /* ASV6 */
+	{1000000,  950000,  900000,  900000,  900000,  900000}, /* ASV7 */
+	{1000000,  950000,  900000,  900000,  900000,  900000}, /* ASV8 */
+	{1000000,  950000,  900000,  900000,  900000,  900000}, /* ASV9 */
+	{1000000,  950000,  900000,  900000,  900000,  900000}, /* ASV10 */
 };
 
 static unsigned int exynos5_mif_volt_for400[ASV_GROUP_10+1][LV_MIF_END] = {
-	/* L0        L1      L2      L3      L4 */
-	{      0,       0,      0,      0,      0}, /* ASV0 */
-	{1000000, 1000000, 950000, 950000, 950000}, /* ASV1 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV2 */
-	{1050000, 1000000, 950000, 950000, 950000}, /* ASV3 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV4 */
-	{1050000, 1000000, 950000, 950000, 950000}, /* ASV5 */
-	{1050000,  950000, 950000, 950000, 950000}, /* ASV6 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV7 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV8 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV9 */
-	{1000000,  950000, 900000, 900000, 900000}, /* ASV10 */
+	/* L0        L1      L2      L3      L4      L5 */
+	{      0,       0,      0,      0,      0,      0}, /* ASV0 */
+	{1000000, 1000000, 950000, 950000, 950000, 950000}, /* ASV1 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV2 */
+	{1050000, 1000000, 950000, 950000, 950000, 950000}, /* ASV3 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV4 */
+	{1050000, 1000000, 950000, 950000, 950000, 950000}, /* ASV5 */
+	{1050000,  950000, 950000, 950000, 950000, 950000}, /* ASV6 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV7 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV8 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV9 */
+	{1000000,  950000, 900000, 900000, 900000, 900000}, /* ASV10 */
 };
 
 static struct busfreq_table *exynos5_busfreq_table_mif;
@@ -316,16 +320,19 @@ static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_MIF_END][9] = {
 	/* MCLK_CDREX L0: 800MHz */
 	{0, 0, 1, 0, 5, 1, 1, 4, 1},
 
-	/* MCLK_CDREX L1: 400MHz */
+	/* MCLK_CDREX L1: 667MHz */
+	{0, 0, 1, 0, 4, 1, 1, 4, 1},
+
+	/* MCLK_CDREX L2: 400MHz */
 	{0, 1, 1, 1, 5, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L2: 267MHz */
+	/* MCLK_CDREX L3: 267MHz */
 	{0, 2, 1, 1, 5, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L3: 160MHz */
+	/* MCLK_CDREX L4: 160MHz */
 	{0, 5, 1, 1, 7, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L4: 100MHz */
+	/* MCLK_CDREX L5: 100MHz */
 	{0, 7, 1, 3, 7, 7, 1, 15, 1},
 };
 
@@ -343,6 +350,15 @@ static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_MIF_END][9] = {
 	{0, 1, 1, 1, 4, 2, 1, 5, 1},
 
 	/* MCLK_CDREX L2: 111MHz */
+	{0, 5, 1, 4, 4, 5, 1, 8, 1},
+
+	/* MCLK_CDREX L3: 111MHz */
+	{0, 5, 1, 4, 4, 5, 1, 8, 1},
+
+	/* MCLK_CDREX L4: 111MHz */
+	{0, 5, 1, 4, 4, 5, 1, 8, 1},
+
+	/* MCLK_CDREX L5: 111MHz */
 	{0, 5, 1, 4, 4, 5, 1, 8, 1},
 };
 
@@ -368,6 +384,8 @@ static unsigned int clkdiv_cdrex_for533[LV_MIF_END][9] = {
 	/* MCLK_CDREX L4: 107MHz */
 	{0, 4, 1, 4, 3, 5, 1, 8, 1},
 
+	/* MCLK_CDREX L5: 107MHz */
+	{0, 4, 1, 4, 3, 5, 1, 8, 1},
 };
 
 static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_MIF_END][9] = {
@@ -390,6 +408,9 @@ static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_MIF_END][9] = {
 	{1, 7, 1, 2, 7, 7, 1, 15, 1},
 
 	/* MCLK_CDREX L4: 100MHz */
+	{1, 7, 1, 2, 7, 7, 1, 15, 1},
+
+	/* MCLK_CDREX L5: 100MHz */
 	{1, 7, 1, 2, 7, 7, 1, 15, 1},
 };
 
@@ -435,7 +456,13 @@ static void exynos5250_set_bus_volt(void)
 	return;
 }
 
-static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
+unsigned int old_mif_index = 0;
+
+static struct clk *mout_bpll;
+static struct clk *mout_mpll;
+static struct clk *mout_mclk_cdrex;
+
+static void exynos5250_mif_div_change(struct busfreq_data *data, int div_index)
 {
 	unsigned int tmp;
 
@@ -444,19 +471,37 @@ static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX);
 
-	do {
-		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX);
-	} while (tmp & 0x11111111);
-
 	if (samsung_rev() < EXYNOS5250_REV_1_0) {
 		tmp = data->cdrex2_divtable[div_index];
 
 		__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
-
-		do {
-			tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
-		} while (tmp & 0x1);
 	}
+}
+
+static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
+{
+	/* Mux change BPLL to MPLL */
+	if (old_mif_index == LV_1) {
+		/* Change divider */
+		exynos5250_mif_div_change(data, div_index);
+		/* Change Mux BPLL to MPLL */
+		if (clk_set_parent(mout_mclk_cdrex, mout_mpll))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+					mout_mpll->name, mout_mclk_cdrex->name);
+	/* Mux change MPLL to BPLL */
+	} else if (div_index == LV_1) {
+		/* Change Mux MPLL to BPLL */
+		if (clk_set_parent(mout_mclk_cdrex, mout_bpll))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+					mout_bpll->name, mout_mclk_cdrex->name);
+		/* Change divider */
+		exynos5250_mif_div_change(data, div_index);
+	/* It is not need to change mux */
+	} else
+		/* Change divider */
+		exynos5250_mif_div_change(data, div_index);
+
+	old_mif_index = div_index;
 }
 
 static void exynos5250_target_for_int(struct busfreq_data *data, int div_index)
@@ -705,6 +750,27 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	unsigned long lrbusfreq;
 	struct clk *clk;
 	int ret;
+
+	mout_mpll = clk_get(NULL, "mout_mpll");
+	if (IS_ERR(mout_mpll)) {
+		dev_err(dev, "Fail to get mout_mpll clock");
+		ret = PTR_ERR(mout_mpll);
+		return ret;
+	}
+
+	mout_bpll = clk_get(NULL, "mout_bpll");
+	if (IS_ERR(mout_bpll)) {
+		dev_err(dev, "fail to get mout_bpll clock");
+		ret = PTR_ERR(mout_bpll);
+		return ret;
+	}
+
+	mout_mclk_cdrex = clk_get(NULL, "mclk_cdrex");
+	if (IS_ERR(mout_mclk_cdrex)) {
+		dev_err(dev, "fail to get mout_mclk_cdrex clock");
+		ret = PTR_ERR(mout_mclk_cdrex);
+		return ret;
+	}
 
 	/* Enable pause function for DREX2 DVFS */
 	drex2_pause_ctrl = __raw_readl(EXYNOS5_DREX2_PAUSE);

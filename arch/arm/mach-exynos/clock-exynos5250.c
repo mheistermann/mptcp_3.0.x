@@ -670,7 +670,7 @@ static struct clksrc_clk exynos5_clk_mclk_cdrex = {
 		.name		= "mclk_cdrex",
 	},
 	.sources = &exynos5_clkset_mclk_cdrex,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_CDREX, .shift = 8, .size = 1 },
+	.reg_src = { .reg = EXYNOS5_CLKSRC_CDREX, .shift = 4, .size = 1 },
 	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 28, .size = 3 },
 };
 
