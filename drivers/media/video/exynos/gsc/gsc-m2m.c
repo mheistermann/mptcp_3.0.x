@@ -253,7 +253,6 @@ static int gsc_m2m_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 static int gsc_m2m_buf_prepare(struct vb2_buffer *vb)
 {
 	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
-	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_frame *frame;
 	int i;
 
@@ -265,9 +264,7 @@ static int gsc_m2m_buf_prepare(struct vb2_buffer *vb)
 		for (i = 0; i < frame->fmt->num_planes; i++)
 			vb2_set_plane_payload(vb, i, frame->payload[i]);
 	}
-
-	if (frame->cacheable)
-		gsc->vb2->cache_flush(vb, frame->fmt->num_planes);
+	vb2_ion_buf_prepare(vb);
 
 	return 0;
 }
@@ -285,6 +282,7 @@ static void gsc_m2m_buf_queue(struct vb2_buffer *vb)
 struct vb2_ops gsc_m2m_qops = {
 	.queue_setup	 = gsc_m2m_queue_setup,
 	.buf_prepare	 = gsc_m2m_buf_prepare,
+	.buf_finish	 = vb2_ion_buf_finish,
 	.buf_queue	 = gsc_m2m_buf_queue,
 	.wait_prepare	 = gsc_unlock,
 	.wait_finish	 = gsc_lock,

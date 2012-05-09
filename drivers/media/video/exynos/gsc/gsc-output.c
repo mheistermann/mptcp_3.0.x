@@ -689,24 +689,6 @@ static int gsc_out_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 	return 0;
 }
 
-static int gsc_out_buffer_prepare(struct vb2_buffer *vb)
-{
-	struct vb2_queue *vq = vb->vb2_queue;
-	struct gsc_ctx *ctx = vq->drv_priv;
-	struct gsc_dev *gsc = ctx->gsc_dev;
-	struct gsc_frame *frame = &ctx->s_frame;
-
-	if (!ctx->s_frame.fmt || !is_output(vq->type)) {
-		gsc_err("Invalid argument");
-		return -EINVAL;
-	}
-
-	if (ctx->s_frame.cacheable)
-		gsc->vb2->cache_flush(vb, frame->fmt->num_planes);
-
-	return 0;
-}
-
 int gsc_out_set_in_addr(struct gsc_dev *gsc, struct gsc_ctx *ctx,
 			struct gsc_input_buf *buf, int index)
 {
@@ -763,7 +745,7 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 
 static struct vb2_ops gsc_output_qops = {
 	.queue_setup		= gsc_out_queue_setup,
-	.buf_prepare		= gsc_out_buffer_prepare,
+	.buf_prepare		= vb2_ion_buf_prepare,
 	.buf_queue		= gsc_out_buffer_queue,
 	.wait_prepare		= gsc_unlock,
 	.wait_finish		= gsc_lock,

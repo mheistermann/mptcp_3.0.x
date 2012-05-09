@@ -58,7 +58,6 @@ static int gsc_capture_buf_prepare(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct gsc_ctx *ctx = vq->drv_priv;
-	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_frame *frame = &ctx->d_frame;
 	int i;
 
@@ -76,9 +75,7 @@ static int gsc_capture_buf_prepare(struct vb2_buffer *vb)
 		}
 		vb2_set_plane_payload(vb, i, size);
 	}
-
-	if (frame->cacheable)
-		gsc->vb2->cache_flush(vb, frame->fmt->num_planes);
+	vb2_ion_buf_prepare(vb);
 
 	return 0;
 }
@@ -361,6 +358,7 @@ static int gsc_capture_stop_streaming(struct vb2_queue *q)
 static struct vb2_ops gsc_capture_qops = {
 	.queue_setup		= gsc_capture_queue_setup,
 	.buf_prepare		= gsc_capture_buf_prepare,
+	.buf_finish		= vb2_ion_buf_finish,
 	.buf_queue		= gsc_capture_buf_queue,
 	.wait_prepare		= gsc_unlock,
 	.wait_finish		= gsc_lock,
