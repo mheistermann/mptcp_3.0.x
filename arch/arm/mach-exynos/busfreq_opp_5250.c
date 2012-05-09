@@ -1069,6 +1069,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 	data->busfreq_early_suspend_handler.suspend = &busfreq_early_suspend;
 	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
+	data->busfreq_early_suspend_handler.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 2;
 	register_early_suspend(&data->busfreq_early_suspend_handler);
 #endif
 	if (samsung_rev() < EXYNOS5250_REV_1_0) {
