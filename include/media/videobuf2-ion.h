@@ -207,6 +207,9 @@ void vb2_ion_sync_for_device(void *cookie, off_t offset, size_t size,
 void vb2_ion_sync_for_cpu(void *cookie, off_t offset, size_t size,
 						enum dma_data_direction dir);
 
+int vb2_ion_buf_prepare(struct vb2_buffer *vb);
+int vb2_ion_buf_finish(struct vb2_buffer *vb);
+
 int vb2_ion_cache_flush(struct vb2_buffer *vb, u32 num_planes);
 int vb2_ion_cache_inv(struct vb2_buffer *vb, u32 num_planes);
 

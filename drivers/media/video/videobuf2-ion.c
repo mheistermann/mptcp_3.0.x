@@ -176,6 +176,10 @@ void *vb2_ion_private_alloc(void *alloc_ctx, size_t size)
 		}
 	}
 
+	if (!buf->cookie.cached)
+		dmac_flush_range(buf->cookie.kva,
+				buf->cookie.kva + buf->cookie.size);
+
 	return &buf->cookie;
 
 err_ion_map_io:
@@ -529,7 +533,7 @@ void vb2_ion_sync_for_device(void *cookie, off_t offset, size_t size,
 {
 	struct vb2_ion_cookie *vb2cookie = cookie;
 
-	if (WARN_ON((offset + size) > vb2cookie->size) || !vb2cookie->cached)
+	if (WARN_ON((offset + size) > vb2cookie->size))
 		return;
 
 	dmac_map_area(vb2cookie->kva + offset, size, dir);
@@ -564,7 +568,7 @@ void vb2_ion_sync_for_cpu(void *cookie, off_t offset, size_t size,
 {
 	struct vb2_ion_cookie *vb2cookie = cookie;
 
-	if (WARN_ON((offset + size) > vb2cookie->size) || !vb2cookie->cached)
+	if (WARN_ON((offset + size) > vb2cookie->size))
 		return;
 
 	dmac_unmap_area(vb2cookie->kva + offset, size, dir);
@@ -589,6 +593,121 @@ void vb2_ion_sync_for_cpu(void *cookie, off_t offset, size_t size,
 #endif
 }
 EXPORT_SYMBOL_GPL(vb2_ion_sync_for_cpu);
+
+int vb2_ion_buf_prepare(struct vb2_buffer *vb)
+{
+	int i;
+	size_t size = 0;
+	enum dma_data_direction dir;
+
+	dir = V4L2_TYPE_IS_OUTPUT(vb->v4l2_buf.type) ?
+					DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+	for (i = 0; i < vb->num_planes; i++) {
+		struct vb2_ion_buf *buf;
+		buf = vb->planes[i].mem_priv;
+		if (!buf->cookie.cached)
+			continue;
+
+		dmac_map_area(buf->cookie.kva, buf->cookie.size, dir);
+		size += buf->cookie.size;
+	}
+
+#ifdef CONFIG_OUTER_CACHE
+	if (size > SZ_1M) { /* L2 cache size of Exynos4 */
+		outer_flush_all();
+		return 0;
+	}
+
+	for (i = 0; i < vb->num_planes; i++) {
+		int j;
+		struct vb2_ion_buf *buf;
+		struct scatterlist *sg;
+		off_t offset;
+
+		buf = vb->planes[i].mem_priv;
+		if (!buf->cookie.cached)
+			continue;
+
+		offset = buf->cookie.offset;
+
+		for_each_sg(buf->cookie.sg, sg, buf->cookie.nents, j) {
+			if (offset >= sg_dma_len(sg)) {
+				offset -= sg_dma_len;
+				continue;
+			}
+
+			if (dir == DMA_FROM_DEVICE)
+				outer_inv_range(sg_phys(sg) + offset,
+					sg_phys(sg) + sg_dma_len(sg));
+			else
+				outer_clean_range(sg_phys(sg) + offset,
+					sg_phys(sg) + sg_dma_len(sg));
+
+			offset = 0;
+		}
+	}
+#endif
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vb2_ion_buf_prepare);
+
+int vb2_ion_buf_finish(struct vb2_buffer *vb)
+{
+	int i;
+	size_t size = 0;
+	enum dma_data_direction dir;
+
+	dir = V4L2_TYPE_IS_OUTPUT(vb->v4l2_buf.type) ?
+					DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+	if (dir == DMA_TO_DEVICE)
+		return 0;
+
+	for (i = 0; i < vb->num_planes; i++) {
+		struct vb2_ion_buf *buf;
+		buf = vb->planes[i].mem_priv;
+		if (!buf->cookie.cached)
+			continue;
+
+		dmac_unmap_area(buf->cookie.kva, buf->cookie.size, dir);
+		size += buf->cookie.size;
+	}
+
+#ifdef CONFIG_OUTER_CACHE
+	if (size > SZ_1M) { /* L2 cache size of Exynos4 */
+		outer_flush_all();
+		return 0;
+	}
+
+	for (i = 0; i < vb->num_planes; i++) {
+		int j;
+		struct vb2_ion_buf *buf;
+		struct scatterlist *sg;
+		off_t offset;
+
+		buf = vb->planes[i].mem_priv;
+		if (!buf->cookie.cached)
+			continue;
+
+		offset = buf->cookie.offset;
+
+		for_each_sg(buf->cookie.sg, sg, buf->cookie.nents, j) {
+			if (offset >= sg_dma_len(sg)) {
+				offset -= sg_dma_len;
+				continue;
+			}
+
+			outer_inv_range(sg_phys(sg) + offset,
+					sg_phys(sg) + sg_dma_len(sg));
+
+			offset = 0;
+		}
+	}
+#endif
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vb2_ion_buf_finish);
 
 int vb2_ion_cache_flush(struct vb2_buffer *vb, u32 num_planes)
 {
