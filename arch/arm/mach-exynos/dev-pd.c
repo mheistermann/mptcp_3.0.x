@@ -22,6 +22,7 @@
 #include <plat/cpu.h>
 #include <plat/pd.h>
 #include <plat/bts.h>
+#include <plat/map-base.h>
 
 int exynos_pd_init(struct device *dev)
 {
@@ -88,6 +89,7 @@ int exynos_pd_disable(struct device *dev)
 	struct exynos_pd_data *data = (struct exynos_pd_data *) pdata->data;
 	u32 timeout;
 	u32 tmp = 0;
+	u32 cfg;
 
 	/*  save clock source register */
 	if (data->clksrc_base)
@@ -143,6 +145,27 @@ int exynos_pd_disable(struct device *dev)
 		__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
 
 	__raw_writel(0, pdata->base);
+
+	if (soc_is_exynos5250_rev1 &&
+		(pdata->base == EXYNOS5_DISP1_CONFIGURATION)) {
+		/* GSCBLK Pixel asyncy FIFO S/W reset sequence
+		   set PXLASYNC_SW_RESET to 0 then,
+		   set PXLASYNC_SW_RESET to 1 again */
+		cfg = __raw_readl(S3C_VA_SYS + 0x0220);
+		cfg &= ~(0xf);
+		__raw_writel(cfg, S3C_VA_SYS + 0x0220);
+		cfg |= (0xf);
+		__raw_writel(cfg, S3C_VA_SYS + 0x0220);
+	} else if (soc_is_exynos5250_rev1 &&
+		(pdata->base == EXYNOS5_GSCL_CONFIGURATION)) {
+		cfg = __raw_readl(S3C_VA_SYS + 0x0214);
+		/* DISPBLK1 FIFO S/W reset sequence
+		   set FIFORST_DISP1 as 0 then, set FIFORST_DISP1 as 1 again */
+		cfg &= ~(1 << 23);
+		__raw_writel(cfg, S3C_VA_SYS + 0x0214);
+		cfg |= (1 << 23);
+		__raw_writel(cfg, S3C_VA_SYS + 0x0214);
+	}
 
 	/* Wait max 1ms */
 	timeout = 1000;
