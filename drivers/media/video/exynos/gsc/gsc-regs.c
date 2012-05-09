@@ -24,24 +24,6 @@ void gsc_hw_set_sw_reset(struct gsc_dev *dev)
 	writel(cfg, dev->regs + GSC_SW_RESET);
 }
 
-void gsc_pixelasync_reset_mask_all(void)
-{
-	int i;
-	u32 cfg = readl(SYSREG_GSCBLK_CFG0);
-	for(i = 0; i < GSC_MAX_DEVS; i++)
-		cfg |= GSC_PXLASYNC_MASK(i);
-	writel(cfg, SYSREG_GSCBLK_CFG0);
-}
-
-void gsc_disp1blk_lo_reset_mask_all(void)
-{
-	int i;
-	u32 cfg = readl(SYSREG_DISPBLK_CFG2);
-	for(i = 0; i < GSC_MAX_DEVS; i++)
-		cfg |= DISP1BLK_LO_MASK(i);
-	writel(cfg, SYSREG_DISPBLK_CFG2);
-}
-
 void gsc_disp_fifo_sw_reset(struct gsc_dev *dev)
 {
 	u32 cfg = readl(SYSREG_DISP1BLK_CFG);

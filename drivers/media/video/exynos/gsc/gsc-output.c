@@ -72,8 +72,6 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 	}
 
 	gsc_hw_set_mixer();
-	gsc_pixelasync_reset_mask_all();
-	gsc_disp1blk_lo_reset_mask_all();
 
 	if (soc_is_exynos5250_rev1) {
 		gsc_hw_set_sw_reset(gsc);
