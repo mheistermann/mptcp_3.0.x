@@ -57,33 +57,47 @@ enum actuator_name {
 };
 
 enum flash_drv_name {
-	FLADRV_NAME_GPIO0	= 1,
-	FLADRV_NAME_GPIO1	= 2,
-	FLADRV_NAME_GPIO2	= 3,
-	FLADRV_NAME_GPIO3	= 4,
-	FLADRV_NAME_GPIO4	= 5,
-	FLADRV_NAME_GPIO5	= 6,
-	FLADRV_NAME_GPIO6	= 7,
-	FLADRV_NAME_GPIO7	= 8,
-	FLADRV_NAME_GPIO8	= 9,
-	FLADRV_NAME_GPIO9	= 10,
-	FLADRV_NAME_GPIO10	= 11,
-	FLADRV_NAME_GPIO11	= 12,
-	FLADRV_NAME_GPIO12	= 13,
-	FLADRV_NAME_GPIO13	= 14,
-	FLADRV_NAME_GPIO14	= 15,
-	FLADRV_NAME_GPIO15	= 16,
-	FLADRV_NAME_GPIO16	= 17,
-	FLADRV_NAME_GPIO17	= 18,
+	FLADRV_NAME_KTD267	= 1,
 	FLADRV_NAME_NOTHING	= 100,
 	FLADRV_NAME_END
 };
 
 enum from_name {
-	FROMDRV_NAME_SPI0	= 1,
-	FROMDRV_NAME_SPI1	= 2,
+	FROMDRV_NAME_W25Q80BW	= 1,
 	FROMDRV_NAME_NOTHING
 };
+
+enum sensor_peri_type {
+	SE_I2C,
+	SE_SPI,
+	SE_GPIO,
+	SE_MPWM,
+	SE_ADC,
+	SE_NULL
+};
+
+typedef union sensor_peri_format_union {
+    struct {
+        u32 channel;
+        u32 slave_address;
+        u32 speed;
+    } i2c;
+
+    struct {
+        u32 channel;
+    } spi;
+
+    struct {
+        u32 first_gpio_port_no;
+        u32 second_gpio_port_no;
+    } gpio;
+} sensor_peri_format;
+
+typedef struct {
+	u32 product_name;
+	enum sensor_peri_type peri_type;
+	sensor_peri_format peri_setting;
+} sensor_protocol, *psensor_protocol;
 
 enum exynos5_sensor_channel {
 	SENSOR_CONTROL_I2C0	= 0,
@@ -117,9 +131,10 @@ struct exynos5_fimc_is_sensor_info {
 };
 
 struct sensor_open_extended {
-	u32 actuator_type;
-	u32 flash_type;
-	u32 from_type;
+	sensor_protocol actuator_con;
+	sensor_protocol flash_con;
+	sensor_protocol from_con;
+
 	u32 mclk;
 	u32 mipi_lane_num;
 	u32 mipi_speed;
