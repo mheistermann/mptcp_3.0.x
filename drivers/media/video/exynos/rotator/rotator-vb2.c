@@ -33,9 +33,18 @@ const struct rot_vb2 rot_vb2_cma = {
 	.plane_addr	= vb2_cma_phys_plane_paddr,
 	.resume		= rot_cma_resume,
 	.suspend	= rot_cma_suspend,
-	.cache_flush	= rot_cma_cache_flush,
 	.set_cacheable	= rot_cma_set_cacheable,
 };
+
+int rot_buf_sync_prepare(struct vb2_buffer *vb)
+{
+	return rot_cma_cache_flush(vb, vb->num_planes);
+}
+
+int rot_buf_sync_finish(struct vb2_buffer *vb)
+{
+	return 0;
+}
 
 #elif defined(CONFIG_VIDEOBUF2_ION)
 void *rot_ion_init(struct rot_dev *rot)
@@ -61,7 +70,6 @@ const struct rot_vb2 rot_vb2_ion = {
 	.plane_addr	= rot_vb2_plane_addr,
 	.resume		= vb2_ion_attach_iommu,
 	.suspend	= vb2_ion_detach_iommu,
-	.cache_flush	= vb2_ion_cache_flush,
 	.set_cacheable	= vb2_ion_set_cached,
 };
 #endif

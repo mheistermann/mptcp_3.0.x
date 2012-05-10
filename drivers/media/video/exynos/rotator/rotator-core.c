@@ -517,10 +517,7 @@ static int rot_vb2_buf_prepare(struct vb2_buffer *vb)
 			vb2_set_plane_payload(vb, i, frame->bytesused[i]);
 	}
 
-	if (ctx->cacheable)
-		ctx->rot_dev->vb2->cache_flush(vb, frame->rot_fmt->num_planes);
-
-	return 0;
+	return rot_buf_sync_prepare(vb);
 }
 
 static void rot_vb2_buf_queue(struct vb2_buffer *vb)
@@ -570,6 +567,7 @@ static int rot_vb2_stop_streaming(struct vb2_queue *vq)
 static struct vb2_ops rot_vb2_ops = {
 	.queue_setup		 = rot_vb2_queue_setup,
 	.buf_prepare		 = rot_vb2_buf_prepare,
+	.buf_finish		 = rot_buf_sync_finish,
 	.buf_queue		 = rot_vb2_buf_queue,
 	.wait_finish		 = rot_vb2_lock,
 	.wait_prepare		 = rot_vb2_unlock,

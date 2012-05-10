@@ -255,7 +255,6 @@ struct rot_vb2 {
 	int (*resume)(void *alloc_ctx);
 	void (*suspend)(void *alloc_ctx);
 
-	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
 };
 
@@ -303,4 +302,11 @@ extern const struct rot_vb2 rot_vb2_cma;
 extern const struct rot_vb2 rot_vb2_ion;
 #endif
 
+#ifdef CONFIG_VIDEOBUF2_ION
+#define rot_buf_sync_prepare vb2_ion_buf_prepare
+#define rot_buf_sync_finish vb2_ion_buf_finish
+#else
+int rot_buf_sync_finish(struct vb2_buffer *vb);
+int rot_buf_sync_prepare(struct vb2_buffer *vb);
+#endif
 #endif /* ROTATOR__H_ */
