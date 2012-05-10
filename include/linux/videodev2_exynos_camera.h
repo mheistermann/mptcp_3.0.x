@@ -1025,6 +1025,12 @@ typedef enum {
 #define V4L2_CID_CAMERA_CHECK_ESD		(V4L2_CID_PRIVATE_BASE+123)
 #define V4L2_CID_CAMERA_APP_CHECK		(V4L2_CID_PRIVATE_BASE+124)
 
+#define V4L2_CID_CAMERA_FACE_ZOOM  (V4L2_CID_PRIVATE_BASE + 132)
+enum v4l2_face_zoom {
+	FACE_ZOOM_STOP = 0,
+	FACE_ZOOM_START
+};
+
 /* control for post processing block in ISP */
 #define V4L2_CID_CAMERA_SET_ODC				(V4L2_CID_PRIVATE_BASE+127)
 enum set_odc_mode {
