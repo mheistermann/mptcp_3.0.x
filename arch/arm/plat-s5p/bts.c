@@ -22,6 +22,10 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#include <linux/pm_runtime.h>
+#include <plat/pd.h>
+#endif
 #include <plat/devs.h>
 #include <plat/cpu.h>
 #include <plat/bts.h>
@@ -244,6 +248,9 @@ static void bts_change_fbm_priority(bool on)
 		for (i = 0; i < bts_data->listnum; i++) {
 			bts_local_data = bts_data->bts_local_data;
 			if (bts_local_data->changable_prior) {
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+				pm_runtime_get_sync(bts_data->dev->parent);
+#endif
 				if (bts_data->clk)
 					clk_enable(bts_data->clk);
 				bts_onoff(bts_local_data->base, BTS_OFF);
@@ -252,6 +259,9 @@ static void bts_change_fbm_priority(bool on)
 				bts_onoff(bts_local_data->base, BTS_ON);
 				if (bts_data->clk)
 					clk_disable(bts_data->clk);
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+				pm_runtime_put_sync(bts_data->dev->parent);
+#endif
 			}
 			bts_local_data++;
 		}
@@ -265,6 +275,9 @@ static void bts_devs_onoff(struct exynos_bts_data *bts_data, bool on)
 	int i;
 	int onoff = on ? BTS_OFF : BTS_ON;
 
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+	pm_runtime_get_sync(bts_data->dev->parent);
+#endif
 	if (bts_data->clk)
 		clk_enable(bts_data->clk);
 
@@ -276,6 +289,9 @@ static void bts_devs_onoff(struct exynos_bts_data *bts_data, bool on)
 
 	if (bts_data->clk)
 		clk_disable(bts_data->clk);
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+	pm_runtime_put_sync(bts_data->dev->parent);
+#endif
 }
 
 /* init physical bts devices */
