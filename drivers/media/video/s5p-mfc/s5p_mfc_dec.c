@@ -1401,19 +1401,18 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	int ret = 0;
 	unsigned long flags;
-	int cacheable;
+	void *alloc_ctx;
 
 	mfc_debug_enter();
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
 
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		cacheable = (ctx->cacheable & MFCMASK_SRC_CACHE) ? 1 : 0;
 		if (ctx->is_drm)
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm,
-				cacheable);
+			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		else
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				cacheable);
+			alloc_ctx =
+				ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
+
 		/* Can only request buffers after
 		   an instance has been opened.*/
 		if (ctx->state == MFCINST_GOT_INST) {
@@ -1422,34 +1421,35 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 				ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
 				return ret;
 			}
+
 			/* Decoding */
 			if (ctx->output_state != QUEUE_FREE) {
 				mfc_err("Bufs have already been requested.\n");
 				return -EINVAL;
 			}
+
+			if (ctx->cacheable & MFCMASK_SRC_CACHE)
+				s5p_mfc_mem_set_cacheable(alloc_ctx, true);
+
 			ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
 			if (ret) {
 				mfc_err("vb2_reqbufs on output failed.\n");
+				s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 				return ret;
 			}
-			mfc_debug(2, "vb2_reqbufs: %d\n", ret);
+
+			s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 			ctx->output_state = QUEUE_BUFS_REQUESTED;
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		dec->dst_memtype = reqbufs->memory;
 
-		/* cacheable setting */
-		cacheable = (ctx->cacheable & MFCMASK_DST_CACHE) ? 1 : 0;
 		if (ctx->is_drm) {
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm,
-				cacheable);
+			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		} else {
-			if (!IS_MFCV6(dev))
-				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
-					cacheable);
-
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				cacheable);
+			alloc_ctx = (!IS_MFCV6(dev)) ?
+				ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX] :
+				ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 		}
 
 		if (reqbufs->count == 0) {
@@ -1464,20 +1464,26 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			return -EINVAL;
 		}
 
-		ctx->capture_state = QUEUE_BUFS_REQUESTED;
+		if (ctx->cacheable & MFCMASK_DST_CACHE)
+			s5p_mfc_mem_set_cacheable(alloc_ctx, true);
 
 		ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 		if (ret) {
 			mfc_err("vb2_reqbufs on capture failed.\n");
+			s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 			return ret;
 		}
 
 		if (reqbufs->count < ctx->dpb_count) {
 			mfc_err("Not enough buffers allocated.\n");
 			reqbufs->count = 0;
-			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 			return -ENOMEM;
 		}
+
+		s5p_mfc_mem_set_cacheable(alloc_ctx, false);
+		ctx->capture_state = QUEUE_BUFS_REQUESTED;
 
 		dec->total_dpb_count = reqbufs->count;
 
@@ -1485,7 +1491,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		if (ret) {
 			mfc_err("Failed to allocate decoding buffers.\n");
 			reqbufs->count = 0;
-			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			vb2_reqbufs(&ctx->vq_dst, reqbufs);
 			return -ENOMEM;
 		}
 
@@ -1495,7 +1501,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			} else {
 				mfc_err("Not all buffers passed to buf_init.\n");
 				reqbufs->count = 0;
-				ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+				vb2_reqbufs(&ctx->vq_dst, reqbufs);
 				s5p_mfc_release_codec_buffers(ctx);
 				return -ENOMEM;
 			}

@@ -1379,7 +1379,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	dev->alloc_ctx_fw = (struct vb2_alloc_ctx *)
 		vb2_ion_create_context(&pdev->dev,
 			IS_MFCV6(dev) ? SZ_4K : SZ_128K,
-			VB2ION_CTX_DRM_MFCFW);
+			VB2ION_CTX_UNCACHED | VB2ION_CTX_DRM_MFCFW);
 	if (IS_ERR(dev->alloc_ctx_fw)) {
 		mfc_err("failed to prepare F/W allocation context\n");
 		ret = PTR_ERR(dev->alloc_ctx_fw);
@@ -1389,7 +1389,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	dev->alloc_ctx_sh = (struct vb2_alloc_ctx *)
 		vb2_ion_create_context(&pdev->dev,
 			SZ_4K,
-			VB2ION_CTX_DRM_MFCSH);
+			VB2ION_CTX_UNCACHED | VB2ION_CTX_DRM_MFCSH);
 	if (IS_ERR(dev->alloc_ctx_sh)) {
 		mfc_err("failed to prepare shared allocation context\n");
 		ret = PTR_ERR(dev->alloc_ctx_sh);
@@ -1412,7 +1412,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	dev->alloc_ctx_drm = (struct vb2_alloc_ctx *)
 		vb2_ion_create_context(&pdev->dev,
 			SZ_4K,
-			VB2ION_CTX_DRM_VIDEO);
+			VB2ION_CTX_UNCACHED | VB2ION_CTX_DRM_VIDEO);
 	if (IS_ERR(dev->alloc_ctx_drm)) {
 		mfc_err("failed to prepare DRM allocation context\n");
 		ret = PTR_ERR(dev->alloc_ctx_drm);

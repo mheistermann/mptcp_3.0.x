@@ -1971,7 +1971,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	struct s5p_mfc_dev *dev = video_drvdata(file);
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret = 0;
-	int cacheable;
+	void *alloc_ctx;
 
 	mfc_debug_enter();
 
@@ -1990,65 +1990,71 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			return -EINVAL;
 		}
 		*/
-		/* FIXME: check it out in the MFC6.1 */
-		cacheable = (ctx->cacheable & MFCMASK_DST_CACHE) ? 1 : 0;
 		if (ctx->is_drm)
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm, cacheable);
+			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		else
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-				cacheable);
+			alloc_ctx =
+				ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 
 		if (ctx->capture_state != QUEUE_FREE) {
 			mfc_err("invalid capture state: %d\n", ctx->capture_state);
 			return -EINVAL;
 		}
 
+		if (ctx->cacheable & MFCMASK_DST_CACHE)
+			s5p_mfc_mem_set_cacheable(alloc_ctx, true);
+
 		ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
-		if (ret != 0) {
+		if (ret) {
 			mfc_err("error in vb2_reqbufs() for E(D)\n");
+			s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 			return ret;
 		}
+
+		s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 		ctx->capture_state = QUEUE_BUFS_REQUESTED;
 
 		if (!IS_MFCV6(dev)) {
-		ret = s5p_mfc_alloc_codec_buffers(ctx);
+			ret = s5p_mfc_alloc_codec_buffers(ctx);
 			if (ret) {
 				mfc_err("Failed to allocate encoding buffers.\n");
 				reqbufs->count = 0;
-				ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+				vb2_reqbufs(&ctx->vq_dst, reqbufs);
 				return -ENOMEM;
 			}
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		/* cacheable setting */
-		cacheable = (ctx->cacheable & MFCMASK_SRC_CACHE) ? 1 : 0;
 		if (ctx->is_drm) {
-			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx_drm, cacheable);
+			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		} else {
-			if (!IS_MFCV6(dev))
-				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
-					cacheable);
-			else
-				s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-					cacheable);
+			alloc_ctx = (!IS_MFCV6(dev)) ?
+				ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX] :
+				ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 		}
+
 		if (ctx->output_state != QUEUE_FREE) {
 			mfc_err("invalid output state: %d\n", ctx->output_state);
 			return -EINVAL;
 		}
 
+		if (ctx->cacheable & MFCMASK_SRC_CACHE)
+			s5p_mfc_mem_set_cacheable(alloc_ctx, true);
+
 		ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
-		if (ret != 0) {
+		if (ret) {
 			mfc_err("error in vb2_reqbufs() for E(S)\n");
+			s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 			return ret;
 		}
+
+		s5p_mfc_mem_set_cacheable(alloc_ctx, false);
 		ctx->output_state = QUEUE_BUFS_REQUESTED;
 	} else {
 		mfc_err("invalid buf type\n");
 		return -EINVAL;
 	}
 
-	mfc_debug(2, "--\n");
+	mfc_debug_leave();
 
 	return ret;
 }
