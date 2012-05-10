@@ -280,6 +280,11 @@ static int exynos5_clk_ip_isp1_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_ISP1, clk, enable);
 }
 
+static int exynos5_clk_ip_bus_syslft_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_BUS_SYSLFT, clk, enable);
+}
+
 /* BPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -1375,6 +1380,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "mie",
 		.enable		= exynos5_clk_ip_disp1_ctrl ,
 		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "efclk",
+		.enable		= exynos5_clk_ip_bus_syslft_ctrl,
+		.ctrlbit	= (1 << 16),
 	},
 };
 
