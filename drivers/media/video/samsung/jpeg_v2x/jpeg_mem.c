@@ -75,5 +75,7 @@ const struct jpeg_vb2 jpeg_vb2_ion = {
 	.suspend	= vb2_ion_detach_iommu,
 	.cache_flush	= vb2_ion_cache_flush,
 	.set_cacheable	= vb2_ion_set_cached,
+	.buf_prepare	= vb2_ion_buf_prepare,
+	.buf_finish	= vb2_ion_buf_finish,
 };
 #endif

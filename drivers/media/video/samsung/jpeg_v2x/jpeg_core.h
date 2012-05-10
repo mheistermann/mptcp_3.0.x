@@ -190,6 +190,8 @@ struct jpeg_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
+	int (*buf_prepare)(struct vb2_buffer *vb);
+	int (*buf_finish)(struct vb2_buffer *vb);
 };
 
 struct jpeg_dev {

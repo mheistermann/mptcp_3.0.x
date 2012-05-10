@@ -143,15 +143,30 @@ static int jpeg_dec_buf_prepare(struct vb2_buffer *vb)
 	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		num_plane = ctx->param.dec_param.in_plane;
 		if (ctx->input_cacheable == 1)
-			ctx->dev->vb2->cache_flush(vb, num_plane);
+			ctx->dev->vb2->buf_prepare(vb);
 	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		num_plane = ctx->param.dec_param.out_plane;
 		if (ctx->output_cacheable == 1)
-			ctx->dev->vb2->cache_flush(vb, num_plane);
+			ctx->dev->vb2->buf_prepare(vb);
 	}
 
 	for (i = 0; i < num_plane; i++)
 		vb2_set_plane_payload(vb, i, ctx->payload[i]);
+
+	return 0;
+}
+
+static int jpeg_dec_buf_finish(struct vb2_buffer *vb)
+{
+	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (ctx->input_cacheable == 1)
+			ctx->dev->vb2->buf_finish(vb);
+	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (ctx->output_cacheable == 1)
+			ctx->dev->vb2->buf_finish(vb);
+	}
 
 	return 0;
 }
@@ -225,15 +240,30 @@ static int jpeg_enc_buf_prepare(struct vb2_buffer *vb)
 	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		num_plane = ctx->param.enc_param.in_plane;
 		if (ctx->input_cacheable == 1)
-			ctx->dev->vb2->cache_flush(vb, num_plane);
+			ctx->dev->vb2->buf_prepare(vb);
 	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		num_plane = ctx->param.enc_param.out_plane;
 		if (ctx->output_cacheable == 1)
-			ctx->dev->vb2->cache_flush(vb, num_plane);
+			ctx->dev->vb2->buf_prepare(vb);
 	}
 
 	for (i = 0; i < num_plane; i++)
 		vb2_set_plane_payload(vb, i, ctx->payload[i]);
+
+	return 0;
+}
+
+static int jpeg_enc_buf_finish(struct vb2_buffer *vb)
+{
+	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (ctx->input_cacheable == 1)
+			ctx->dev->vb2->buf_finish(vb);
+	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (ctx->output_cacheable == 1)
+			ctx->dev->vb2->buf_finish(vb);
+	}
 
 	return 0;
 }
@@ -271,6 +301,7 @@ static int jpeg_enc_stop_streaming(struct vb2_queue *q)
 static struct vb2_ops jpeg_enc_vb2_qops = {
 	.queue_setup		= jpeg_enc_queue_setup,
 	.buf_prepare		= jpeg_enc_buf_prepare,
+	.buf_finish		= jpeg_enc_buf_finish,
 	.buf_queue		= jpeg_enc_buf_queue,
 	.wait_prepare		= jpeg_enc_lock,
 	.wait_finish		= jpeg_enc_unlock,
@@ -280,6 +311,7 @@ static struct vb2_ops jpeg_enc_vb2_qops = {
 static struct vb2_ops jpeg_dec_vb2_qops = {
 	.queue_setup		= jpeg_dec_queue_setup,
 	.buf_prepare		= jpeg_dec_buf_prepare,
+	.buf_finish		= jpeg_dec_buf_finish,
 	.buf_queue		= jpeg_dec_buf_queue,
 	.wait_prepare		= jpeg_dec_lock,
 	.wait_finish		= jpeg_dec_unlock,
