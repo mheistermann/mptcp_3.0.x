@@ -107,6 +107,7 @@ static void srp_request_intr_mode(int mode)
 	unsigned int intr_src = readl(srp.commbox + SRP_INTRSRC);
 	unsigned int intr_irq = readl(srp.commbox + SRP_INTRIRQ);
 	unsigned int check_mode = 0;
+	int result = -1;
 
 	pwr_mode &= ~SRP_POWER_MODE_MASK;
 	intr_en &= ~SRP_INTR_DI;
@@ -124,6 +125,7 @@ static void srp_request_intr_mode(int mode)
 		srp_info("Request Resume to SRP\n");
 		pwr_mode |= SRP_POWER_MODE_TRIGGER;
 		check_mode = 0;
+		result = 0;
 		break;
 	case RESET:
 		srp_info("Request S/W reset to SRP\n");
@@ -161,8 +163,11 @@ static void srp_request_intr_mode(int mode)
 		do {
 			/* Waiting for completed suspended mode */
 			if ((readl(srp.commbox + SRP_POWER_MODE)
-					& check_mode))
+						& check_mode)) {
+				srp_info("Success!! requested mode\n");
+				result = 0;
 				break;
+			}
 		} while (time_before(jiffies, deadline));
 		srp_pending_ctrl(STALL);
 
@@ -171,6 +176,9 @@ static void srp_request_intr_mode(int mode)
 		pwr_mode &= ~check_mode;
 		writel(pwr_mode, srp.commbox + SRP_POWER_MODE);
 	}
+
+	if (result < 0)
+		srp_err("Failed to request power mode!\n");
 }
 
 static void srp_check_stream_info(void)
