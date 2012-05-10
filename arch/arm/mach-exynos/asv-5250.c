@@ -60,7 +60,6 @@ struct asv_judge_table exynos5250_limit_orig[] = {
 /* New ASV table has 12 level */
 struct asv_judge_table exynos5250_limit[] = {
 	/* HPM, IDS */
-	{ 0, 0},		/* Reserved Group */
 	{ 6, 7},
 	{ 8, 9},
 	{ 9, 10},
@@ -154,7 +153,6 @@ static void exynos5250_pre_set_abb(void)
 		switch (exynos_result_of_asv) {
 		case 0:
 		case 1:
-		case 2:
 			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_080V);
 			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_080V);
 			exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_080V);
