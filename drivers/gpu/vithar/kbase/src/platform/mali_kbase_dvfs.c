@@ -66,6 +66,26 @@ static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
 #endif
 #endif
 
+/***********************************************************/
+/*  This table and variable are using the check time share of GPU Clock  */
+/***********************************************************/
+static unsigned long long prev_time = 0;
+
+mali_time_in_state time_in_state[MALI_DVFS_STEP]=
+{
+#if (MALI_DVFS_STEP == 7)
+	{100, 0},
+	{160, 0},
+	{266, 0},
+	{350, 0},
+	{400, 0},
+	{450, 0},
+	{533, 0}
+#else
+#error no table
+#endif
+};
+
 typedef struct _mali_dvfs_info{
 	unsigned int voltage;
 	unsigned int clock;
@@ -447,6 +467,11 @@ int kbase_platform_dvfs_init(struct device *dev)
 	mali_dvfs_control=1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
+	// this operation is set the external variable for time_in_state sysfile.
+	// this variable "prev_time" is Using the time share of GPU clock( mali_kbase_platform.c ).
+	if( prev_time == 0 )
+		prev_time = get_jiffies_64();
+
 	return MALI_TRUE;
 }
 
@@ -747,7 +772,12 @@ int kbase_platform_dvfs_get_level(int freq)
 
 void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level)
 {
-	static int level_prev=-1;
+#if MALI_DVFS_START_MAX_STEP
+	static int level_prev = MALI_DVFS_STEP-1;
+#else
+	static int level_prev = 0;
+#endif
+	unsigned long long current_time;
 
 	if (level == level_prev)
 		return;
@@ -762,6 +792,12 @@ void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level)
 		kbase_platform_dvfs_set_clock(kbdev, mali_dvfs_infotbl[level].clock);
 		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
 	}
+	// Calculate the time share of input DVFS level.
+	current_time = get_jiffies_64();
+
+	time_in_state[level_prev].time = cputime64_add(time_in_state[level_prev].time, cputime_sub(current_time, prev_time));
+
+	prev_time = current_time;
 	level_prev = level;
 }
 

@@ -35,6 +35,12 @@
 #endif
 #endif
 
+// time share for GPU clock level
+typedef struct _time_in_state {
+	unsigned int freq;
+	unsigned long long time;
+} mali_time_in_state;
+
 struct regulator *kbase_platform_get_regulator(void);
 int kbase_platform_regulator_init(struct device *dev);
 int kbase_platform_regulator_disable(struct device *dev);

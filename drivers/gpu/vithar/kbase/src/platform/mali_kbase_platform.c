@@ -854,6 +854,46 @@ static ssize_t set_asv(struct device *dev, struct device_attribute *attr, const 
 	}
 	return count;
 }
+
+extern mali_time_in_state time_in_state[MALI_DVFS_STEP];
+static ssize_t show_time_in_state(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	int i;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	for(i = 0 ; i < MALI_DVFS_STEP ; i++) {
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d %llu\n", time_in_state[i].freq, time_in_state[i].time);
+	}
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_time_in_state(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	int i;
+
+	for(i = 0 ; i < MALI_DVFS_STEP ; i++) {
+		time_in_state[i].time = 0;
+	}
+
+	printk("time_in_state value is reset complete.\n");
+	return count;
+}
 /** The sysfs file @c clock, fbdev.
  *
  * This is used for obtaining information about the vithar operating clock & framebuffer address,
@@ -866,6 +906,7 @@ DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
 DEVICE_ATTR(dvfs_lock, S_IRUGO|S_IWUSR, show_lock_dvfs, set_lock_dvfs);
 DEVICE_ATTR(asv, S_IRUGO|S_IWUSR, show_asv, set_asv);
+DEVICE_ATTR(time_in_state, S_IRUGO|S_IWUSR, show_time_in_state, set_time_in_state);
 
 static int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -905,15 +946,21 @@ static int kbase_platform_create_sysfs_file(struct device *dev)
 		goto out;
 	}
 
-
 	if (device_create_file(dev, &dev_attr_dvfs_lock))
 	{
 		dev_err(dev, "Couldn't create sysfs file [dvfs_lock]\n");
 		goto out;
 	}
+
 	if (device_create_file(dev, &dev_attr_asv))
 	{
 		dev_err(dev, "Couldn't create sysfs file [asv]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_time_in_state))
+	{
+		dev_err(dev, "Couldn't create sysfs file [time_in_state]\n");
 		goto out;
 	}
 	return 0;
@@ -931,6 +978,7 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_dvfs);
 	device_remove_file(dev, &dev_attr_dvfs_lock);
 	device_remove_file(dev, &dev_attr_asv);
+	device_remove_file(dev, &dev_attr_time_in_state);
 }
 
 int kbase_platform_init(struct device *dev)
