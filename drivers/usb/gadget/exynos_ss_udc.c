@@ -1664,7 +1664,7 @@ static void exynos_ss_udc_xfer_complete(struct exynos_ss_udc *udc,
 	if (udc_ep->dir_in) {
 		/* Incomplete IN transfer */
 		if (size_left) {
-			dev_err(udc->dev, "%s: BUFSIZ is not zero (%d)",
+			dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
 					  __func__, size_left);
 			/* REVISIT shall we -ECONNRESET here? */
 		}
