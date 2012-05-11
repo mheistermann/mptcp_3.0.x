@@ -1039,8 +1039,31 @@ int fimc_is_digital_zoom(struct fimc_is_dev *dev, int value)
 	crop_width &= 0xffe;
 	crop_height &= 0xffe;
 
-	crop_x = (front_width - crop_width)/2;
-	crop_y = (front_height - crop_height)/2;
+	if (dev->misc.face_zoom_on == FACE_ZOOM_START) {
+		dev->af.pos_x = dev->af.pos_x;
+		dev->af.pos_y = dev->af.pos_y;
+
+		if (dev->af.pos_x <= (crop_width / 2))
+			crop_x = 0;
+		else {
+		    if (dev->af.pos_x + (crop_width / 2) <= front_width)
+			    crop_x = dev->af.pos_x - (crop_width / 2);
+		    else
+			    crop_x = front_width - crop_width;
+		}
+
+		if (dev->af.pos_y <= (crop_height / 2))
+			crop_y = 0;
+		else {
+		    if (dev->af.pos_y + (crop_height / 2) <= front_height)
+			    crop_y = dev->af.pos_y - (crop_height / 2);
+		    else
+			    crop_y = front_height - crop_height;
+		}
+	} else {
+		crop_x = (front_width - crop_width)/2;
+		crop_y = (front_height - crop_height)/2;
+	}
 
 	crop_x &= 0xffe;
 	crop_y &= 0xffe;

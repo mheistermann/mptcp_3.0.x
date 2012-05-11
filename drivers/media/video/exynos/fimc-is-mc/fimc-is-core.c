@@ -512,6 +512,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 	dev->sensor.sensor_type = val;
 	dev->sensor.id_dual = 0;
 	dev->setfile.sub_index = 0;
+	dev->misc.face_zoom_on = FACE_ZOOM_STOP;
 
 	dbg("fimc_is_init\n");
 	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {

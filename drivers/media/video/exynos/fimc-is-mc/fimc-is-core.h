@@ -454,6 +454,10 @@ struct is_af_info {
 	u16 use_af;
 };
 
+struct is_misc {
+	int face_zoom_on;
+};
+
 struct flite_frame {
 	u32 o_width;
 	u32 o_height;
@@ -511,6 +515,7 @@ struct fimc_is_dev {
 	u32					sensor_num;
 	struct is_af_info			af;
 	int					low_power_mode;
+	struct is_misc				misc;
 
 	const struct fimc_is_vb2		*vb2;
 };

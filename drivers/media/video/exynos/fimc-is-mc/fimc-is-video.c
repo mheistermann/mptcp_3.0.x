@@ -1709,6 +1709,9 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
 		break;
+	case V4L2_CID_CAMERA_FACE_ZOOM:
+		isp->misc.face_zoom_on = ctrl->value;
+		break;
 	default:
 		err("Invalid control\n");
 		return -EINVAL;
