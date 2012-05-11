@@ -245,6 +245,7 @@ struct s3c_fb_vsync {
  * @regs: The mapped hardware registers.
  * @variant: Variant information for this hardware.
  * @enabled: A bitmask of enabled hardware windows.
+ * @output_on: Flag if the physical output is enabled.
  * @pdata: The platform configuration data passed with the device.
  * @windows: The hardware windows that have been claimed.
  * @irq_no: IRQ line number
@@ -261,6 +262,7 @@ struct s3c_fb {
 	struct s3c_fb_variant	 variant;
 
 	unsigned char		 enabled;
+	bool			 output_on;
 
 	struct s3c_fb_platdata	*pdata;
 	struct s3c_fb_win	*windows[S3C_FB_MAX_WIN];
@@ -630,6 +632,8 @@ static int s3c_fb_set_par(struct fb_info *info)
 		data |= VIDCON0_ENVID | VIDCON0_ENVID_F;
 		writel(data, regs + VIDCON0);
 
+		sfb->output_on = 1;
+
 		data = VIDTCON0_VBPD(var->upper_margin - 1) |
 		       VIDTCON0_VFPD(var->lower_margin - 1) |
 		       VIDTCON0_VSPW(var->vsync_len - 1);
@@ -927,6 +931,8 @@ static void s3c_fb_enable(struct s3c_fb *sfb, int enable)
 	}
 
 	writel(vidcon0, sfb->regs + VIDCON0);
+
+	sfb->output_on = enable;
 }
 
 /**
@@ -942,6 +948,7 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	struct s3c_fb *sfb = win->parent;
 	unsigned int index = win->index;
 	u32 wincon;
+	u32 output_on = sfb->output_on;
 
 	dev_dbg(sfb->dev, "Window[%d] : blank mode %d\n", index, blank_mode);
 
@@ -1009,10 +1016,7 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	 *	s3c_fb_enable(sfb, blank_mode != FB_BLANK_POWERDOWN ? 1 : 0);
 	 */
 
-	if (index != sfb->pdata->default_win)
-		return 1;
-
-	return 0;
+	return output_on == sfb->output_on;
 }
 
 /**
