@@ -519,12 +519,6 @@ static int fimc_is_bayer_queue_setup(struct vb2_queue *vq,
 	return 0;
 }
 
-static int fimc_is_bayer_buffer_prepare(struct vb2_buffer *vb)
-{
-	dbg_sensor("-%s\n", __func__);
-	return 0;
-}
-
 static inline void fimc_is_bayer_lock(struct vb2_queue *vq)
 {
 	dbg_sensor("-%s\n", __func__);
@@ -780,8 +774,9 @@ static void fimc_is_bayer_buffer_queue(struct vb2_buffer *vb)
 
 const struct vb2_ops fimc_is_bayer_qops = {
 	.queue_setup		= fimc_is_bayer_queue_setup,
-	.buf_prepare		= fimc_is_bayer_buffer_prepare,
+	.buf_prepare		= vb2_ion_buf_prepare,
 	.buf_queue		= fimc_is_bayer_buffer_queue,
+	.buf_finish             = vb2_ion_buf_finish,
 	.wait_prepare		= fimc_is_bayer_unlock,
 	.wait_finish		= fimc_is_bayer_lock,
 	.start_streaming	= fimc_is_bayer_start_streaming,

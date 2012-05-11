@@ -544,12 +544,6 @@ static int fimc_is_scalerc_queue_setup(struct vb2_queue *vq,
 	dbg("(num_planes : %d)(size : %d)\n", (int)*num_planes, (int)sizes[0]);
 	return 0;
 }
-static int fimc_is_scalerc_buffer_prepare(struct vb2_buffer *vb)
-{
-	dbg("--%s\n", __func__);
-	return 0;
-}
-
 
 static inline void fimc_is_scalerc_lock(struct vb2_queue *vq)
 {
@@ -833,8 +827,9 @@ static void fimc_is_scalerc_buffer_queue(struct vb2_buffer *vb)
 
 const struct vb2_ops fimc_is_scalerc_qops = {
 	.queue_setup		= fimc_is_scalerc_queue_setup,
-	.buf_prepare		= fimc_is_scalerc_buffer_prepare,
+	.buf_prepare		= vb2_ion_buf_prepare,
 	.buf_queue		= fimc_is_scalerc_buffer_queue,
+	.buf_finish             = vb2_ion_buf_finish,
 	.wait_prepare		= fimc_is_scalerc_unlock,
 	.wait_finish		= fimc_is_scalerc_lock,
 	.start_streaming	= fimc_is_scalerc_start_streaming,
@@ -1779,12 +1774,6 @@ static int fimc_is_scalerp_queue_setup(struct vb2_queue *vq,
 
 	return 0;
 }
-static int fimc_is_scalerp_buffer_prepare(struct vb2_buffer *vb)
-{
-	dbg("--%s\n", __func__);
-	return 0;
-}
-
 
 static inline void fimc_is_scalerp_lock(struct vb2_queue *vq)
 {
@@ -2180,8 +2169,9 @@ static void fimc_is_scalerp_buffer_queue(struct vb2_buffer *vb)
 
 const struct vb2_ops fimc_is_scalerp_qops = {
 	.queue_setup		= fimc_is_scalerp_queue_setup,
-	.buf_prepare		= fimc_is_scalerp_buffer_prepare,
+	.buf_prepare		= vb2_ion_buf_prepare,
 	.buf_queue		= fimc_is_scalerp_buffer_queue,
+	.buf_finish             = vb2_ion_buf_finish,
 	.wait_prepare		= fimc_is_scalerp_unlock,
 	.wait_finish		= fimc_is_scalerp_lock,
 	.start_streaming	= fimc_is_scalerp_start_streaming,

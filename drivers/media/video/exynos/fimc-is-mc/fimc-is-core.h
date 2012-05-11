@@ -135,7 +135,7 @@
 	printk(KERN_DEBUG "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
 #define dbg_sensor(fmt, args...) \
-	printk("[SEN] " fmt "\n", ##args)
+	printk(KERN_DEBUG "[SEN] " fmt "\n", ##args)
 #else
 #define dbg(fmt, args...)
 #define dbg_sensor(fmt, args...)
@@ -312,7 +312,6 @@ struct fimc_is_vb2 {
 	int (*resume)(void *alloc_ctx);
 	void (*suspend)(void *alloc_ctx);
 
-	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
 };
 
