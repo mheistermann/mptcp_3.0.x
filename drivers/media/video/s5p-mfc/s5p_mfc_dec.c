@@ -1442,6 +1442,13 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			ctx->output_state = QUEUE_BUFS_REQUESTED;
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (reqbufs->count == 0) {
+			mfc_debug(2, "Freeing buffers.\n");
+			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			dec->dpb_queue_cnt = 0;
+			return ret;
+		}
+
 		dec->dst_memtype = reqbufs->memory;
 
 		if (ctx->is_drm) {
@@ -1450,13 +1457,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			alloc_ctx = (!IS_MFCV6(dev)) ?
 				ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX] :
 				ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
-		}
-
-		if (reqbufs->count == 0) {
-			mfc_debug(2, "Freeing buffers.\n");
-			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
-			dec->dpb_queue_cnt = 0;
-			return ret;
 		}
 
 		if (ctx->capture_state != QUEUE_FREE) {

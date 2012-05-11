@@ -1983,13 +1983,12 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		return -EINVAL;
 
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		/* RMVME: s5p_mfc_buf_negotiate() ctx state checked */
-		/*
-		if (ctx->state != MFCINST_GOT_INST) {
-			mfc_err("invalid context state: %d\n", ctx->state);
-			return -EINVAL;
+		if (reqbufs->count == 0) {
+			mfc_debug(2, "Freeing buffers.\n");
+			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			return ret;
 		}
-		*/
+
 		if (ctx->is_drm)
 			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		else
@@ -2024,6 +2023,12 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			}
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (reqbufs->count == 0) {
+			mfc_debug(2, "Freeing buffers.\n");
+			ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
+			return ret;
+		}
+
 		if (ctx->is_drm) {
 			alloc_ctx = ctx->dev->alloc_ctx_drm;
 		} else {
