@@ -488,7 +488,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			mfc_debug(2, "Running again the same buffer.\n");
 
 			stream_vir = vb2_plane_vaddr(&src_buf->vb, 0);
-			s5p_mfc_cache_inv(&src_buf->vb, 0);
+			s5p_mfc_mem_inv_vb(&src_buf->vb, 1);
 
 			offset = s5p_mfc_find_start_code(
 					stream_vir + dec->consumed, remained);
@@ -1396,13 +1396,14 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 		goto alloc_ctx_sh_fail;
 	}
 
-	dev->drm_info.alloc = s5p_mfc_mem_alloc(dev->alloc_ctx_sh, PAGE_SIZE);
+	dev->drm_info.alloc = s5p_mfc_mem_alloc_priv(dev->alloc_ctx_sh,
+						PAGE_SIZE);
 	if (IS_ERR(dev->drm_info.alloc)) {
 		mfc_err("failed to allocate shared region\n");
 		ret = PTR_ERR(dev->drm_info.alloc);
 		goto shared_alloc_fail;
 	}
-	dev->drm_info.virt = s5p_mfc_mem_vaddr(dev->drm_info.alloc);
+	dev->drm_info.virt = s5p_mfc_mem_vaddr_priv(dev->drm_info.alloc);
 	if (!dev->drm_info.virt) {
 		mfc_err("failed to get vaddr for shared region\n");
 		ret = -ENOMEM;
@@ -1474,7 +1475,7 @@ err_proc_number:
 err_proc_entry:
 	vb2_ion_destroy_context(dev->alloc_ctx_drm);
 shared_vaddr_fail:
-	s5p_mfc_mem_free(dev->drm_info.alloc);
+	s5p_mfc_mem_free_priv(dev->drm_info.alloc);
 shared_alloc_fail:
 alloc_ctx_drm_fail:
 	vb2_ion_destroy_context(dev->alloc_ctx_sh);
@@ -1533,7 +1534,7 @@ static int __devexit s5p_mfc_remove(struct platform_device *pdev)
 	remove_proc_entry(MFC_PROC_INSTANCE_NUMBER, mfc_proc_entry);
 	remove_proc_entry(MFC_PROC_ROOT, NULL);
 	vb2_ion_destroy_context(dev->alloc_ctx_drm);
-	s5p_mfc_mem_free(dev->drm_info.alloc);
+	s5p_mfc_mem_free_priv(dev->drm_info.alloc);
 	vb2_ion_destroy_context(dev->alloc_ctx_sh);
 	vb2_ion_destroy_context(dev->alloc_ctx_fw);
 #endif

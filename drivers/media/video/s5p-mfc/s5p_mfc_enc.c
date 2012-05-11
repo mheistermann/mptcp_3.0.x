@@ -3048,9 +3048,6 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			mfc_err("plane size is too small for capture\n");
 			return -EINVAL;
 		}
-		/* FIXME: 'cacheable' should be tested */
-		if (ctx->cacheable & MFCMASK_DST_CACHE)
-			s5p_mfc_mem_cache_flush(vb, 1);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		ret = check_vb_with_fmt(ctx->src_fmt, vb);
 		if (ret < 0)
@@ -3067,16 +3064,14 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			return -EINVAL;
 		}
 
-		if (ctx->cacheable & MFCMASK_SRC_CACHE)
-			s5p_mfc_mem_cache_flush(vb, 2);
-
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
-
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
 		return -EINVAL;
 	}
+
+	s5p_mfc_mem_prepare(vb);
 
 	mfc_debug_leave();
 
@@ -3096,6 +3091,8 @@ static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_ctx_ctrls\n");
 	}
+
+	s5p_mfc_mem_finish(vb);
 
 	return 0;
 }

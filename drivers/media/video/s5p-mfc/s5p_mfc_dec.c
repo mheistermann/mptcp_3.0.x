@@ -99,7 +99,7 @@ static void vb2_save_buf(struct vb2_buffer *vb, unsigned int plane_no)
 	unsigned char *addr;
 
 	addr = (unsigned char *)vb2_plane_vaddr(vb, plane_no);
-	s5p_mfc_cache_inv(vb, plane_no);
+	s5p_mfc_mem_inv_vb(vb, plane_no);
 
 	save_stream((unsigned long)addr, vb->v4l2_planes[plane_no].bytesused);
 }
@@ -2160,15 +2160,13 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			mfc_err("Plane buffer (CAPTURE) is too small.\n");
 			return -EINVAL;
 		}
+
 		mfc_debug(2, "Size: 0=%lu 2=%lu\n", vb2_plane_size(vb, 0),
 							vb2_plane_size(vb, 1));
-		if (ctx->cacheable & MFCMASK_DST_CACHE)
-			s5p_mfc_mem_cache_flush(vb, 2);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (ctx->cacheable & MFCMASK_SRC_CACHE)
-			s5p_mfc_mem_cache_flush(vb, 1);
 		mfc_debug(2, "Plane size: %ld, ctx->dec_src_buf_size: %d\n",
 				vb2_plane_size(vb, 0), dec->src_buf_size);
+
 		if (vb2_plane_size(vb, 0) < dec->src_buf_size) {
 			mfc_err("Plane buffer (OUTPUT) is too small.\n");
 			return -EINVAL;
@@ -2177,6 +2175,9 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	}
+
+	s5p_mfc_mem_prepare(vb);
+
 	return 0;
 }
 
@@ -2187,14 +2188,14 @@ static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		if (ctx->cacheable & MFCMASK_DST_CACHE)
-			s5p_mfc_mem_cache_flush(vb, 2);
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in to_ctx_ctrls\n");
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_ctx_ctrls\n");
 	}
+
+	s5p_mfc_mem_finish(vb);
 
 	return 0;
 }

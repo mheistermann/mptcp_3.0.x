@@ -214,7 +214,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 
 	/* Allocate only if memory from bank 1 is necessary */
 	if (ctx->port_a_size > 0) {
-		ctx->port_a_buf = s5p_mfc_mem_alloc(
+		ctx->port_a_buf = s5p_mfc_mem_alloc_priv(
 				alloc_ctx, ctx->port_a_size);
 		if (IS_ERR(ctx->port_a_buf)) {
 			ctx->port_a_buf = 0;
@@ -222,7 +222,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 			       "Buf alloc for decoding failed (port A).\n");
 			return -ENOMEM;
 		}
-		ctx->port_a_phys = s5p_mfc_mem_daddr(ctx->port_a_buf);
+		ctx->port_a_phys = s5p_mfc_mem_daddr_priv(ctx->port_a_buf);
 	}
 
 	mfc_debug_leave();
@@ -234,7 +234,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
 	if (ctx->port_a_buf) {
-		s5p_mfc_mem_free(ctx->port_a_buf);
+		s5p_mfc_mem_free_priv(ctx->port_a_buf);
 		ctx->port_a_buf = 0;
 		ctx->port_a_phys = 0;
 		ctx->port_a_size = 0;
@@ -285,16 +285,16 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 		alloc_ctx = dev->alloc_ctx_drm;
 	}
 
-	ctx->ctx.alloc = s5p_mfc_mem_alloc(alloc_ctx, ctx->ctx_buf_size);
+	ctx->ctx.alloc = s5p_mfc_mem_alloc_priv(alloc_ctx, ctx->ctx_buf_size);
 	if (IS_ERR(ctx->ctx.alloc)) {
 		mfc_err("Allocating context buffer failed.\n");
 		return PTR_ERR(ctx->ctx.alloc);
 	}
 
-	ctx->ctx.ofs = s5p_mfc_mem_daddr(ctx->ctx.alloc);
-	ctx->ctx.virt = s5p_mfc_mem_vaddr(ctx->ctx.alloc);
+	ctx->ctx.ofs = s5p_mfc_mem_daddr_priv(ctx->ctx.alloc);
+	ctx->ctx.virt = s5p_mfc_mem_vaddr_priv(ctx->ctx.alloc);
 	if (!ctx->ctx.virt) {
-		s5p_mfc_mem_free(ctx->ctx.alloc);
+		s5p_mfc_mem_free_priv(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -304,7 +304,8 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	}
 
 	memset(ctx->ctx.virt, 0, ctx->ctx_buf_size);
-	s5p_mfc_cache_clean_priv(ctx->ctx.alloc);
+	s5p_mfc_mem_clean_priv(ctx->ctx.alloc, ctx->ctx.virt, 0,
+			ctx->ctx_buf_size);
 	/*
 	ctx->ctx.dma = dma_map_single(ctx->dev->v4l2_dev.dev,
 					  ctx->ctx.virt, ctx->ctx_buf_size,
@@ -327,7 +328,7 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 				ctx->ctx.dma, ctx->ctx_buf_size,
 				DMA_TO_DEVICE);
 		*/
-		s5p_mfc_mem_free(ctx->ctx.alloc);
+		s5p_mfc_mem_free_priv(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -347,20 +348,20 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	alloc_ctx = dev->alloc_ctx_drm;
 #endif
-	dev->ctx_buf.alloc = s5p_mfc_mem_alloc(alloc_ctx, buf_size->dev_ctx);
+	dev->ctx_buf.alloc = s5p_mfc_mem_alloc_priv(alloc_ctx, buf_size->dev_ctx);
 	if (IS_ERR(dev->ctx_buf.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
 		return PTR_ERR(dev->ctx_buf.alloc);
 	}
 
-	dev->ctx_buf.ofs = s5p_mfc_mem_daddr(dev->ctx_buf.alloc);
+	dev->ctx_buf.ofs = s5p_mfc_mem_daddr_priv(dev->ctx_buf.alloc);
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	iovmm_map_oto(&dev->plat_dev->dev, dev->ctx_buf.ofs,
 			buf_size->dev_ctx);
 #endif
-	dev->ctx_buf.virt = s5p_mfc_mem_vaddr(dev->ctx_buf.alloc);
+	dev->ctx_buf.virt = s5p_mfc_mem_vaddr_priv(dev->ctx_buf.alloc);
 	if (!dev->ctx_buf.virt) {
-		s5p_mfc_mem_free(dev->ctx_buf.alloc);
+		s5p_mfc_mem_free_priv(dev->ctx_buf.alloc);
 		dev->ctx_buf.alloc = NULL;
 		dev->ctx_buf.ofs = 0;
 
@@ -369,7 +370,8 @@ int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
 	}
 
 	memset(dev->ctx_buf.virt, 0, buf_size->dev_ctx);
-	s5p_mfc_cache_clean_priv(dev->ctx_buf.alloc);
+	s5p_mfc_mem_clean_priv(dev->ctx_buf.alloc, dev->ctx_buf.virt, 0,
+			buf_size->dev_ctx);
 
 	mfc_debug_leave();
 
@@ -383,7 +385,7 @@ void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 		iovmm_unmap_oto(&dev->plat_dev->dev, dev->ctx_buf.ofs);
 #endif
-		s5p_mfc_mem_free(dev->ctx_buf.alloc);
+		s5p_mfc_mem_free_priv(dev->ctx_buf.alloc);
 		dev->ctx_buf.alloc = NULL;
 		dev->ctx_buf.ofs = 0;
 		dev->ctx_buf.virt = NULL;
@@ -512,11 +514,11 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		if (i == 0 && (!ctx->is_drm)) {
 			dpb_vir = vb2_plane_vaddr(&buf->vb, 0);
 			memset(dpb_vir, 0x0, ctx->luma_size);
-			s5p_mfc_cache_inv(&buf->vb, 0);
 
 			dpb_vir = vb2_plane_vaddr(&buf->vb, 1);
 			memset(dpb_vir, 0x80, ctx->chroma_size);
-			s5p_mfc_cache_inv(&buf->vb, 1);
+
+			s5p_mfc_mem_clean_vb(&buf->vb, 2);
 		}
 		i++;
 	}

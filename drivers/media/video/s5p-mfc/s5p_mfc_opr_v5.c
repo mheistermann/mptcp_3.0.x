@@ -61,31 +61,15 @@ int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug_enter();
 
-	dec->dsc.alloc = s5p_mfc_mem_alloc(
+	dec->dsc.alloc = s5p_mfc_mem_alloc_priv(
 			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], buf_size->desc_buf);
 	if (IS_ERR(dec->dsc.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
 		return PTR_ERR(dec->dsc.alloc);
 	}
 
-	dec->dsc.ofs = OFFSETA(s5p_mfc_mem_daddr(dec->dsc.alloc));
+	dec->dsc.ofs = OFFSETA(s5p_mfc_mem_daddr_priv(dec->dsc.alloc));
 
-	/* FIXME: need clean to zero */
-#if 0
-	dec->dsc.virt = s5p_mfc_mem_vaddr(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dec->dsc.alloc);
-	if (!dec->dsc.virt) {
-		s5p_mfc_mem_free(dec->dsc.alloc);
-		dec->dsc.alloc = NULL;
-		dec->dsc.ofs = 0;
-
-		mfc_err("Remapping DESC buffer failed.\n");
-		return -ENOMEM;
-	}
-
-	memset(ctx->dec.virt, 0, DESC_BUF_SIZE);
-	s5p_mfc_cache_clean(ctx->dec.virt, DESC_BUF_SIZE);
-#endif
 	mfc_debug_leave();
 
 	return 0;
@@ -97,7 +81,7 @@ void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
 	if (dec->dsc.alloc) {
-		s5p_mfc_mem_free(dec->dsc.alloc);
+		s5p_mfc_mem_free_priv(dec->dsc.alloc);
 		dec->dsc.alloc = NULL;
 		dec->dsc.ofs = 0;
 		dec->dsc.virt = NULL;
@@ -224,27 +208,29 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 
 	/* Allocate only if memory from bank 1 is necessary */
 	if (ctx->port_a_size > 0) {
-		ctx->port_a_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->port_a_size);
+		ctx->port_a_buf = s5p_mfc_mem_alloc_priv(
+				dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
+				ctx->port_a_size);
 		if (IS_ERR(ctx->port_a_buf)) {
 			ctx->port_a_buf = 0;
 			printk(KERN_ERR
 			       "Buf alloc for decoding failed (port A).\n");
 			return -ENOMEM;
 		}
-		ctx->port_a_phys = s5p_mfc_mem_daddr(ctx->port_a_buf);
+		ctx->port_a_phys = s5p_mfc_mem_daddr_priv(ctx->port_a_buf);
 	}
 
 	/* Allocate only if memory from bank 2 is necessary */
 	if (ctx->port_b_size > 0) {
-		ctx->port_b_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], ctx->port_b_size);
+		ctx->port_b_buf = s5p_mfc_mem_alloc_priv(
+				dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
+				ctx->port_b_size);
 		if (IS_ERR(ctx->port_b_buf)) {
 			ctx->port_b_buf = 0;
 			mfc_err("Buf alloc for decoding failed (port B).\n");
 			return -ENOMEM;
 		}
-		ctx->port_b_phys = s5p_mfc_mem_daddr(ctx->port_b_buf);
+		ctx->port_b_phys = s5p_mfc_mem_daddr_priv(ctx->port_b_buf);
 	}
 	mfc_debug_leave();
 
@@ -255,13 +241,13 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
 	if (ctx->port_a_buf) {
-		s5p_mfc_mem_free(ctx->port_a_buf);
+		s5p_mfc_mem_free_priv(ctx->port_a_buf);
 		ctx->port_a_buf = 0;
 		ctx->port_a_phys = 0;
 		ctx->port_a_size = 0;
 	}
 	if (ctx->port_b_buf) {
-		s5p_mfc_mem_free(ctx->port_b_buf);
+		s5p_mfc_mem_free_priv(ctx->port_b_buf);
 		ctx->port_b_buf = 0;
 		ctx->port_b_phys = 0;
 		ctx->port_b_size = 0;
@@ -281,18 +267,18 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	else
 		ctx->ctx_buf_size = buf_size->non_h264_ctx_buf;
 
-	ctx->ctx.alloc = s5p_mfc_mem_alloc(
+	ctx->ctx.alloc = s5p_mfc_mem_alloc_priv(
 		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx_buf_size);
 	if (IS_ERR(ctx->ctx.alloc)) {
 		mfc_err("Allocating context buffer failed.\n");
 		return PTR_ERR(ctx->ctx.alloc);
 	}
 
-	ctx->ctx.ofs = OFFSETA(s5p_mfc_mem_daddr(ctx->ctx.alloc));
+	ctx->ctx.ofs = OFFSETA(s5p_mfc_mem_daddr_priv(ctx->ctx.alloc));
 
-	ctx->ctx.virt = s5p_mfc_mem_vaddr(ctx->ctx.alloc);
+	ctx->ctx.virt = s5p_mfc_mem_vaddr_priv(ctx->ctx.alloc);
 	if (!ctx->ctx.virt) {
-		s5p_mfc_mem_free(ctx->ctx.alloc);
+		s5p_mfc_mem_free_priv(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -302,7 +288,8 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	}
 
 	memset(ctx->ctx.virt, 0, ctx->ctx_buf_size);
-	s5p_mfc_cache_clean_priv(ctx->ctx.alloc);
+	s5p_mfc_mem_clean_priv(ctx->ctx.alloc, ctx->ctx.virt, 0,
+			ctx->ctx_buf_size);
 	/*
 	ctx->ctx.dma = dma_map_single(ctx->dev->v4l2_dev.dev,
 					  ctx->ctx.virt, ctx->ctx_buf_size,
@@ -310,7 +297,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	*/
 
 	if (s5p_mfc_init_shm(ctx) < 0) {
-		s5p_mfc_mem_free(ctx->ctx.alloc);
+		s5p_mfc_mem_free_priv(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
@@ -335,13 +322,13 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 				ctx->ctx.dma, ctx->ctx_buf_size,
 				DMA_TO_DEVICE);
 		*/
-		s5p_mfc_mem_free(ctx->ctx.alloc);
+		s5p_mfc_mem_free_priv(ctx->ctx.alloc);
 		ctx->ctx.alloc = NULL;
 		ctx->ctx.ofs = 0;
 		ctx->ctx.virt = NULL;
 	}
 	if (ctx->shm.alloc) {
-		s5p_mfc_mem_free(ctx->shm.alloc);
+		s5p_mfc_mem_free_priv(ctx->shm.alloc);
 		ctx->shm.alloc = NULL;
 		ctx->shm.ofs = 0;
 		ctx->shm.virt = NULL;

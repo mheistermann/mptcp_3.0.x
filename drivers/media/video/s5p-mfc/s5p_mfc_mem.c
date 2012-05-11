@@ -131,69 +131,42 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes, unsigned int ctx_num)
 #endif
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
-struct vb2_cma_phys_conf {
-	struct device		*dev;
-	const char		*type;
-	unsigned long		alignment;
-	bool			cacheable;
-};
-
-struct vb2_cma_phys_buf {
-	struct vb2_cma_phys_conf		*conf;
-	dma_addr_t			paddr;
-	unsigned long			size;
-	struct vm_area_struct		*vma;
-	atomic_t			refcount;
-	struct vb2_vmarea_handler	handler;
-	bool				cacheable;
-};
-
-void s5p_mfc_cache_clean_priv(void *cookie)
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
 {
-	phys_addr_t phys = (phys_addr_t)cookie;
-
-	/* FIXME: cache maintenance operation */
-	dmac_map_area(phys_to_virt(phys), SZ_1M, DMA_TO_DEVICE);
-	outer_clean_range(phys, phys + SZ_1M);
+	vb2_cma_phys_set_cacheable(alloc_ctx, cacheable);
 }
 
-void s5p_mfc_cache_inv_priv(void *cookie)
+void s5p_mfc_mem_clean_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
-	phys_addr_t phys = (phys_addr_t)cookie;
+	phys_addr_t phys = (phys_addr_t)vb_priv + offset;
 
-	/* FIXME: cache maintenance operation */
-	outer_inv_range(phys, phys + SZ_1M);
-	dmac_unmap_area(phys_to_virt(phys), SZ_1M, DMA_FROM_DEVICE);
+	dmac_map_area(phys_to_virt(phys), size, DMA_TO_DEVICE);
+	outer_clean_range(phys, phys + size);
 }
 
-void s5p_mfc_cache_clean(struct vb2_buffer *vb, int plane_no)
+void s5p_mfc_mem_inv_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
-	struct vb2_cma_phys_buf *buf =
-		(struct vb2_cma_phys_buf *)vb->planes[plane_no].mem_priv;
-	void *start_addr;
-	unsigned long size;
-	unsigned long paddr = (dma_addr_t)buf->paddr;
+	phys_addr_t phys = (phys_addr_t)vb_priv + offset;
 
-	start_addr = (dma_addr_t *)phys_to_virt(buf->paddr);
-	size = buf->size;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	outer_clean_range(paddr, paddr + size);
+	outer_inv_range(phys, phys + size);
+	dmac_unmap_area(phys_to_virt(phys), size, DMA_FROM_DEVICE);
 }
 
-void s5p_mfc_cache_inv(struct vb2_buffer *vb, int plane_no)
+int s5p_mfc_mem_clean_vb(struct vb2_buffer *vb, u32 num_planes)
 {
-	struct vb2_cma_phys_buf *buf =
-		(struct vb2_cma_phys_buf *)vb->planes[plane_no].mem_priv;
-	void *start_addr;
-	unsigned long size;
-	unsigned long paddr = (dma_addr_t)buf->paddr;
+	return vb2_cma_phys_cache_clean(vb, num_planes);
+}
 
-	start_addr = (dma_addr_t *)phys_to_virt(buf->paddr);
-	size = buf->size;
+int s5p_mfc_mem_inv_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	return vb2_cma_phys_cache_inv(vb, num_planes);
+}
 
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+int s5p_mfc_mem_flush_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	return vb2_cma_phys_cache_flush(vb, num_planes);
 }
 
 void s5p_mfc_mem_suspend(void *alloc_ctx)
@@ -205,26 +178,21 @@ int s5p_mfc_mem_resume(void *alloc_ctx)
 {
 	return 0;
 }
-
+#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
 {
-	vb2_cma_phys_set_cacheable(alloc_ctx, cacheable);
+	vb2_sdvmm_set_cacheable(alloc_ctx, cacheable);
 }
 
-int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
-{
-	vb2_cma_phys_cache_flush(vb, plane_no);
-	return 0;
-}
-#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
-void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
+void s5p_mfc_mem_clean_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
 	unsigned long paddr;
 	void *cur_addr, *end_addr;
 
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
+	dmac_map_area(start + offset, size, DMA_TO_DEVICE);
 
-	cur_addr = (void *)((unsigned long)start_addr & PAGE_MASK);
+	cur_addr = (void *)(((unsigned long)start + offset) & PAGE_MASK);
 	end_addr = cur_addr + PAGE_ALIGN(size);
 
 	while (cur_addr < end_addr) {
@@ -234,52 +202,15 @@ void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
 			outer_clean_range(paddr, paddr + PAGE_SIZE);
 		cur_addr += PAGE_SIZE;
 	}
-
-	/* FIXME: L2 operation optimization */
-	/*
-	unsigned long start, end, unitsize;
-	unsigned long cur_addr, remain;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-
-	cur_addr = (unsigned long)start_addr;
-	remain = size;
-
-	start = page_to_pfn(vmalloc_to_page(cur_addr));
-	start <<= PAGE_SHIFT;
-	if (start & PAGE_MASK) {
-		unitsize = min((start | PAGE_MASK) - start + 1, remain);
-		end = start + unitsize;
-		outer_clean_range(start, end);
-		remain -= unitsize;
-		cur_addr += unitsize;
-	}
-
-	while (remain >= PAGE_SIZE) {
-		start = page_to_pfn(vmalloc_to_page(cur_addr));
-		start <<= PAGE_SHIFT;
-		end = start + PAGE_SIZE;
-		outer_clean_range(start, end);
-		remain -= PAGE_SIZE;
-		cur_addr += PAGE_SIZE;
-	}
-
-	if (remain) {
-		start = page_to_pfn(vmalloc_to_page(cur_addr));
-		start <<= PAGE_SHIFT;
-		end = start + remain;
-		outer_clean_range(start, end);
-	}
-	*/
-
 }
 
-void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
+void s5p_mfc_mem_inv_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
 	unsigned long paddr;
 	void *cur_addr, *end_addr;
 
-	cur_addr = (void *)((unsigned long)start_addr & PAGE_MASK);
+	cur_addr = (void *)(((unsigned long)start + offset) & PAGE_MASK);
 	end_addr = cur_addr + PAGE_ALIGN(size);
 
 	while (cur_addr < end_addr) {
@@ -290,44 +221,22 @@ void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
 		cur_addr += PAGE_SIZE;
 	}
 
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+	dmac_unmap_area(start + offset, size, DMA_FROM_DEVICE);
+}
 
-	/* FIXME: L2 operation optimization */
-	/*
-	unsigned long start, end, unitsize;
-	unsigned long cur_addr, remain;
+int s5p_mfc_mem_clean_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	return 0;
+}
 
-	cur_addr = (unsigned long)start_addr;
-	remain = size;
+int s5p_mfc_mem_inv_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	return 0;
+}
 
-	start = page_to_pfn(vmalloc_to_page(cur_addr));
-	start <<= PAGE_SHIFT;
-	if (start & PAGE_MASK) {
-		unitsize = min((start | PAGE_MASK) - start + 1, remain);
-		end = start + unitsize;
-		outer_inv_range(start, end);
-		remain -= unitsize;
-		cur_addr += unitsize;
-	}
-
-	while (remain >= PAGE_SIZE) {
-		start = page_to_pfn(vmalloc_to_page(cur_addr));
-		start <<= PAGE_SHIFT;
-		end = start + PAGE_SIZE;
-		outer_inv_range(start, end);
-		remain -= PAGE_SIZE;
-		cur_addr += PAGE_SIZE;
-	}
-
-	if (remain) {
-		start = page_to_pfn(vmalloc_to_page(cur_addr));
-		start <<= PAGE_SHIFT;
-		end = start + remain;
-		outer_inv_range(start, end);
-	}
-
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-	*/
+int s5p_mfc_mem_flush_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	return vb2_sdvmm_cache_flush(vb, num_planes);
 }
 
 void s5p_mfc_mem_suspend(void *alloc_ctx)
@@ -344,57 +253,77 @@ int s5p_mfc_mem_resume(void *alloc_ctx)
 	s5p_mfc_clock_off();
 	return 0;
 }
-
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
 {
-	vb2_sdvmm_set_cacheable(alloc_ctx, cacheable);
+	vb2_ion_set_cached(alloc_ctx, cacheable);
 }
 
-int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
+void s5p_mfc_mem_clean_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
-	return vb2_sdvmm_cache_flush(vb, plane_no);
-}
-#elif defined(CONFIG_S5P_MFC_VB2_ION)
-void s5p_mfc_cache_clean_priv(void *cookie)
-{
-	int nents = 0;
-	struct scatterlist *sg;
-
-	sg = vb2_ion_get_sg(cookie, &nents);
-
-	dma_sync_sg_for_device(NULL, sg, nents, DMA_TO_DEVICE);
+	vb2_ion_sync_for_device(vb_priv, offset, size, DMA_TO_DEVICE);
 }
 
-void s5p_mfc_cache_inv_priv(void *cookie)
+void s5p_mfc_mem_inv_priv(void *vb_priv, void *start, off_t offset,
+							size_t size)
 {
-	int nents = 0;
-	struct scatterlist *sg;
-
-	sg = vb2_ion_get_sg(cookie, &nents);
-
-	dma_sync_sg_for_device(NULL, sg, nents, DMA_FROM_DEVICE);
+	vb2_ion_sync_for_device(vb_priv, offset, size, DMA_FROM_DEVICE);
 }
 
-void s5p_mfc_cache_clean(struct vb2_buffer *vb, int plane_no)
+int s5p_mfc_mem_clean_vb(struct vb2_buffer *vb, u32 num_planes)
 {
-	void *cookie = vb2_plane_cookie(vb, plane_no);
-	int nents = 0;
-	struct scatterlist *sg;
+	struct vb2_ion_cookie *cookie;
+	int i;
 
-	sg = vb2_ion_get_sg(cookie, &nents);
+	for (i = 0; i < num_planes; i++) {
+		cookie = vb2_plane_cookie(vb, i);
+		if (!cookie)
+			continue;
 
-	dma_sync_sg_for_device(NULL, sg, nents, DMA_TO_DEVICE);
+		vb2_ion_sync_for_device(cookie, cookie->offset,
+					cookie->size, DMA_TO_DEVICE);
+	}
+
+	return 0;
 }
 
-void s5p_mfc_cache_inv(struct vb2_buffer *vb, int plane_no)
+int s5p_mfc_mem_inv_vb(struct vb2_buffer *vb, u32 num_planes)
 {
-	void *cookie = vb2_plane_cookie(vb, plane_no);
-	int nents = 0;
-	struct scatterlist *sg;
+	struct vb2_ion_cookie *cookie;
+	int i;
 
-	sg = vb2_ion_get_sg(cookie, &nents);
+	for (i = 0; i < num_planes; i++) {
+		cookie = vb2_plane_cookie(vb, i);
+		if (!cookie)
+			continue;
 
-	dma_sync_sg_for_device(NULL, sg, nents, DMA_FROM_DEVICE);
+		vb2_ion_sync_for_device(cookie, cookie->offset,
+					cookie->size, DMA_FROM_DEVICE);
+	}
+
+	return 0;
+}
+
+int s5p_mfc_mem_flush_vb(struct vb2_buffer *vb, u32 num_planes)
+{
+	struct vb2_ion_cookie *cookie;
+	int i;
+	enum dma_data_direction dir;
+
+	dir = V4L2_TYPE_IS_OUTPUT(vb->v4l2_buf.type) ?
+					DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+	for (i = 0; i < num_planes; i++) {
+		cookie = vb2_plane_cookie(vb, i);
+		if (!cookie)
+			continue;
+
+		vb2_ion_sync_for_device(cookie, cookie->offset,
+					cookie->size, dir);
+	}
+
+	return 0;
 }
 
 void s5p_mfc_mem_suspend(void *alloc_ctx)
@@ -405,15 +334,5 @@ void s5p_mfc_mem_suspend(void *alloc_ctx)
 int s5p_mfc_mem_resume(void *alloc_ctx)
 {
 	return vb2_ion_attach_iommu(alloc_ctx);
-}
-
-void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
-{
-	vb2_ion_set_cached(alloc_ctx, cacheable);
-}
-
-int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
-{
-	return vb2_ion_cache_flush(vb, plane_no);
 }
 #endif
