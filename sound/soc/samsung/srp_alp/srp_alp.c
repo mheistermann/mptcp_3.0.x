@@ -49,6 +49,7 @@
 static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
 static DECLARE_WAIT_QUEUE_HEAD(read_wq);
+static DECLARE_WAIT_QUEUE_HEAD(preset_wq);
 static DECLARE_WAIT_QUEUE_HEAD(decinfo_wq);
 
 inline bool srp_fw_use_memcpy(void)
@@ -164,8 +165,9 @@ static void srp_request_intr_mode(int mode)
 			/* Waiting for completed suspended mode */
 			if ((readl(srp.commbox + SRP_POWER_MODE)
 						& check_mode)) {
-				srp_info("Success!! requested mode\n");
 				result = 0;
+				srp_info("Success! requested power[%s] mode!\n",
+					mode == SUSPEND ? "SUSPEND" : "RESET");
 				break;
 			}
 		} while (time_before(jiffies, deadline));
@@ -776,6 +778,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code = readl(srp.commbox + SRP_INTERRUPT_CODE);
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
+	unsigned int post_reset = 0;
 	unsigned int wakeup_decinfo = 0;
 	unsigned long i;
 
@@ -803,8 +806,10 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp.ibuf_empty[1] = 1;
 
 				if (soc_is_exynos5250() && !srp.ready_to_reset) {
+					srp_pending_ctrl(STALL);
 					srp.ready_to_reset = true;
-					wakeup_read = 1;
+					post_reset = 1;
+					break;
 				}
 			}
 
@@ -866,6 +871,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 	writel(0, srp.commbox + SRP_INTERRUPT_CODE);
 	writel(0, srp.commbox + SRP_INTERRUPT);
+
+	if (post_reset) {
+		if (waitqueue_active(&preset_wq))
+			wake_up_interruptible(&preset_wq);
+	}
 
 	if (wakeup_read) {
 		if (waitqueue_active(&read_wq))
@@ -1084,6 +1094,23 @@ static struct miscdevice srp_miscdev = {
 };
 
 #ifdef CONFIG_PM
+void srp_post_reset(void)
+{
+	if (srp.is_loaded) {
+		srp_commbox_init();
+		srp_fw_download();
+
+		/* RESET */
+		writel(0x0, srp.commbox + SRP_CONT);
+		srp_pending_ctrl(RUN);
+
+		if (!wait_event_interruptible_timeout(preset_wq,
+				srp.ready_to_reset, HZ / 20)) {
+			srp_err("Not ready to sw reset.\n");
+		}
+	}
+}
+
 void srp_prepare_suspend(void)
 {
 	unsigned long i;
@@ -1123,6 +1150,9 @@ void srp_prepare_suspend(void)
 		srp.pm_suspended = true;
 		srp.is_running = false;
 	}
+
+	if (soc_is_exynos5250())
+		srp.ready_to_reset = false;
 }
 
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
@@ -1157,10 +1187,12 @@ void srp_post_resume(void)
 		memcpy(srp.ibuf0, srp.sp_data.ibuf, IBUF_SIZE * 2);
 		memcpy(srp.obuf0, srp.sp_data.obuf, OBUF_SIZE * 2);
 
-		/* RESET */
-		writel(0x0, srp.commbox + SRP_CONT);
-		srp_request_intr_mode(RESUME);
+		if (!soc_is_exynos5250()) {
+			/* RESET */
+			writel(0x0, srp.commbox + SRP_CONT);
+		}
 
+		srp_request_intr_mode(RESUME);
 		srp.pm_suspended = false;
 	}
 }
@@ -1262,44 +1294,15 @@ static __devinit int srp_probe(struct platform_device *pdev)
 
 	srp.pm_suspended = false;
 	srp.ready_to_reset = false;
+	srp.is_loaded = true;
 	srp.is_running = soc_is_exynos5250() ? false : true;
 
 	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
 	srp.audss_clken_stat = audss_clken_stat;
 
-	if (soc_is_exynos5250()) {
-
-		if (!srp.audss_clken_stat())
-			srp.audss_clk_enable(true);
-
-		srp_fw_download();
-		writel(0x0, srp.commbox + SRP_CONT);
-
-		srp_pending_ctrl(RUN);
-		srp.is_running = true;
-
-		ret = wait_event_interruptible_timeout(read_wq,
-				srp.ready_to_reset, HZ / 20);
-		if (!ret) {
-			if (srp.audss_clken_stat())
-				srp.audss_clk_enable(false);
-
-			srp_err("Couldn't to ready by timeout\n");
-			goto err8;
-		}
-
-		srp_pending_ctrl(STALL);
-
-		if (srp.audss_clken_stat())
-			srp.audss_clk_enable(false);
-	}
-
 	return 0;
 
-err8:
-	srp_pending_ctrl(STALL);
-	srp.decoding_started = 0;
 err7:
 	free_irq(IRQ_AUDIO_SS, pdev);
 err6:

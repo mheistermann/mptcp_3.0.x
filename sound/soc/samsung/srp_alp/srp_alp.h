@@ -192,6 +192,7 @@ struct srp_info {
 	bool	initialized;
 	bool	ready_to_reset;
 	bool	is_running;
+	bool	is_loaded;
 
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
@@ -213,4 +214,5 @@ enum {
 
 extern void srp_prepare_suspend(void);
 extern void srp_post_resume(void);
+extern void srp_post_reset(void);
 #endif /* __SRP_ALP_H */
