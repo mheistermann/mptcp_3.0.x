@@ -387,25 +387,6 @@ static struct clksrc_clk exynos5_clk_mout_bpll_user = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP2, .shift = 24, .size = 1 },
 };
 
-/* Mux output for MPLL_BPLL */
-static struct clk *exynos5_clkset_mout_mpll_bpll_list[] = {
-	[0] = &exynos5_clk_mout_mpll_user.clk,
-	[1] = &exynos5_clk_mout_bpll_user.clk,
-};
-
-static struct clksrc_sources exynos5_clkset_mout_mpll_bpll = {
-	.sources	= exynos5_clkset_mout_mpll_bpll_list,
-	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_mpll_bpll_list),
-};
-
-static struct clksrc_clk exynos5_clk_mout_mpll_bpll = {
-	.clk	= {
-		.name		= "mout_mpll_bpll",
-	},
-	.sources = &exynos5_clkset_mout_mpll_bpll,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP1, .shift = 20, .size = 1 },
-};
-
 /* Clock for ACLK_XXX */
 static struct clk *exynos5_clkset_aclk_xxx_list[] = {
 	[0] = &exynos5_clk_mout_mpll_user.clk,
@@ -493,7 +474,7 @@ struct clk *exynos5_clkset_group_list[] = {
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
 	[5] = &exynos5_clk_sclk_hdmiphy,
-	[6] = &exynos5_clk_mout_mpll_bpll.clk,
+	[6] = &exynos5_clk_mout_mpll_user.clk,
 	[7] = &exynos5_clk_mout_epll.clk,
 	[8] = &exynos5_clk_mout_vpll.clk,
 	[9] = &exynos5_clk_mout_cpll.clk,
@@ -614,7 +595,6 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_vpll,
 	&exynos5_clk_mout_mpll_user,
 	&exynos5_clk_mout_bpll_user,
-	&exynos5_clk_mout_mpll_bpll,
 	&exynos5_clk_aclk_400,
 	&exynos5_clk_aclk_333_pre,
 	&exynos5_clk_aclk_333,
