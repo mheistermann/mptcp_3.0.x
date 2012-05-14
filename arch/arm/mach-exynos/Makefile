@@ -67,7 +67,6 @@ obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-audio.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-usb.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-input.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-spi.o
-obj-$(CONFIG_MACH_SMDK5410)		+= mach-smdk5410.o
 
 # device support
 
