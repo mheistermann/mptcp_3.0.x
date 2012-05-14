@@ -318,22 +318,22 @@ static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_MIF_END][9] = {
 	 */
 
 	/* MCLK_CDREX L0: 800MHz */
-	{0, 0, 1, 0, 5, 1, 1, 4, 1},
+	{0, 0, 1, 2, 1, 1, 1, 4, 1},
 
 	/* MCLK_CDREX L1: 667MHz */
-	{0, 0, 1, 0, 4, 1, 1, 4, 1},
+	{0, 0, 1, 2, 1, 1, 1, 4, 1},
 
 	/* MCLK_CDREX L2: 400MHz */
-	{0, 1, 1, 1, 5, 2, 1, 5, 1},
+	{0, 1, 1, 2, 3, 2, 1, 5, 1},
 
 	/* MCLK_CDREX L3: 267MHz */
-	{0, 2, 1, 1, 5, 2, 1, 5, 1},
+	{0, 2, 1, 2, 4, 2, 1, 5, 1},
 
 	/* MCLK_CDREX L4: 160MHz */
-	{0, 5, 1, 1, 7, 2, 1, 5, 1},
+	{0, 4, 1, 2, 5, 2, 1, 5, 1},
 
 	/* MCLK_CDREX L5: 100MHz */
-	{0, 7, 1, 3, 7, 7, 1, 15, 1},
+	{0, 7, 1, 2, 6, 7, 1, 15, 1},
 };
 
 static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_MIF_END][9] = {
