@@ -22,6 +22,7 @@
 
 #include <plat/audio.h>
 #include <plat/dma.h>
+#include <plat/cpu.h>
 
 #include "dma.h"
 #include "pcm.h"
@@ -134,6 +135,8 @@ struct s3c_pcm_info {
 
 	u32	suspend_pcmctl;
 	u32	suspend_pcmclkctl;
+
+	struct platform_device	*pdev;
 };
 
 static struct s3c2410_dma_client s3c_pcm_dma_client_out = {
@@ -495,9 +498,19 @@ static int s3c_pcm_resume(struct snd_soc_dai *dai)
 {
 	struct s3c_pcm_info *pcm = snd_soc_dai_get_drvdata(dai);
 	void __iomem *regs = pcm->regs;
+	struct platform_device *pdev = pcm->pdev;
+	struct s3c_audio_pdata *pcm_pdata = pdev->dev.platform_data;
 
 	writel(pcm->suspend_pcmctl, regs + S3C_PCM_CTL);
 	writel(pcm->suspend_pcmclkctl, regs + S3C_PCM_CLKCTL);
+
+	if (soc_is_exynos5250() && (pdev->id == 0)) {
+		if (pcm_pdata && pcm_pdata->cfg_gpio &&
+			pcm_pdata->cfg_gpio(pdev)) {
+			dev_err(&pdev->dev, "Unable to configure gpio\n");
+			return -EINVAL;
+		}
+	}
 
 	return 0;
 }
@@ -589,6 +602,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 
 	pcm = &s3c_pcm[pdev->id];
 	pcm->dev = &pdev->dev;
+	pcm->pdev = pdev;
 
 	spin_lock_init(&pcm->lock);
 
