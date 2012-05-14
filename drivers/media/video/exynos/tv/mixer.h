@@ -302,7 +302,6 @@ struct mxr_vb2 {
 	int (*resume)(void *alloc_ctx);
 	void (*suspend)(void *alloc_ctx);
 
-	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
 };
 
@@ -540,5 +539,13 @@ void mxr_reg_vp_format(struct mxr_device *mdev,
 	const struct mxr_format *fmt, const struct mxr_geometry *geo);
 #endif
 void mxr_reg_dump(struct mxr_device *mdev);
+
+#if defined(CONFIG_VIDEOBUF2_ION)
+#define mxr_buf_sync_prepare	vb2_ion_buf_prepare
+#define mxr_buf_sync_finish	vb2_ion_buf_finish
+#else
+int mxr_buf_sync_prepare(struct vb2_buffer *vb);
+int mxr_buf_sync_finish(struct vb2_buffer *vb);
+#endif
 
 #endif /* SAMSUNG_MIXER_H */

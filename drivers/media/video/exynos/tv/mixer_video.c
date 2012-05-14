@@ -961,7 +961,7 @@ static int buf_prepare(struct vb2_buffer *vb)
 		return -ERANGE;
 	}
 
-	return 0;
+	return mxr_buf_sync_prepare(vb);
 }
 
 static int start_streaming(struct vb2_queue *vq)
@@ -1085,6 +1085,7 @@ static struct vb2_ops mxr_video_qops = {
 	.wait_prepare = wait_unlock,
 	.wait_finish = wait_lock,
 	.buf_prepare = buf_prepare,
+	.buf_finish = mxr_buf_sync_finish,
 	.start_streaming = start_streaming,
 	.stop_streaming = stop_streaming,
 };
