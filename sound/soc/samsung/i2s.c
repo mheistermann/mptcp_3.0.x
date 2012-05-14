@@ -73,6 +73,7 @@ struct i2s_dai {
 	u32	suspend_i2spsr;
 	u32	suspend_i2sahb[((I2SSTR1 - I2SAHB) >> 2) + 1];
 
+	bool	pd_ctl_enable;
 	bool	reg_saved;
 	bool	reg_saved_by_pm;
 
@@ -781,7 +782,7 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 
 		spin_lock_irqsave(&lock, flags);
 
-		if (soc_is_exynos5250()) {
+		if (soc_is_exynos5250() && i2s->pd_ctl_enable) {
 			gpio_dev = is_secondary(i2s) ?
 				   i2s->pri_dai->pdev : i2s->pdev;
 
@@ -1267,6 +1268,7 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 	pri_dai->base = regs_base;
 	pri_dai->quirks = quirks;
 	pri_dai->i2s_pdata = i2s_pdata;
+	pri_dai->pd_ctl_enable = false;
 	if (pdev->id == 0) {
 		pri_dai->audss_clk_enable = audss_clk_enable;
 		pri_dai->audss_suspend = audss_suspend;
@@ -1293,6 +1295,7 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->base = regs_base;
 		sec_dai->quirks = quirks;
 		sec_dai->i2s_pdata = i2s_pdata;
+		sec_dai->pd_ctl_enable = false;
 
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
@@ -1312,6 +1315,11 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_SND_SAMSUNG_RUNTIME_PM
+	pri_dai->pd_ctl_enable = true;
+	if (quirks & QUIRK_SEC_DAI)
+		sec_dai->pd_ctl_enable = true;
+#endif
 	snd_soc_register_dai(&pri_dai->pdev->dev, &pri_dai->i2s_dai_drv);
 
 	return 0;
