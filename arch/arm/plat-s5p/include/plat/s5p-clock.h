@@ -26,8 +26,6 @@
 #define clk_fin_dpll clk_ext_xtal_mux
 #define clk_fin_vpll clk_ext_xtal_mux
 #define clk_fin_hpll clk_ext_xtal_mux
-#define clk_fin_kpll clk_ext_xtal_mux
-#define clk_fin_ipll clk_ext_xtal_mux
 
 extern struct clk clk_ext_xtal_mux;
 extern struct clk clk_xusbxti;

@@ -20,7 +20,6 @@ obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o clock-exynos4.o pmu-exynos4.o ppc.o
 obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o pmu-exynos5.o
 
 obj-$(CONFIG_CPU_EXYNOS5250)	+= clock-exynos5250.o
-obj-$(CONFIG_CPU_EXYNOS5410)	+= clock-exynos5410.o
 
 obj-y				+= clock-domain.o
 obj-$(CONFIG_CPU_EXYNOS4210)	+= clock-exynos4210.o
