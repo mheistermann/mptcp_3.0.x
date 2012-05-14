@@ -309,6 +309,58 @@ static unsigned int clkdiv_top[LV_INT_END][10] = {
 	{4, 4, 5, 5, 1, 5, 2, 3, 1, 1},
 };
 
+/* For CMU_ACP */
+static unsigned int clkdiv_acp[LV_MIF_END][2] = {
+	/*
+	 * Clock divider value for following
+	 * { DIVACLK_SYSLFT, DIVPCLK_SYSLFT }
+	 */
+
+	/* ACLK_SYSLFT L0 : 400MHz */
+	{1, 1},
+
+	/* ACLK_SYSLFT L1 : 400MHz */
+	{1, 1},
+
+	/* ACLK_SYSLFT L2 : 200MHz */
+	{3, 1},
+
+	/* ACLK_SYSLFT L3 : 133MHz */
+	{5, 1},
+
+	/* ACLK_SYSLFT L4 : 100MHz */
+	{7, 1},
+
+	/* ACLK_SYSLFT L5 : 100MHz */
+	{7, 1},
+};
+
+/* For CMU_CORE */
+static unsigned int clkdiv_core[LV_MIF_END][1] = {
+	/*
+	 * Clock divider value for following
+	 * { DIVACLK_R1BX }
+	 */
+
+	/* ACLK_SYSLFT L0 : 400MHz */
+	{1},
+
+	/* ACLK_SYSLFT L1 : 400MHz */
+	{1},
+
+	/* ACLK_SYSLFT L2 : 200MHz */
+	{3},
+
+	/* ACLK_SYSLFT L3 : 133MHz */
+	{5},
+
+	/* ACLK_SYSLFT L4 : 100MHz */
+	{7},
+
+	/* ACLK_SYSLFT L5 : 100MHz */
+	{7},
+};
+
 /* For CMU_CDREX */
 static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_MIF_END][9] = {
 	/*
@@ -466,6 +518,14 @@ static void exynos5250_mif_div_change(struct busfreq_data *data, int div_index)
 {
 	unsigned int tmp;
 
+	/* Change Divier - CORE */
+	tmp = __raw_readl(EXYNOS5_CLKDIV_SYSRGT);
+	tmp &= ~EXYNOS5_CLKDIV_SYSRGT_ACLK_R1BX_MASK;
+
+	tmp |= clkdiv_core[div_index][0];
+
+	__raw_writel(tmp, EXYNOS5_CLKDIV_SYSLFT);
+
 	/* Change Divider - CDREX */
 	tmp = data->cdrex_divtable[div_index];
 
@@ -476,6 +536,17 @@ static void exynos5250_mif_div_change(struct busfreq_data *data, int div_index)
 
 		__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
 	}
+
+	/* Change Divier - ACP */
+	tmp = __raw_readl(EXYNOS5_CLKDIV_SYSLFT);
+
+	tmp &= ~(EXYNOS5_CLKDIV_SYSLFT_PCLK_SYSLFT_MASK |
+		 EXYNOS5_CLKDIV_SYSLFT_ACLK_SYSLFT_MASK);
+
+	tmp |= ((clkdiv_acp[div_index][0] << EXYNOS5_CLKDIV_SYSLFT_ACLK_SYSLFT_SHIFT) |
+		(clkdiv_acp[div_index][1] << EXYNOS5_CLKDIV_SYSLFT_PCLK_SYSLFT_SHIFT));
+
+	__raw_writel(tmp, EXYNOS5_CLKDIV_SYSLFT);
 }
 
 static void exynos5250_target_for_mif(struct busfreq_data *data, int div_index)
