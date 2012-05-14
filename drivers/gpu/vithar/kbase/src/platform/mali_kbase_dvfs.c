@@ -123,6 +123,7 @@ typedef struct _mali_dvfs_status_type{
 #endif
 #ifdef MALI_DVFS_ASV_ENABLE
 	int asv_need_update;
+	int asv_group;
 #endif
 }mali_dvfs_status;
 
@@ -227,7 +228,7 @@ static int mali_dvfs_update_asv(int group)
 {
 	int i;
 
-	if (group == 0) return 1;
+	if (exynos_lot_id && group == 0) return 1;
 
 	if (group == -1) {
 		for (i=0; i<MALI_DVFS_STEP; i++)
@@ -246,7 +247,7 @@ static int mali_dvfs_update_asv(int group)
 		if (exynos_lot_id)
 			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl_special[group-1][i];
 		else
-			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group-1][i];
+			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group][i];
 	}
 	return 0;
 }
@@ -302,12 +303,14 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
 #ifdef MALI_DVFS_ASV_ENABLE
-	if (dvfs_status.asv_need_update==1) {
-		if (mali_dvfs_update_asv(exynos_result_of_asv&0xf)==0)
-			dvfs_status.asv_need_update=0;
-	}else if (dvfs_status.asv_need_update==2) {
+	if (dvfs_status.asv_need_update==2) {
 		mali_dvfs_update_asv(-1);
 		dvfs_status.asv_need_update=0;
+	} else if (dvfs_status.asv_group!=(exynos_result_of_asv&0xf)) {
+		if (mali_dvfs_update_asv(exynos_result_of_asv&0xf)==0) {
+			dvfs_status.asv_group = (exynos_result_of_asv&0xf);
+			dvfs_status.asv_need_update=0;
+		}
 	}
 #endif
 
@@ -463,6 +466,7 @@ int kbase_platform_dvfs_init(struct device *dev)
 #endif
 #ifdef MALI_DVFS_ASV_ENABLE
 	mali_dvfs_status_current.asv_need_update=1;
+	mali_dvfs_status_current.asv_group=-1;
 #endif
 	mali_dvfs_control=1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
@@ -825,6 +829,7 @@ int kbase_platform_dvfs_set(int enable)
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	if (enable) {
 		mali_dvfs_status_current.asv_need_update=1;
+		mali_dvfs_status_current.asv_group=-1;
 	}else{
 		mali_dvfs_status_current.asv_need_update=2;
 	}
