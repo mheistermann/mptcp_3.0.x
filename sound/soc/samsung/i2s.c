@@ -779,6 +779,8 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 	if (!is_opened(other) && !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
 
+		spin_lock_irqsave(&lock, flags);
+
 		if (soc_is_exynos5250()) {
 			gpio_dev = is_secondary(i2s) ?
 				   i2s->pri_dai->pdev : i2s->pdev;
@@ -789,6 +791,8 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 
 		if (i2s->reg_saved)
 			i2s_reg_restore(dai);
+
+		spin_unlock_irqrestore(&lock, flags);
 	}
 
 	return 0;
@@ -814,8 +818,6 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 	i2s->rfs = 0;
 	i2s->bfs = 0;
 
-	spin_unlock_irqrestore(&lock, flags);
-
 	if (!is_opened(other) && !srp_active(i2s, IS_RUNNING)) {
 		/* Gate CDCLK by default */
 		i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK, 0, SND_SOC_CLOCK_IN);
@@ -823,6 +825,8 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 		if (!i2s->reg_saved)
 			i2s_reg_save(dai);
 	}
+
+	spin_unlock_irqrestore(&lock, flags);
 
 	if (!is_opened(other) && !srp_active(i2s, IS_OPENED))
 		i2s_clk_enable(i2s, false);
