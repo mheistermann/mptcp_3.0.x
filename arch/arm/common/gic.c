@@ -206,13 +206,6 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	mask = 0xff << shift;
 	bit = 1 << (cpu + shift);
 
-#ifdef CONFIG_CPU_EXYNOS5410
-	/*
-	 * shift the bit if current cluster is cluster1
-	 */
-	if ((get_mpidr() >> 8) & 1)
-		bit <<= 4;
-#endif
 	spin_lock(&irq_controller_lock);
 	d->node = cpu;
 	val = readl_relaxed(reg) & ~mask;
@@ -297,13 +290,6 @@ static void __init gic_dist_init(struct gic_chip_data *gic,
 	cpumask |= cpumask << 8;
 	cpumask |= cpumask << 16;
 
-#ifdef CONFIG_CPU_EXYNOS5410
-	/*
-	 * shift the bit if current cluster is cluster1
-	 */
-	if ((get_mpidr() >> 8) & 1)
-		cpumask <<= 4;
-#endif
 	writel_relaxed(0, base + GIC_DIST_CTRL);
 
 	/*
@@ -440,14 +426,6 @@ void __cpuinit gic_enable_ppi(unsigned int irq)
 void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 {
 	unsigned long map = *cpus_addr(*mask);
-
-#ifdef CONFIG_CPU_EXYNOS5410
-	/*
-	 * shift the bit if current cluster is cluster1
-	 */
-	if ((get_mpidr() >> 8) & 1)
-		map <<= 4;
-#endif
 
 	/*
 	 * Ensure that stores to Normal memory are visible to the

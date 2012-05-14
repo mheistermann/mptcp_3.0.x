@@ -201,13 +201,6 @@ static inline void set_cr(unsigned int val)
 	isb();
 }
 
-static inline unsigned int get_mpidr(void)
-{
-	unsigned int val;
-	asm("mrc p15, 0, %0, c0, c0, 5	@ get MPIDR" : "=r" (val) : : "cc");
-	return val;
-}
-
 #ifndef CONFIG_SMP
 extern void adjust_cr(unsigned long mask, unsigned long set);
 #endif
