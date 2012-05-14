@@ -41,25 +41,6 @@ static int exynos5_clksrc_mask_peric0_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_PERIC0, clk, enable);
 }
 
-static int exynos5_clk_ip_gen_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
-}
-
-static int exynos5_clk_ip_fsys_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_FSYS, clk, enable);
-}
-
-static int exynos5_clk_bus_fsys0_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKGATE_BUS_FSYS0, clk, enable);
-}
-
-static int exynos5_clk_ip_g2d_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_G2D, clk, enable);
-}
 /*
  * Clock for PHY
  */
@@ -515,29 +496,6 @@ static struct clk exynos5_init_clocks[] = {
 	},
 };
 
-struct clk exynos5_init_dmaclocks[] = {
-	{
-		.name		= "pdma",
-		.devname	= "s3c-pl330.0",
-		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= ((1 << 4) | (1 << 14)),
-	}, {
-		.name		= "pdma",
-		.devname	= "s3c-pl330.1",
-		.enable		= exynos5_clk_bus_fsys0_ctrl,
-		.ctrlbit	= (1 << 1),
-	}, {
-		.name		= "pdma",
-		.devname	= "s3c-pl330.2",
-		.enable		= exynos5_clk_bus_fsys0_ctrl,
-		.ctrlbit	= (1 << 2),
-	}, {
-		.name		= "pdma",
-		.enable		= exynos5_clk_ip_g2d_ctrl,
-		.ctrlbit	= ((1 << 1) | (1 << 8)),
-	},
-};
-
 static struct clksrc_clk exynos5_clksrcs[] = {
 	{
 		.clk	= {
@@ -692,9 +650,6 @@ void __init exynos5_register_clocks(void)
 
 	s3c_register_clksrc(exynos5_clksrcs, ARRAY_SIZE(exynos5_clksrcs));
 	s3c_register_clocks(exynos5_init_clocks, ARRAY_SIZE(exynos5_init_clocks));
-
-	s3c_register_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
-	s3c_disable_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
 
 	s3c_pwmclk_init();
 }
