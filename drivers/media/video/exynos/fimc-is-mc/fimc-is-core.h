@@ -21,7 +21,7 @@
 #define FW_SUPPORT_FACE_AF
 /*#define TASKLET*/
 #define FIMCLITE
-/*#ifdef AE_AWB_LOCK_UNLOCK*/
+#define AE_AWB_LOCK_UNLOCK
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
