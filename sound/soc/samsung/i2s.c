@@ -822,8 +822,12 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 	if (!is_opened(other) && !srp_active(i2s, IS_RUNNING)) {
 		/* Gate CDCLK by default */
 		i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK, 0, SND_SOC_CLOCK_IN);
+	}
 
-		if (!i2s->reg_saved)
+	if (!i2s->reg_saved) {
+		if (is_opened(other))
+			i2s->reg_saved = true;
+		else
 			i2s_reg_save(dai);
 	}
 
