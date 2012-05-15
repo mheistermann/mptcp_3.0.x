@@ -20,8 +20,12 @@
 #define EFUSE_MAX_VALUE 100
 #define UNUSED_THRESHOLD 0xFF
 
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412) \
+					|| defined(CONFIG_CPU_EXYNOS5250)
 #define CONFIG_TC_VOLTAGE /* Temperature compensated voltage */
+#endif
+#if defined(CONFIG_CPU_EXYNOS5250)
+#define CONFIG_MIF_VC
 #endif
 
 enum tmu_status_t {
@@ -31,6 +35,7 @@ enum tmu_status_t {
 	TMU_STATUS_WARNING,
 	TMU_STATUS_TRIPPED,
 	TMU_STATUS_TC,
+	TMU_STATUS_MIF_VC,
 };
 
 struct temperature_params {
@@ -42,6 +47,10 @@ struct temperature_params {
 #if defined(CONFIG_TC_VOLTAGE)
 	int stop_tc;	/* temperature compensation for sram */
 	int start_tc;
+#endif
+#if defined(CONFIG_MIF_VC)
+	int stop_mif_vc; /* temperture for mif voltage compensation */
+	int start_mif_vc;
 #endif
 };
 
@@ -106,5 +115,16 @@ extern void mali_dvfs_freq_unlock(void);
 extern int mali_voltage_lock_init(void);
 extern int mali_voltage_lock_push(int lock_vol);
 extern int mali_voltage_lock_pop(void);
+extern int mali_dvfs_freq_under_lock(int level);
+extern void mali_dvfs_freq_under_unlock(void);
+#endif
+#if defined(CONFIG_MIF_VC)
+extern void busfreq_set_volt_offset(unsigned int offset);
+#endif
+#if defined(CONFIG_BUSFREQ_OPP)
+extern int exynos4x12_find_busfreq
+		_by_volt(unsigned int req_volt, unsigned int *freq);
+extern int exynos5250_find_busfreq
+		_by_volt(unsigned int req_volt, unsigned int *freq);
 #endif
 #endif /* _S5P_THERMAL_H */

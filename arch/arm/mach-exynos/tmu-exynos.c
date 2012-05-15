@@ -29,15 +29,12 @@
 #include <mach/cpufreq.h>
 #include <mach/tmu.h>
 #include <mach/asv.h>
-#ifdef CONFIG_BUSFREQ_OPP
-#include <mach/busfreq_exynos4.h>
 #include <mach/dev.h>
-#endif
-
 #include <plat/cpu.h>
 
 static DEFINE_MUTEX(tmu_lock);
 
+unsigned int mifvolt_up;
 unsigned int already_limit;
 static struct workqueue_struct  *tmu_monitor_wq;
 
@@ -399,7 +396,7 @@ static void cur_temp_monitor(struct work_struct *work)
 	cur_temp = get_cur_temp(info);
 	pr_info("current temp = %d\n", cur_temp);
 	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-			secs_to_jiffies(200 * 1000));
+			usecs_to_jiffies(200 * 1000));
 }
 #endif
 
@@ -435,12 +432,18 @@ static int exynos_tc_volt(struct tmu_info *info, int enable)
 		if (ret)
 			goto err_lock;
 #endif
-		ret = mali_voltage_lock_push(data->temp_compensate.g3d_volt);
-		if (ret < 0) {
-			pr_err("TMU: g3d_push error: %u uV\n",
-				data->temp_compensate.g3d_volt);
-			goto err_lock;
+		if (soc_is_exynos4212() || soc_is_exynos4412()) {
+			ret = mali_voltage_lock_push
+					(data->temp_compensate.g3d_volt);
+			if (ret < 0) {
+				pr_err("TMU: g3d_push error: %u uV\n",
+					data->temp_compensate.g3d_volt);
+				goto err_lock;
+			}
 		}
+		if (soc_is_exynos5250())
+			mali_dvfs_freq_under_lock(1);
+
 		pr_info("Lock for TC is sucessful..\n");
 	} else {
 		exynos_cpufreq_lock_free(DVFS_LOCK_ID_TMU);
@@ -449,10 +452,14 @@ static int exynos_tc_volt(struct tmu_info *info, int enable)
 		if (ret)
 			goto err_unlock;
 #endif
-		ret = mali_voltage_lock_pop();
-		if (ret < 0) {
-			pr_err("TMU: g3d_pop error\n");
-			goto err_unlock;
+		if (soc_is_exynos4212() || soc_is_exynos4412()) {
+			ret = mali_voltage_lock_pop();
+			if (ret < 0) {
+				pr_err("TMU: g3d_pop error\n");
+				goto err_unlock;
+			}
+		if (soc_is_exynos5250())
+			mali_dvfs_freq_under_unlock();
 		}
 		pr_info("Unlock for TC is sucessful..\n");
 	}
@@ -482,13 +489,43 @@ static void tmu_monitor(struct work_struct *work)
 			cur_temp, info->tmu_state);
 #endif
 	switch (info->tmu_state) {
+#if defined(CONFIG_MIF_VC)
+	case TMU_STATUS_MIF_VC:
+		if (cur_temp >= data->ts.stop_mif_vc) {
+			__raw_writel(INTCLEAR_FALL1, info->tmu_base + INTCLEAR);
+			busfreq_set_volt_offset(0);
+			info->tmu_state = TMU_STATUS_NORMAL;
+			mifvolt_up = 0;
+			pr_info("MIF VC is released!!\n");
+		} else if (cur_temp <= data->ts.start_mif_vc && !mifvolt_up) {
+			busfreq_set_volt_offset(37500);
+			mifvolt_up = 1;
+#if defined(CONFIG_TC_VOLTAGE)
+		} else if (cur_temp <= data->ts.start_tc)
+			info->tmu_state = TMU_STATUS_TC;
+#else
+		}
+#endif
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(200 * 1000));
+		break;
+#endif
 #if defined(CONFIG_TC_VOLTAGE)
 	case TMU_STATUS_TC:
+#if defined(CONFIG_MIF_VC)
+		if (cur_temp > data->ts.stop_tc &&
+				cur_temp < data->ts.stop_mif_vc) {
+#else
 		if (cur_temp >= data->ts.stop_tc) {
+#endif
 			__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
 			if (exynos_tc_volt(info, 0) < 0)
 				pr_err("%s\n", __func__);
+#if defined(CONFIG_MIF_VC)
+			info->tmu_state = TMU_STATUS_MIF_VC;
+#else
 			info->tmu_state = TMU_STATUS_NORMAL;
+#endif
 			already_limit = 0;
 			pr_info("TC limit is released!!\n");
 		} else if (cur_temp <= data->ts.start_tc && !already_limit) {
@@ -684,8 +721,11 @@ static int exynos_tmu_init(struct tmu_info *info)
 	struct tmu_data *data = info->dev->platform_data;
 	unsigned int te_temp, con;
 	unsigned int temp_throttle, temp_warning, temp_trip;
+	unsigned int tc_thr = 0;
 	unsigned int rising_thr = 0, cooling_thr = 0;
-
+#if defined(CONFIG_MIF_VC)
+	unsigned int mif_vc_thr = 0;
+#endif
 	/* must reload for using efuse value at EXYNOS4212 */
 	__raw_writel(TRIMINFO_RELOAD, info->tmu_base + TRIMINFO_CON);
 
@@ -715,8 +755,13 @@ static int exynos_tmu_init(struct tmu_info *info)
 	/* Get set temperature for tc_voltage and set falling interrupt
 	 * trigger level
 	*/
-	cooling_thr = data->ts.start_tc
+	tc_thr = data->ts.start_tc + info->te1 - TMU_DC_VALUE;
+	cooling_thr = tc_thr;
+#endif
+#if defined(CONFIG_MIF_VC)
+	mif_vc_thr = data->ts.start_mif_vc
 			+ info->te1 - TMU_DC_VALUE;
+	cooling_thr |= (mif_vc_thr<<8);
 #endif
 	__raw_writel(cooling_thr, info->tmu_base + THD_TEMP_FALL);
 
@@ -742,17 +787,27 @@ static int exynos_tmu_init(struct tmu_info *info)
 		pr_err("Failed to get_dev\n");
 		return -EINVAL;
 	}
-	if (exynos4x12_find_busfreq_by_volt(data->temp_compensate.bus_volt,
-		&info->busfreq_tc)) {
-		pr_err("get_busfreq_value error\n");
-		return -EINVAL;
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		if (exynos4x12_find_busfreq_by_volt
+				(data->temp_compensate.bus_volt, &info->busfreq_tc)) {
+			pr_err("get_busfreq_value error\n");
+			return -EINVAL;
+		}
+	}
+	if (soc_is_exynos5250()) {
+		if (exynos5250_find_busfreq_by_volt
+				(data->temp_compensate.bus_volt, &info->busfreq_tc)) {
+			pr_err("get_busfreq_value error\n");
+			return -EINVAL;
+		}
 	}
 #endif
-	if (mali_voltage_lock_init()) {
-		pr_err("Failed to initialize mail voltage lock.\n");
-		return -EINVAL;
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		if (mali_voltage_lock_init()) {
+			pr_err("Failed to initialize mail voltage lock.\n");
+			return -EINVAL;
+		}
 	}
-
 	pr_info("%s: cpufreq_level[%d], busfreq_value[%d]\n",
 		 __func__, info->cpulevel_tc, info->busfreq_tc);
 #endif
@@ -778,25 +833,43 @@ static int exynos_tmu_init(struct tmu_info *info)
 	__raw_writel(INTEN_RISE0 | INTEN_RISE1 | INTEN_RISE2,	\
 		     info->tmu_base + INTEN);
 
-#if defined(CONFIG_TC_VOLTAGE)
+#if defined(CONFIG_MIF_VC)
 	te_temp = __raw_readl(info->tmu_base + INTEN);
-	te_temp |= INTEN_FALL0;
+	te_temp |= INTEN_FALL1;
 	__raw_writel(te_temp, info->tmu_base + INTEN);
 
+	if (get_cur_temp(info) <= data->ts.start_mif_vc) {
+		busfreq_set_volt_offset(37500);
+		info->tmu_state = TMU_STATUS_MIF_VC;
+		mifvolt_up = 1;
+		pr_info("MIF VC is completed...!\n");
+
+		disable_irq_nosync(info->irq);
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(1 * 1000));
+}
+#endif
+#if defined(CONFIG_TC_VOLTAGE)
 	/* s/w workaround for fast service when interrupt is not occured,
 	* such as current temp is lower than tc interrupt temperature
 	* or current temp is continuosly increased.
 	*/
+	te_temp = __raw_readl(info->tmu_base + INTEN);
+	te_temp |= INTEN_FALL0;
+	__raw_writel(te_temp, info->tmu_base + INTEN);
+
 	if (get_cur_temp(info) <= data->ts.start_tc) {
-		disable_irq_nosync(info->irq);
 		if (exynos_tc_volt(info, 1) < 0)
 			pr_err("%s\n", __func__);
 
 		info->tmu_state = TMU_STATUS_TC;
 		already_limit = 1;
+#if !defined(CONFIG_MIF_VC)
+		disable_irq_nosync(info->irq);
 		queue_delayed_work_on(0, tmu_monitor_wq,
 				&info->polling, usecs_to_jiffies(1 * 1000));
-}
+#endif
+	}
 #endif
 	return 0;
 }
@@ -834,9 +907,18 @@ static irqreturn_t tmu_irq(int irq, void *id)
 	/* To handle multiple interrupt pending,
 	* interrupt by high temperature are serviced with priority.
 	*/
-
-#if defined(CONFIG_TC_VOLTAGE)
+#if defined(CONFIG_MIF_VC)
+	if (status & INTSTAT_FALL1) {
+		pr_info("MIF_VC interrupt occured..!\n");
+		__raw_writel(INTCLEAR_FALL1, info->tmu_base + INTCLEAR);
+		info->tmu_state = TMU_STATUS_MIF_VC;
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(1 * 1000));
+	} else if (status & INTSTAT_FALL0) {
+#else
 	if (status & INTSTAT_FALL0) {
+#endif
+#if defined(CONFIG_TC_VOLTAGE)
 		pr_info("TC interrupt occured..!\n");
 		__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_TC;
@@ -970,14 +1052,15 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		goto err_wq;
 	}
 	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
-
+#ifdef CONFIG_TMU_DEBUG
+	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
+#endif
 	print_temperature_params(info);
 	ret = tmu_initialize(pdev);
 	if (ret < 0)
 		goto err_noinit;
 
 #ifdef CONFIG_TMU_DEBUG
-	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
 	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
 			usecs_to_jiffies(200 * 1000));
 #endif
@@ -1035,26 +1118,42 @@ static int tmu_suspend(struct platform_device *pdev, pm_message_t state)
 static int tmu_resume(struct platform_device *pdev)
 {
 	struct tmu_info *info = platform_get_drvdata(pdev);
-#if defined(CONFIG_TC_VOLTAGE)
+#if defined(CONFIG_TC_VOLTAGE) || defined(CONFIG_MIF_VC)
 	struct tmu_data *data = info->dev->platform_data;
 #endif
 	pm_tmu_restore(info);
 
+#if defined(CONFIG_TC_VOLTAGE) || defined(CONFIG_MIF_VC)
+	mdelay(1);
+#endif
+#if defined(CONFIG_MIF_VC)
+	if (get_cur_temp(info) <= data->ts.start_mif_vc) {
+		busfreq_set_volt_offset(37500);
+		info->tmu_state = TMU_STATUS_MIF_VC;
+		mifvolt_up = 1;
+		pr_info("MIF VC is completed...!\n");
+
+		disable_irq_nosync(info->irq);
+		queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->polling, usecs_to_jiffies(1 * 1000));
+	}
+#endif
 #if defined(CONFIG_TC_VOLTAGE)
 	/* s/w workaround for fast service when interrupt is not occured,
 	* such as current temp is lower than tc interrupt temperature
 	* or current temp is continuosly increased.
 	*/
-	mdelay(1);
 	if (get_cur_temp(info) <= data->ts.start_tc) {
-		disable_irq_nosync(info->irq);
 		if (exynos_tc_volt(info, 1) < 0)
 			pr_err("%s\n", __func__);
 
 		info->tmu_state = TMU_STATUS_TC;
 		already_limit = 1;
+#if !defined(CONFIG_MIF_VC)
+		disable_irq_nosync(info->irq);
 		queue_delayed_work_on(0, tmu_monitor_wq,
 				&info->polling, usecs_to_jiffies(1 * 1000));
+#endif
 	}
 #endif
 	return 0;
