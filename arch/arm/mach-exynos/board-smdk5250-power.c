@@ -724,11 +724,25 @@ struct tmu_data exynos_tmu_data __initdata = {
 		.stop_warning  = 95,
 		.start_warning = 103,
 		.start_tripping = 110, /* temp to do tripping */
+#ifdef CONFIG_TC_VOLTAGE
+		.stop_tc = 13,
+		.start_tc = 10,
+#endif
+#ifdef CONFIG_MIF_VC
+		.stop_mif_vc = 27,
+		.start_mif_vc = 25,
+#endif
 	},
 	.cpulimit = {
 		.throttle_freq = 800000,
 		.warning_freq = 200000,
 	},
+#ifdef CONFIG_TC_VOLTAGE
+	.temp_compensate = {
+		.arm_volt = 925000, /* vdd_arm in uV for temperature compensation */
+		.bus_volt = 900000,
+	},
+#endif
 	.efuse_value = 55,
 	.slope = 0x10008802,
 	.mode = 0,

@@ -122,9 +122,9 @@ extern void mali_dvfs_freq_under_unlock(void);
 extern void busfreq_set_volt_offset(unsigned int offset);
 #endif
 #if defined(CONFIG_BUSFREQ_OPP)
-extern int exynos4x12_find_busfreq
-		_by_volt(unsigned int req_volt, unsigned int *freq);
-extern int exynos5250_find_busfreq
-		_by_volt(unsigned int req_volt, unsigned int *freq);
+extern int exynos4x12_find_busfreq_by_volt(unsigned int req_volt,
+					   unsigned int *freq);
+extern int exynos5250_find_busfreq_by_volt(unsigned int req_volt,
+					   unsigned int *freq);
 #endif
 #endif /* _S5P_THERMAL_H */
