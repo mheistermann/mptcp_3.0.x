@@ -458,9 +458,9 @@ static int exynos_tc_volt(struct tmu_info *info, int enable)
 				pr_err("TMU: g3d_pop error\n");
 				goto err_unlock;
 			}
+		}
 		if (soc_is_exynos5250())
 			mali_dvfs_freq_under_unlock();
-		}
 		pr_info("Unlock for TC is sucessful..\n");
 	}
 	usage = enable;
