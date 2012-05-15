@@ -56,6 +56,7 @@ struct busfreq_control {
 	struct device *dev[PPMU_TYPE_END];
 };
 
+static unsigned int volt_offset;
 static struct busfreq_control bus_ctrl;
 
 void update_busfreq_stat(struct busfreq_data *data,
@@ -112,6 +113,11 @@ unsigned long step_down(struct busfreq_data *data,
 	return newfreq;
 }
 
+void busfreq_set_volt_offset(unsigned int offset)
+{
+	volt_offset = offset;
+}
+
 static void _target(struct busfreq_data *data,
 		enum ppmu_type type, unsigned long newfreq)
 {
@@ -137,6 +143,8 @@ static void _target(struct busfreq_data *data,
 	voltage = opp_get_voltage(opp);
 
 	if (newfreq > data->curr_freq[type]) {
+		if (type == PPMU_MIF && volt_offset)
+			voltage += volt_offset;
 		regulator_set_voltage(data->vdd_reg[type], voltage,
 				voltage + 25000);
 		if (type == PPMU_MIF && data->busfreq_prepare)
@@ -146,6 +154,8 @@ static void _target(struct busfreq_data *data,
 	data->target(data, type, index);
 
 	if (newfreq < data->curr_freq[type]) {
+		if (type == PPMU_MIF && volt_offset)
+			voltage += volt_offset;
 		if (type == PPMU_MIF && data->busfreq_post)
 			data->busfreq_post(index);
 		regulator_set_voltage(data->vdd_reg[type], voltage,
@@ -177,7 +187,7 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	}
 
 	mutex_unlock(&busfreq_lock);
-	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, 10 * data->sampling_rate);
 }
 
 static int exynos_buspm_notifier_event(struct notifier_block *this,
@@ -421,7 +431,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, data);
 
-	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, (data->sampling_rate) * 10);
 	return 0;
 
 err_busfreq:

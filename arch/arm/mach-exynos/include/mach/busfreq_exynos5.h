@@ -97,4 +97,5 @@ void exynos_request_apply(unsigned long freq);
 unsigned long step_down(struct busfreq_data *data, enum ppmu_type type, int step);
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
+int exynos5250_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq);
 #endif /* __ASM_ARCH_BUSFREQ_H */

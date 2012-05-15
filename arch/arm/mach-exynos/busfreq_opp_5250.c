@@ -680,6 +680,53 @@ static int exynos5250_get_table_index(unsigned long freq, enum ppmu_type type)
 	return -EINVAL;
 }
 
+
+int exynos5250_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq)
+{
+	unsigned int volt_cmp;
+	unsigned int tmp = 0;
+	int i;
+
+	/* check if req_volt has value or not */
+	if (!req_volt) {
+		pr_err("%s: req_volt has no value.\n", __func__);
+		return -EINVAL;
+	}
+
+	/* find busfreq level in busfreq_table */
+	for (i = LV_MIF_END - 1; i >= 0; i--) {
+		volt_cmp = exynos5_int_volt[mif_asv_group_index][i];
+
+		if (volt_cmp >= req_volt) {
+			tmp = exynos5_busfreq_table_mif[i].mem_clk;
+			break;
+		}
+	}
+
+	if (tmp == 0)
+		return -EINVAL;
+
+	*freq = tmp;
+
+	for (i = LV_INT_END - 1; i >= 0; i--) {
+		volt_cmp = exynos5_int_volt[asv_group_index][i];
+
+		if (volt_cmp >= req_volt) {
+			tmp = exynos5_busfreq_table_int[i].mem_clk;
+			break;
+		}
+	}
+
+	if (tmp == 0) {
+	pr_err("%s: %u volt can't support\n", __func__, req_volt);
+		return -EINVAL;
+	}
+
+	*freq += (tmp / 1000);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(exynos5250_find_busfreq_by_volt);
+
 static void exynos5250_suspend(void)
 {
 	/* Nothing to do */
