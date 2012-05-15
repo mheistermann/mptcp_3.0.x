@@ -71,9 +71,6 @@ static const unsigned int idle_threshold[PPMU_TYPE_END] = {
 
 static struct device busfreq_for_int;
 
-/* To save/restore DREX2_PAUSE_CTRL register */
-static unsigned int drex2_pause_ctrl;
-
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
 	{LV_1, 667000, 1000000, 0, 0, 0},
@@ -734,7 +731,6 @@ static void exynos5250_suspend(void)
 
 static void exynos5250_resume(void)
 {
-	__raw_writel(drex2_pause_ctrl, EXYNOS5_DREX2_PAUSE);
 }
 
 static void exynos5250_monitor(struct busfreq_data *data,
@@ -889,11 +885,6 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		ret = PTR_ERR(mout_mclk_cdrex);
 		return ret;
 	}
-
-	/* Enable pause function for DREX2 DVFS */
-	drex2_pause_ctrl = __raw_readl(EXYNOS5_DREX2_PAUSE);
-	drex2_pause_ctrl |= DMC_PAUSE_ENABLE;
-	__raw_writel(drex2_pause_ctrl, EXYNOS5_DREX2_PAUSE);
 
 	clk = clk_get(NULL, "mclk_cdrex");
 	if (IS_ERR(clk)) {
