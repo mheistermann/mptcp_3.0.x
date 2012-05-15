@@ -433,7 +433,7 @@ static const struct scalerp_param init_val_scalerp_preview_still = {
 		.err = 0,
 	},
 	.output_crop = {
-		.cmd = OTF_INPUT_COMMAND_DISABLE,
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
 		.pos_x = 0,
 		.pos_y = 0,
 		.crop_width = DEFAULT_PREVIEW_STILL_WIDTH,
@@ -2330,9 +2330,9 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	IS_INC_PARAM_NUM(dev);
 
 	IS_SCALERP_SET_PARAM_OUTPUT_CROP_CROP_WIDTH(dev,
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width);
+		ALIGN(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width, 32));
 	IS_SCALERP_SET_PARAM_OUTPUT_CROP_CROP_HEIGHT(dev,
-		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height);
+		ALIGN(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height, 16));
 	IS_SET_PARAM_BIT(dev, PARAM_SCALERP_OUTPUT_CROP);
 	IS_INC_PARAM_NUM(dev);
 
