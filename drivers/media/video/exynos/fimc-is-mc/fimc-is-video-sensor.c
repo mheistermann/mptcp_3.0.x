@@ -561,20 +561,28 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		/*isp->is_p_region->parameter.isp.control.run_mode = 0;*/
 		isp_param->control.run_mode = 1;
 
-		isp_param->otf_input.cmd = OTF_INPUT_COMMAND_ENABLE;
+		isp_param->otf_input.cmd = OTF_INPUT_COMMAND_DISABLE;
 		isp_param->otf_input.width = width;
 		isp_param->otf_input.height = height;
-		isp_param->otf_input.format = OTF_INPUT_FORMAT_BAYER_DMA;
+		isp_param->otf_input.format = OTF_INPUT_FORMAT_BAYER;
 		isp_param->otf_input.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT;
 		isp_param->otf_input.order = OTF_INPUT_ORDER_BAYER_GR_BG;
-		isp_param->otf_input.frametime_max = 33333;
+		isp_param->otf_input.frametime_min = 0;
+		isp_param->otf_input.frametime_max = 66666;
 
 		isp_param->dma1_input.cmd = DMA_INPUT_COMMAND_ENABLE;
 		isp_param->dma1_input.width = width;
 		isp_param->dma1_input.height = height;
-		isp_param->dma1_input.reserved[0] = 1;
-		isp_param->dma1_input.reserved[1] = 0x1000;
-		isp_param->dma1_input.reserved[2] = 45;
+		isp_param->dma1_input.format = DMA_INPUT_FORMAT_BAYER;
+		isp_param->dma1_input.crop_offset_x = 0;
+		isp_param->dma1_input.crop_offset_y = 0;
+		isp_param->dma1_input.crop_width = 0;
+		isp_param->dma1_input.crop_height = 0;
+		isp_param->dma1_input.wide_frame_gap = 1;
+		isp_param->dma1_input.frame_gap = 0x1000;
+		isp_param->dma1_input.line_gap = 45;
+		isp_param->dma1_input.user_min_frame_time = 0;
+		isp_param->dma1_input.user_max_frame_time = 66666;
 		isp_param->dma1_input.bitwidth = DMA_INPUT_BIT_WIDTH_10BIT;
 		isp_param->dma1_input.order = DMA_INPUT_ORDER_GR_BG;
 		isp_param->dma1_input.plane = 1;

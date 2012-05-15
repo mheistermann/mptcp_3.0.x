@@ -72,7 +72,7 @@ static const struct isp_param init_val_isp_preview_still = {
 		.crop_width = 0,
 		.crop_height = 0,
 		.frametime_min = 0,
-		.frametime_max = 33333,
+		.frametime_max = 66666,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -85,6 +85,16 @@ static const struct isp_param init_val_isp_preview_still = {
 		.order = 0,
 		.buffer_number = 0,
 		.buffer_address = 0,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.user_min_frame_time = 0,
+		.user_max_frame_time = 66666,
+		.wide_frame_gap = 0,
+		.frame_gap = 0,
+		.line_gap = 0,
+		.reserved[0] = 0,
 		.err = 0,
 	},
 	.dma2_input = {
@@ -92,6 +102,16 @@ static const struct isp_param init_val_isp_preview_still = {
 		.width = 0, .height = 0,
 		.format = 0, .bitwidth = 0, .plane = 0,
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.user_min_frame_time = 0,
+		.user_max_frame_time = 66666,
+		.wide_frame_gap = 0,
+		.frame_gap = 0,
+		.line_gap = 0,
+		.reserved[0] = 0,
 		.err = 0,
 	},
 	.aa = {
@@ -153,6 +173,8 @@ static const struct isp_param init_val_isp_preview_still = {
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
@@ -298,7 +320,7 @@ static const struct scalerc_param init_val_scalerc_preview_still = {
 static const struct odc_param init_val_odc_preview_still = {
 	.control = {
 		.cmd = CONTROL_COMMAND_START,
-		.bypass = CONTROL_BYPASS_ENABLE,
+		.bypass = CONTROL_BYPASS_DISABLE,
 		.err = CONTROL_ERROR_NO,
 	},
 	.otf_input = {
@@ -321,6 +343,8 @@ static const struct odc_param init_val_odc_preview_still = {
 		.format = OTF_OUTPUT_FORMAT_YUV422,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 };
@@ -1357,6 +1381,24 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		init_val_isp_preview_still.dma1_input.buffer_number);
 	IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
 		init_val_isp_preview_still.dma1_input.buffer_address);
+	IS_ISP_SET_PARAM_DMA_INPUT1_CROP_OFFSET_X(dev,
+		init_val_isp_preview_still.dma1_input.crop_offset_x);
+	IS_ISP_SET_PARAM_DMA_INPUT1_CROP_OFFSET_Y(dev,
+		init_val_isp_preview_still.dma1_input.crop_offset_y);
+	IS_ISP_SET_PARAM_DMA_INPUT1_CROP_WIDTH(dev,
+		init_val_isp_preview_still.dma1_input.crop_width);
+	IS_ISP_SET_PARAM_DMA_INPUT1_CROP_HEIGHT(dev,
+		init_val_isp_preview_still.dma1_input.crop_height);
+	IS_ISP_SET_PARAM_DMA_INPUT1_FRAMETIME_MIN(dev,
+		init_val_isp_preview_still.dma1_input.user_min_frame_time);
+	IS_ISP_SET_PARAM_DMA_INPUT1_FRAMETIME_MAX(dev,
+		init_val_isp_preview_still.dma1_input.user_max_frame_time);
+	IS_ISP_SET_PARAM_DMA_INPUT1_WIDE_FRAME_GAP(dev,
+		init_val_isp_preview_still.dma1_input.wide_frame_gap);
+	IS_ISP_SET_PARAM_DMA_INPUT1_FRAME_GAP(dev,
+		init_val_isp_preview_still.dma1_input.frame_gap);
+	IS_ISP_SET_PARAM_DMA_INPUT1_LINE_GAP(dev,
+		init_val_isp_preview_still.dma1_input.line_gap);
 	IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
 		init_val_isp_preview_still.dma1_input.err);
 	IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
@@ -1483,6 +1525,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		init_val_isp_preview_still.otf_output.bitwidth);
 	IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
 		init_val_isp_preview_still.otf_output.order);
+	IS_ISP_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_X(dev,
+		init_val_isp_preview_still.otf_output.crop_offset_x);
+	IS_ISP_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_Y(dev,
+		init_val_isp_preview_still.otf_output.crop_offset_y);
 	IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
 		init_val_isp_preview_still.otf_output.err);
 	IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
@@ -1753,6 +1799,14 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		init_val_odc_preview_still.otf_input.bitwidth);
 	IS_ODC_SET_PARAM_OTF_INPUT_ORDER(dev,
 		init_val_odc_preview_still.otf_input.order);
+	IS_ODC_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev,
+		init_val_odc_preview_still.otf_input.crop_offset_x);
+	IS_ODC_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev,
+		init_val_odc_preview_still.otf_input.crop_offset_y);
+	IS_ODC_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev,
+		init_val_odc_preview_still.otf_input.crop_width);
+	IS_ODC_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev,
+		init_val_odc_preview_still.otf_input.crop_height);
 	IS_ODC_SET_PARAM_OTF_INPUT_ERR(dev,
 		init_val_odc_preview_still.otf_input.err);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_INPUT);
@@ -1770,6 +1824,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		init_val_odc_preview_still.otf_output.bitwidth);
 	IS_ODC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
 		init_val_odc_preview_still.otf_output.order);
+	IS_ODC_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_X(dev,
+		init_val_odc_preview_still.otf_output.crop_offset_x);
+	IS_ODC_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_Y(dev,
+		init_val_odc_preview_still.otf_output.crop_offset_y);
 	IS_ODC_SET_PARAM_OTF_OUTPUT_ERR(dev,
 		init_val_odc_preview_still.otf_output.err);
 	IS_SET_PARAM_BIT(dev, PARAM_ODC_OTF_OUTPUT);

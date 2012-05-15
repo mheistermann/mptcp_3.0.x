@@ -14,7 +14,7 @@
 
 /*#define DEBUG*/
 #define FRAME_RATE_ENABLE
-/*#define ODC_ENABLE*/
+#define ODC_ENABLE
 #define TDNR_ENABLE
 #define DIS_ENABLE
 #define FD_ENABLE
@@ -57,7 +57,7 @@
 
 #define FIMC_IS_DEBUG_LEVEL			(3)
 /*#define FIMC_IS_A5_DEBUG_ON			(1)*/
-#define FPS_ENABLE				(1)
+/*#define FPS_ENABLE				(1)*/
 
 #define MAX_I2H_ARG				(4)
 

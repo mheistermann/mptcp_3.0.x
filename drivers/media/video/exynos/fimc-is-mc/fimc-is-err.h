@@ -12,7 +12,7 @@
 #ifndef FIMC_IS_ERR_H
 #define FIMC_IS_ERR_H
 
-#define IS_ERROR_VER 012 /* IS ERROR VERSION 0.07 */
+#define IS_ERROR_VER 012 /* IS ERROR VERSION 0.12 */
 
 #define IS_ERROR_SUCCESS		0
 /* General 1 ~ 100 */

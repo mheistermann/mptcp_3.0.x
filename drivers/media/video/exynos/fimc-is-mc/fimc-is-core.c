@@ -1630,13 +1630,13 @@ static irqreturn_t fimc_is_sensor_irq_handler0(int irq, void *dev_id)
 				err("[MAIN] INTMSR1's 0 bit is not cleared.\n");
 				cfg = readl(is->regs + INTMSR0);
 				status = INTMSR0_GET_INTMSD0(cfg);
+			} else {
+				writel(HIC_SHOT, is->regs + ISSR0);
+				writel(sensor->id_dual, is->regs + ISSR1);
+				writel(video->buf[buf_index][0],
+					is->regs + ISSR2);
+				fimc_is_hw_set_intgr0_gd0(is);
 			}
-
-			writel(HIC_SHOT, is->regs + ISSR0);
-			writel(sensor->id_dual, is->regs + ISSR1);
-			writel(video->buf[buf_index][0],
-				is->regs + ISSR2);
-			fimc_is_hw_set_intgr0_gd0(is);
 			spin_unlock(&is->mcu_slock);
 
 			dbg_sensor("L%d\n", status3);
@@ -1713,13 +1713,13 @@ static irqreturn_t fimc_is_sensor_irq_handler1(int irq, void *dev_id)
 				err("[MAIN] INTMSR1's 0 bit is not cleared.\n");
 				cfg = readl(is->regs + INTMSR0);
 				status = INTMSR0_GET_INTMSD0(cfg);
+			} else {
+				writel(HIC_SHOT, is->regs + ISSR0);
+				writel(sensor->id_dual, is->regs + ISSR1);
+				writel(video->buf[buf_index][0],
+					is->regs + ISSR2);
+				fimc_is_hw_set_intgr0_gd0(is);
 			}
-
-			writel(HIC_SHOT, is->regs + ISSR0);
-			writel(sensor->id_dual, is->regs + ISSR1);
-			writel(video->buf[buf_index][0],
-				is->regs + ISSR2);
-			fimc_is_hw_set_intgr0_gd0(is);
 			spin_unlock(&is->mcu_slock);
 
 			dbg_sensor("L%d\n", status3);

@@ -12,7 +12,7 @@
 #ifndef FIMC_IS_PARAMS_H
 #define FIMC_IS_PARAMS_H
 
-#define IS_REGION_VER 134  /* IS REGION VERSION 1.34 */
+#define IS_REGION_VER 136  /* IS REGION VERSION 1.36 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -94,6 +94,24 @@
 		(dev->is_p_region->parameter.isp.dma1_input.buffer_number = x)
 #define IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.buffer_address = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_CROP_OFFSET_X(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.crop_offset_x = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_CROP_OFFSET_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.crop_offset_y = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_CROP_WIDTH(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.crop_width = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_CROP_HEIGHT(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.crop_height = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_FRAMETIME_MIN(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.user_min_frame_time = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_FRAMETIME_MAX(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.user_max_frame_time = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_WIDE_FRAME_GAP(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.wide_frame_gap = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_FRAME_GAP(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.frame_gap = x)
+#define IS_ISP_SET_PARAM_DMA_INPUT1_LINE_GAP(dev, x) \
+		(dev->is_p_region->parameter.isp.dma1_input.line_gap = x)
 #define IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.err = x)
 
@@ -126,10 +144,14 @@
 		(dev->is_p_region->parameter.isp.aa.mode = x)
 #define IS_ISP_SET_PARAM_AA_SCENE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.scene = x)
-#define IS_ISP_SET_PARAM_AA_SLEEP(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.sleep = x)
+#define IS_ISP_SET_PARAM_AA_TOUCH(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.touch = x)
 #define IS_ISP_SET_PARAM_AA_FACE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.face = x)
+#define IS_ISP_SET_PARAM_AA_RESPONSE(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.response = x)
+#define IS_ISP_SET_PARAM_AA_SLEEP(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.sleep = x)
 #define IS_ISP_SET_PARAM_AA_TOUCH_X(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.touch_x = x)
 #define IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, x) \
@@ -214,6 +236,10 @@
 		(dev->is_p_region->parameter.isp.otf_output.bitwidth = x)
 #define IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_output.order = x)
+#define IS_ISP_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_X(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_output.crop_offset_x = x)
+#define IS_ISP_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_output.crop_offset_y = x)
 #define IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_output.err = x)
 
@@ -453,6 +479,14 @@
 	(dev->is_p_region->parameter.odc.otf_input.bitwidth = x)
 #define IS_ODC_SET_PARAM_OTF_INPUT_ORDER(dev, x) \
 	(dev->is_p_region->parameter.odc.otf_input.order = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.crop_offset_x = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.crop_offset_y = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.crop_width = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.crop_height = x)
 #define IS_ODC_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.odc.otf_input.err = x)
 
@@ -468,6 +502,10 @@
 	(dev->is_p_region->parameter.odc.otf_output.bitwidth = x)
 #define IS_ODC_SET_PARAM_OTF_OUTPUT_ORDER(dev, x) \
 	(dev->is_p_region->parameter.odc.otf_output.order = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_X(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.crop_offset_x = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_CROP_OFFSET_Y(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.crop_offset_y = x)
 #define IS_ODC_SET_PARAM_OTF_OUTPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.odc.otf_output.err = x)
 
@@ -833,7 +871,7 @@
 
 #define MAGIC_NUMBER 0x01020304
 
-#define PARAMETER_MAX_SIZE    64  /* in byte */
+#define PARAMETER_MAX_SIZE    128  /* in byte */
 #define PARAMETER_MAX_MEMBER  (PARAMETER_MAX_SIZE/4)
 
 enum is_entry {
@@ -1254,7 +1292,7 @@ enum isp_lock_target {
 	ISP_AA_TARGET_AE	= 2,
 	ISP_AA_TARGET_AWB	= 4
 };
-
+#if 0
 enum isp_af_mode {
 	ISP_AF_MODE_MANUAL		= 0,
 	ISP_AF_MODE_SINGLE		= 1,
@@ -1281,6 +1319,43 @@ enum isp_af_sleep {
 	ISP_AF_SLEEP_OFF		= 0,
 	ISP_AF_SLEEP_ON			= 1
 };
+#else
+enum isp_af_mode {
+	ISP_AF_MODE_MANUAL		= 0,
+	ISP_AF_MODE_SINGLE		= 1,
+	ISP_AF_MODE_CONTINUOUS		= 2,
+	ISP_AF_MODE_SLEEP		= 3,
+	ISP_AF_MODE_INIT		= 4,
+	ISP_AF_MODE_SET_CENTER_WINDOW	= 5,
+	ISP_AF_MODE_SET_TOUCH_WINDOW	= 6,
+	ISP_AF_SET_FACE_WINDOW		= 7
+};
+
+enum isp_af_scene {
+	ISP_AF_SCENE_NORMAL		= 0,
+	ISP_AF_SCENE_MACRO		= 1
+};
+
+enum isp_af_touch {
+	ISP_AF_TOUCH_DISABLE		= 0,
+	ISP_AF_TOUCH_ENABLE		= 1
+};
+
+enum isp_af_face {
+	ISP_AF_FACE_DISABLE		= 0,
+	ISP_AF_FACE_ENABLE		= 1
+};
+
+enum isp_af_response {
+	ISP_AF_RESPONSE_PREVIEW		= 0,
+	ISP_AF_RESPONSE_MOVIE		= 1
+};
+#endif
+
+enum isp_af_sleep {
+	ISP_AF_SLEEP_OFF		= 0,
+	ISP_AF_SLEEP_ON			= 1
+};
 
 enum isp_af_continuous {
 	ISP_AF_CONTINUOUS_DISABLE	= 0,
@@ -1295,10 +1370,11 @@ enum isp_af_error {
 /* -------------------------  Flash  ------------------------------------- */
 enum isp_flash_command {
 	ISP_FLASH_COMMAND_DISABLE	= 0,
-	ISP_FLASH_COMMAND_MANUALON	= 1, /* (forced flash) */
+	ISP_FLASH_COMMAND_MANUALON	= 1,
 	ISP_FLASH_COMMAND_AUTO		= 2,
-	ISP_FLASH_COMMAND_TORCH		= 3,   /* 3 sec */
-	ISP_FLASH_COMMAND_FLASH_ON	= 4
+	ISP_FLASH_COMMAND_TORCH		= 3,
+	ISP_FLASH_COMMAND_FLASH_ON	= 4,
+	ISP_FLASH_COMMAND_CAPTURE	= 5
 };
 
 enum isp_flash_redeye {
@@ -1332,9 +1408,10 @@ enum isp_awb_error {
 enum isp_imageeffect_command {
 	ISP_IMAGE_EFFECT_DISABLE		= 0,
 	ISP_IMAGE_EFFECT_MONOCHROME		= 1,
-	ISP_IMAGE_EFFECT_NEGATIVE_COLOR		= 2,
-	ISP_IMAGE_EFFECT_SEPIA			= 3,
-	ISP_IMAGE_EFFECT_EMBOSS			= 4,
+	ISP_IMAGE_EFFECT_NEGATIVE_MONO		= 2,
+	ISP_IMAGE_EFFECT_NEGATIVE_COLOR		= 3,
+	ISP_IMAGE_EFFECT_SEPIA			= 4,
+	ISP_IMAGE_EFFECT_EMBOSS			= 5,
 	ISP_IMAGE_EFFECT_CCM			= 15
 };
 
@@ -1573,7 +1650,16 @@ struct param_dma_input {
 	u32	order;
 	u32	buffer_number;
 	u32	buffer_address;
-	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	u32	crop_offset_x;
+	u32	crop_offset_y;
+	u32	crop_width;
+	u32	crop_height;
+	u32	user_min_frame_time;
+	u32	user_max_frame_time;
+	u32	wide_frame_gap;
+	u32	frame_gap;
+	u32	line_gap;
+	u32	reserved[PARAMETER_MAX_MEMBER-19];
 	u32	err;
 };
 
@@ -1584,7 +1670,9 @@ struct param_otf_output {
 	u32	format;
 	u32	bitwidth;
 	u32	order;
-	u32	reserved[PARAMETER_MAX_MEMBER-7];
+	u32	crop_offset_x;
+	u32	crop_offset_y;
+	u32	reserved[PARAMETER_MAX_MEMBER-9];
 	u32	err;
 };
 
@@ -1616,7 +1704,7 @@ struct param_sensor_framerate {
 	u32	reserved[PARAMETER_MAX_MEMBER-2];
 	u32	err;
 };
-
+#if 0
 struct param_isp_aa {
 	u32	cmd;
 	u32	target;
@@ -1630,6 +1718,23 @@ struct param_isp_aa {
 	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
+#else
+struct param_isp_aa {
+	u32	cmd;
+	u32	target;
+	u32	mode;
+	u32	scene;
+	u32	touch;
+	u32	face;
+	u32	response;
+	u32	sleep;
+	u32	touch_x;
+	u32	touch_y;
+	u32	manual_af_setting;
+	u32	reserved[PARAMETER_MAX_MEMBER-12];
+	u32	err;
+};
+#endif
 struct param_isp_flash {
 	u32	cmd;
 	u32	redeye;
