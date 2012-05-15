@@ -829,8 +829,14 @@ static void exynos5250_monitor(struct busfreq_data *data,
 
 	newfreq[PPMU_MIF] = max3(lockfreq[PPMU_MIF], freq[PPMU_MIF], cpufreq);
 	newfreq[PPMU_INT] = max(lockfreq[PPMU_INT], freq[PPMU_INT]);
+
 	opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq[PPMU_MIF]);
 	opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &newfreq[PPMU_INT]);
+
+	if (opp_get_freq(opp[PPMU_MIF]) == 400000 && opp_get_freq(opp[PPMU_INT]) == 267000) {
+		newfreq[PPMU_INT] -= 1;
+		opp[PPMU_INT] = opp_find_freq_floor(data->dev[PPMU_INT], &newfreq[PPMU_INT]);
+	}
 
 	*mif_opp = opp[PPMU_MIF];
 	*int_opp = opp[PPMU_INT];

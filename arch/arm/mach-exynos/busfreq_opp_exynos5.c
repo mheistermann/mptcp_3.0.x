@@ -309,6 +309,9 @@ static ssize_t store_level_lock(struct device *device, struct device_attribute *
 		return count;
 	}
 
+	if (freq[PPMU_MIF] >= 400000 && freq[PPMU_INT] >= 200000)
+		freq[PPMU_INT] = 200000;
+
 	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
 		if (freq[i] > data->max_freq[i])
 			freq[i] = data->max_freq[i];
