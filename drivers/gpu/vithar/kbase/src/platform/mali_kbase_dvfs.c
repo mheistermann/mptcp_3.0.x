@@ -506,7 +506,6 @@ int mali_dvfs_freq_under_lock(int level)
 {
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
-	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current.under_lock = level;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 #endif
