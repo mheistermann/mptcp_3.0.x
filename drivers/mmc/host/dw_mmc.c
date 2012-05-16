@@ -31,6 +31,7 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/dw_mmc.h>
+#include <linux/mmc/card.h>
 #include <linux/bitops.h>
 #include <linux/regulator/consumer.h>
 
@@ -104,37 +105,11 @@ struct dw_mci_slot {
 	int			last_detect_state;
 };
 
-#define MAX_TUING_LOOP 40
-
-static const u8 tuning_blk_pattern_4bit[] = {
-	0xff, 0x0f, 0xff, 0x00, 0xff, 0xcc, 0xc3, 0xcc,
-	0xc3, 0x3c, 0xcc, 0xff, 0xfe, 0xff, 0xfe, 0xef,
-	0xff, 0xdf, 0xff, 0xdd, 0xff, 0xfb, 0xff, 0xfb,
-	0xbf, 0xff, 0x7f, 0xff, 0x77, 0xf7, 0xbd, 0xef,
-	0xff, 0xf0, 0xff, 0xf0, 0x0f, 0xfc, 0xcc, 0x3c,
-	0xcc, 0x33, 0xcc, 0xcf, 0xff, 0xef, 0xff, 0xee,
-	0xff, 0xfd, 0xff, 0xfd, 0xdf, 0xff, 0xbf, 0xff,
-	0xbb, 0xff, 0xf7, 0xff, 0xf7, 0x7f, 0x7b, 0xde,
-};
-
-static const u8 tuning_blk_pattern_8bit[] = {
-	0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00,
-	0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc, 0xcc,
-	0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff, 0xff,
-	0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee, 0xff,
-	0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd, 0xdd,
-	0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff, 0xbb,
-	0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff, 0xff,
-	0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee, 0xff,
-	0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff, 0x00,
-	0x00, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0x33, 0xcc,
-	0xcc, 0xcc, 0x33, 0x33, 0xcc, 0xcc, 0xcc, 0xff,
-	0xff, 0xff, 0xee, 0xff, 0xff, 0xff, 0xee, 0xee,
-	0xff, 0xff, 0xff, 0xdd, 0xff, 0xff, 0xff, 0xdd,
-	0xdd, 0xff, 0xff, 0xff, 0xbb, 0xff, 0xff, 0xff,
-	0xbb, 0xbb, 0xff, 0xff, 0xff, 0x77, 0xff, 0xff,
-	0xff, 0x77, 0x77, 0xff, 0x77, 0xbb, 0xdd, 0xee,
-};
+#define MAX_TUING_LOOP	40
+#define MAX_LEN		2
+#define TUNING_BLKSZ	512
+#define TUNING_BLOCKS	8 * MAX_LEN
+static u8 tuning_blk_pattern_custom[TUNING_BLKSZ * TUNING_BLOCKS];
 
 #if defined(CONFIG_DEBUG_FS)
 static int dw_mci_req_show(struct seq_file *s, void *v)
@@ -328,9 +303,6 @@ static void dw_mci_stop_dma(struct dw_mci *host)
 	if (host->using_dma) {
 		host->dma_ops->stop(host);
 		host->dma_ops->cleanup(host);
-	} else {
-		/* Data transfer was stopped by the interrupt handler */
-		set_bit(EVENT_XFER_COMPLETE, &host->pending_events);
 	}
 }
 
@@ -971,29 +943,30 @@ static u8 dw_mci_get_sampling(struct dw_mci * host)
 	return sample;
 }
 
-static u8 get_median_sample(u8 map)
+static s8 get_median_sample(u8 map)
 {
-	u8 min = 0, max = 0;
-	u8 pos;
-	u8 i;
+	s8 i, sel = -1;
+	u8 __map;
 
-	for (i = 0; i < 4; i++) {
-		if ((map >> (4 + i)) & 0x1)
-			max = 4 + i;
-		if ((map >> (3 - i)) & 0x1)
-			min = 3 - i;
+	if ((map & 0x3) == 0x3 && (map & 0x80)) {
+		sel = 0;
+		goto out;
 	}
 
-	pos = max;
-	do {
-		max = pos;
-		pos = DIV_ROUND_CLOSEST(min + max, 2);
-		if ((map >> pos) & 0x1)
-			break;
+	for (i = 0; i < 6; i++) {
+		__map = map >> i;
+		if ((__map & 0x7) == 0x7) {
+			sel = i + 1;
+			goto out;
+		}
+	}
 
-	} while(pos != max);
-
-	return pos;
+	if ((map & 0xc0) == 0xc0 && (map & 0x1)) {
+		sel = 7;
+		goto out;
+	}
+out:
+	return sel;
 }
 
 static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
@@ -1001,36 +974,48 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 	unsigned int tuning_loop = MAX_TUING_LOOP;
-	const u8 *tuning_blk_pattern;
+	u8 *tuning_blk_pattern;
 	u8 *tuning_blk;
-	u8 blksz;
+	const u16 blksz = TUNING_BLKSZ;
+	const u16 blocks = TUNING_BLOCKS;
+	const u8 sg_len = MAX_LEN;
+	struct scatterlist *sg, *__sg;
 	u8 tune, start_tune;
-	u8 map = 0, mid;
+	u8 map = 0xff, __map = 0;
+	s8 mid;
+	u8 part_config;
+	s8 retry = 3;
+	int i;
 
-	if (opcode == MMC_SEND_TUNING_BLOCK_HS200) {
-		if (mmc->ios.bus_width == MMC_BUS_WIDTH_8) {
-			tuning_blk_pattern = tuning_blk_pattern_8bit;
-			blksz = 128;
-		}
-		else if (mmc->ios.bus_width == MMC_BUS_WIDTH_4) {
-			tuning_blk_pattern = tuning_blk_pattern_4bit;
-			blksz = 64;
-		}
-		else
-			return -EINVAL;
-	} else if (opcode == MMC_SEND_TUNING_BLOCK) {
-		tuning_blk_pattern = tuning_blk_pattern_4bit;
-		blksz = 64;
-	} else {
+	if (opcode != MMC_SEND_TUNING_BLOCK_HS200 &&
+			opcode != MMC_SEND_TUNING_BLOCK) {
 		dev_err(&mmc->class_dev,
 			"Undefined command(%d) for tuning\n",
 			opcode);
 		return -EINVAL;
 	}
 
-	tuning_blk = kmalloc(blksz, GFP_KERNEL);
+	tuning_blk = kmalloc(blksz * blocks, GFP_KERNEL);
 	if (!tuning_blk)
 		return -ENOMEM;
+
+	if(mmc_blk_part_switch_boot(slot->mmc->card, &part_config, 1))
+		return -ENODEV;
+
+	sg = kmalloc(sizeof(struct scatterlist)*sg_len, GFP_KERNEL);
+	if (!sg)
+		return -ENOMEM;
+	else {
+		sg_init_table(sg, sg_len);
+	}
+
+	tuning_blk_pattern = tuning_blk_pattern_custom;
+	for(i=0; i < TUNING_BLKSZ * TUNING_BLOCKS; i++) {
+		if (i % 2)
+			tuning_blk_pattern_custom[i] = 0xa5;
+		else
+			tuning_blk_pattern_custom[i] = 0x5a;
+	}
 
 	start_tune = dw_mci_get_sampling(host);
 
@@ -1039,9 +1024,19 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		struct mmc_command cmd = {0};
 		struct mmc_command stop = {0};
 		struct mmc_data data = {0};
-		struct scatterlist sg;
 
-		cmd.opcode = opcode;
+		memset(&mrq, 0, sizeof(struct mmc_request));
+		memset(&cmd, 0, sizeof(struct mmc_command));
+		memset(&stop, 0, sizeof(struct mmc_command));
+		memset(&data, 0, sizeof(struct mmc_data));
+		memset(tuning_blk, 0, blksz * blocks);
+		dw_mci_set_timeout(host);
+
+		mrq.cmd = &cmd;
+		mrq.stop = &stop;
+		mrq.data = &data;
+		host->mrq = &mrq;
+
 		cmd.arg = 0;
 		cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
 
@@ -1050,26 +1045,45 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		stop.flags = MMC_RSP_R1B | MMC_CMD_AC;
 
 		data.blksz = blksz;
-		data.blocks = 1;
-		data.flags = MMC_DATA_READ;
-		data.sg = &sg;
-		data.sg_len = 1;
+		data.blocks = blocks;
+		data.flags = MMC_DATA_WRITE;
+		data.sg = sg;
+		data.sg_len = sg_len;
 
-		sg_init_one(&sg, tuning_blk, blksz);
-		dw_mci_set_timeout(host);
+		/* write */
+		cmd.opcode = MMC_WRITE_MULTIPLE_BLOCK;
+		data.flags = MMC_DATA_WRITE;
 
-		mrq.cmd = &cmd;
-		mrq.stop = &stop;
-		mrq.data = &data;
-		host->mrq = &mrq;
+		__sg = sg;
+		for (i = 0; i< sg_len; i++) {
+			sg_set_buf(__sg, tuning_blk_pattern + (i * PAGE_SIZE), PAGE_SIZE);
+			__sg++;
+		}
 
 		tune = dw_mci_tuning_sampling(host);
 
 		mmc_wait_for_req(mmc, &mrq);
 
+		if (cmd.error || data.error) {
+			if (start_tune != tune)
+				continue;
+		}
+
+		/* read */
+		cmd.opcode = MMC_READ_MULTIPLE_BLOCK;
+		data.flags = MMC_DATA_READ;
+
+		__sg = sg;
+		for (i = 0; i < sg_len; i++) {
+			sg_set_buf(__sg, tuning_blk + (i * PAGE_SIZE),  PAGE_SIZE);
+			__sg++;
+		}
+
+		mmc_wait_for_req(mmc, &mrq);
+
 		if (!cmd.error && !data.error) {
-			if (!memcmp(tuning_blk_pattern, tuning_blk, blksz))
-				map |= (1 << tune);
+			if (!memcmp(tuning_blk_pattern, tuning_blk, blksz * blocks))
+				__map |= (1 << tune);
 		} else {
 			dev_dbg(&mmc->class_dev,
 				"Tuning error: cmd.error:%d, data.error:%d\n",
@@ -1077,12 +1091,19 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		}
 
 		if (start_tune == tune) {
-			if (!map) {
+			if (retry) {
+				map &= __map;
+				__map = 0;
+				retry--;
+				continue;
+			}
+
+			mid = get_median_sample(map);
+			if (!map || mid < 0) {
 				tuning_loop = 0;
 				break;
 			}
 
-			mid = get_median_sample(map);
 			dw_mci_set_sampling(host, mid);
 			break;
 		}
@@ -1090,6 +1111,8 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	} while(--tuning_loop);
 
 	kfree(tuning_blk);
+	mmc_blk_part_restore(slot->mmc->card, part_config);
+	mci_writel(slot->host, CDTHRCTL, 512 << 16 | 1);
 
 	if (!tuning_loop)
 		return -EIO;
@@ -1173,8 +1196,8 @@ static void dw_mci_command_complete(struct dw_mci *host, struct mmc_command *cmd
 			mdelay(20);
 
 		if (cmd->data) {
-			host->data = NULL;
 			dw_mci_stop_dma(host);
+			host->data = NULL;
 		}
 		host->prv_err = 1;
 	}
@@ -1216,6 +1239,16 @@ static void dw_mci_tasklet_func(unsigned long priv)
 				goto unlock;
 			}
 
+			if (data && cmd->error &&
+					cmd != data->stop) {
+				host->data = host->mrq->data;
+				if (host->mrq->data->stop) {
+					send_stop_cmd(host, host->mrq->data);
+				}
+				state = STATE_SENDING_STOP;
+				break;
+			}
+
 			if (!host->mrq->data || cmd->error) {
 				dw_mci_request_end(host, host->mrq);
 				goto unlock;
@@ -1227,9 +1260,6 @@ static void dw_mci_tasklet_func(unsigned long priv)
 		case STATE_SENDING_DATA:
 			if (test_and_clear_bit(EVENT_DATA_ERROR,
 					       &host->pending_events)) {
-				dw_mci_stop_dma(host);
-				if (data->stop)
-					send_stop_cmd(host, data);
 				state = STATE_DATA_ERROR;
 				break;
 			}
@@ -1295,6 +1325,7 @@ static void dw_mci_tasklet_func(unsigned long priv)
 				break;
 
 			host->cmd = NULL;
+			host->data = NULL;
 			dw_mci_command_complete(host, host->mrq->stop);
 			dw_mci_request_end(host, host->mrq);
 			goto unlock;
@@ -1303,6 +1334,11 @@ static void dw_mci_tasklet_func(unsigned long priv)
 			if (!test_and_clear_bit(EVENT_XFER_COMPLETE,
 						&host->pending_events))
 				break;
+
+			dw_mci_stop_dma(host);
+			set_bit(EVENT_XFER_COMPLETE, &host->completed_events);
+			if (data->stop)
+				send_stop_cmd(host, data);
 
 			state = STATE_DATA_BUSY;
 			break;
@@ -1428,18 +1464,6 @@ static void dw_mci_read_data_pio(struct dw_mci *host)
 
 		status = mci_readl(host, MINTSTS);
 		mci_writel(host, RINTSTS, SDMMC_INT_RXDR);
-		if (status & DW_MCI_DATA_ERROR_FLAGS) {
-			host->data_status = status;
-			data->bytes_xfered += nbytes;
-			sg_miter_stop(sg_miter);
-			host->sg  = NULL;
-			smp_wmb();
-
-			set_bit(EVENT_DATA_ERROR, &host->pending_events);
-
-			tasklet_schedule(&host->tasklet);
-			return;
-		}
 	} while (status & SDMMC_INT_RXDR); /*if the RXDR is ready read again*/
 	data->bytes_xfered += nbytes;
 
@@ -1494,19 +1518,6 @@ static void dw_mci_write_data_pio(struct dw_mci *host)
 
 		status = mci_readl(host, MINTSTS);
 		mci_writel(host, RINTSTS, SDMMC_INT_TXDR);
-		if (status & DW_MCI_DATA_ERROR_FLAGS) {
-			host->data_status = status;
-			data->bytes_xfered += nbytes;
-			sg_miter_stop(sg_miter);
-			host->sg = NULL;
-
-			smp_wmb();
-
-			set_bit(EVENT_DATA_ERROR, &host->pending_events);
-
-			tasklet_schedule(&host->tasklet);
-			return;
-		}
 	} while (status & SDMMC_INT_TXDR); /* if TXDR write again */
 	data->bytes_xfered += nbytes;
 
@@ -1566,8 +1577,6 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 			host->cmd_status = status;
 			smp_wmb();
 			set_bit(EVENT_CMD_COMPLETE, &host->pending_events);
-			if (!(pending & SDMMC_INT_RTO))
-				tasklet_schedule(&host->tasklet);
 		}
 
 		if (pending & DW_MCI_DATA_ERROR_FLAGS) {
@@ -1576,8 +1585,9 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 			host->data_status = status;
 			smp_wmb();
 			set_bit(EVENT_DATA_ERROR, &host->pending_events);
-			if (!(pending & SDMMC_INT_DTO))
-				tasklet_schedule(&host->tasklet);
+			if (pending & SDMMC_INT_SBE)
+				set_bit(EVENT_XFER_COMPLETE, &host->pending_events);
+			tasklet_schedule(&host->tasklet);
 		}
 
 		if (pending & SDMMC_INT_DATA_OVER) {
@@ -2074,7 +2084,7 @@ static int dw_mci_probe(struct platform_device *pdev)
 		fifo_size = host->pdata->fifo_depth;
 	}
 	host->fifo_depth = fifo_size;
-	host->fifoth_val = ((0x2 << 28) | ((fifo_size/2 - 1) << 16) |
+	host->fifoth_val = ((0x4 << 28) | ((fifo_size/4 - 1) << 16) |
 			((fifo_size/2) << 0));
 	mci_writel(host, FIFOTH, host->fifoth_val);
 
