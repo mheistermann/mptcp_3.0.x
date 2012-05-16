@@ -2564,7 +2564,15 @@ int fimc_is_v4l2_isp_flash_mode(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout 4: %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
