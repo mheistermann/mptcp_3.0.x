@@ -882,7 +882,7 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_BUSFREQ_UNLOCK:
 		/* unlock bus frequency */
-		dev_unlock(dev, dev);
+		dev_unlock(gsc->bus_dev, dev);
 		break;
 #endif
 	default:
