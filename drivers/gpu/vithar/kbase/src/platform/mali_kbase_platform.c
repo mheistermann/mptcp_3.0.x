@@ -54,6 +54,7 @@
 #define VITHAR_DEFAULT_CLOCK 533000000
 
 static struct clk *clk_g3d = NULL;
+static int clk_g3d_status = 0;
 
 static int kbase_platform_power_clock_init(struct device *dev)
 {
@@ -87,6 +88,7 @@ static int kbase_platform_power_clock_init(struct device *dev)
 		goto out;
 	}
 	clk_enable(clk_g3d);
+	clk_g3d_status = 1;
 
 #ifdef CONFIG_VITHAR_HWVER_R0P0
 	kbdev->sclk_g3d = clk_get(dev, "aclk_400");
@@ -136,14 +138,20 @@ out:
 int kbase_platform_clock_on(struct device *dev)
 {
 	UNUSED(dev);
+	if (clk_g3d_status == 1)
+		return 0;
 	(void) clk_enable(clk_g3d);
+	clk_g3d_status=1;
 	return 0;
 }
 
 int kbase_platform_clock_off(struct device *dev)
 {
 	UNUSED(dev);
+	if (clk_g3d_status == 0)
+		return 0;
 	(void)clk_disable(clk_g3d);
+	clk_g3d_status=0;
 	return 0;
 }
 
