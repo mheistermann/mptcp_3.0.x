@@ -574,7 +574,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		isp_param->dma1_input.height = height;
 		isp_param->dma1_input.reserved[0] = 1;
 		isp_param->dma1_input.reserved[1] = 0x1000;
-		isp_param->dma1_input.reserved[2] = width/2;
+		isp_param->dma1_input.reserved[2] = 45;
 		isp_param->dma1_input.bitwidth = DMA_INPUT_BIT_WIDTH_10BIT;
 		isp_param->dma1_input.order = DMA_INPUT_ORDER_GR_BG;
 		isp_param->dma1_input.plane = 1;

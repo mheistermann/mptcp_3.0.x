@@ -692,6 +692,47 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		writel((u32)dev->mem.dvaddr_shared, dev->regs + ISSR4);
 		break;
+	case SENSOR_S5K3H7_CSI_A:
+		sensor_ext = (struct sensor_open_extended *)
+						&dev->is_p_region->shared[0];
+#ifdef S5K3H7_ACTUATOR_NAME_AK7343
+		sensor_ext->actuator_con.product_name = ACTUATOR_NAME_AK7343;
+#else
+		sensor_ext->actuator_con.product_name = ACTUATOR_NAME_HYBRIDVCA;
+#endif
+		sensor_ext->actuator_con.peri_type = SE_I2C;
+		sensor_ext->actuator_con.peri_setting.i2c.channel
+							= SENSOR_CONTROL_I2C0;
+
+		sensor_ext->flash_con.product_name = FLADRV_NAME_KTD267;
+		sensor_ext->flash_con.peri_type = SE_GPIO;
+		sensor_ext->flash_con.peri_setting.gpio.first_gpio_port_no
+									= 17;
+		sensor_ext->flash_con.peri_setting.gpio.second_gpio_port_no
+									= 16;
+
+		sensor_ext->from_con.product_name = FROMDRV_NAME_NOTHING;
+
+		sensor_ext->mclk = 0;
+		sensor_ext->mipi_lane_num = 0;
+		sensor_ext->mipi_speed = 0;
+		sensor_ext->fast_open_sensor = 0;
+		sensor_ext->self_calibration_mode = 0;
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_A;
+		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		writel((u32)dev->mem.dvaddr_shared, dev->regs + ISSR4);
+		break;
+	case SENSOR_S5K3H7_CSI_B:
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_B;
+		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		writel(ISS_PREVIEW_STILL, dev->regs + ISSR4);
+		break;
 	}
 	fimc_is_hw_set_intgr0_gd0(dev);
 	spin_unlock_irq(&dev->mcu_slock);
@@ -2364,6 +2405,20 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 void fimc_is_hw_set_default_size(struct fimc_is_dev *dev, int  sensor_id)
 {
 	switch (sensor_id) {
+	case SENSOR_NAME_S5K3H7:
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width =
+			DEFAULT_3H7_STILLSHOT_WIDTH;
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.height =
+			DEFAULT_3H7_STILLSHOT_HEIGHT;
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.width =
+			DEFAULT_3H7_PREVIEW_WIDTH;
+		dev->video[FIMC_IS_VIDEO_NUM_SCALERP].frame.height =
+			DEFAULT_3H7_PREVIEW_HEIGHT;
+		dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.width =
+			DEFAULT_3H7_VIDEO_WIDTH;
+		dev->video[FIMC_IS_VIDEO_NUM_3DNR].frame.height =
+			DEFAULT_3H7_VIDEO_HEIGHT;
+		break;
 	case SENSOR_NAME_S5K6A3:
 		dev->video[FIMC_IS_VIDEO_NUM_SCALERC].frame.width =
 			DEFAULT_6A3_STILLSHOT_WIDTH;

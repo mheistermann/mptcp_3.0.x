@@ -201,7 +201,7 @@
 /* D-PHY control */
 #define S5PCSIS_DPHYCTRL				(0x04)
 #define S5PCSIS_DPHYCTRL_HSS_MASK			(0x1f << 27)
-#define S5PCSIS_DPHYCTRL_ENABLE				(0x7 << 0)
+#define S5PCSIS_DPHYCTRL_ENABLE				(0x1f << 0)
 
 #define S5PCSIS_CONFIG					(0x08)
 #define S5PCSIS_CFG_FMT_YCBCR422_8BIT			(0x1e << 2)
@@ -211,7 +211,7 @@
 /* User defined formats, x = 1...4 */
 #define S5PCSIS_CFG_FMT_USER(x)				((0x30 + x - 1) << 2)
 #define S5PCSIS_CFG_FMT_MASK				(0x3f << 2)
-#define S5PCSIS_CFG_NR_LANE_MASK			(3)
+#define S5PCSIS_CFG_NR_LANE_MASK			(0x3)
 
 /* Interrupt mask. */
 #define S5PCSIS_INTMSK					(0x10)
@@ -551,7 +551,7 @@ static void s5pcsis_set_params(unsigned long mipi_reg_base,
 	u32 val;
 
 	val = readl(mipi_reg_base + S5PCSIS_CONFIG);
-	val = (val & ~S5PCSIS_CFG_NR_LANE_MASK) | (2 - 1);
+	val = (val & ~S5PCSIS_CFG_NR_LANE_MASK) | (0x3);
 	writel(val, mipi_reg_base + S5PCSIS_CONFIG);
 
 	__s5pcsis_set_format(mipi_reg_base, f_frame);
