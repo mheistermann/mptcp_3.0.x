@@ -493,12 +493,16 @@ static void tmu_monitor(struct work_struct *work)
 	case TMU_STATUS_MIF_VC:
 		if (cur_temp >= data->ts.stop_mif_vc) {
 			__raw_writel(INTCLEAR_FALL1, info->tmu_base + INTCLEAR);
+#ifdef CONFIG_BUSFREQ_OPP
 			busfreq_set_volt_offset(0);
+#endif
 			info->tmu_state = TMU_STATUS_NORMAL;
 			mifvolt_up = 0;
 			pr_info("MIF VC is released!!\n");
 		} else if (cur_temp <= data->ts.start_mif_vc && !mifvolt_up) {
+#ifdef CONFIG_BUSFREQ_OPP
 			busfreq_set_volt_offset(37500);
+#endif
 			mifvolt_up = 1;
 #if defined(CONFIG_TC_VOLTAGE)
 		} else if (cur_temp <= data->ts.start_tc)
@@ -839,7 +843,9 @@ static int exynos_tmu_init(struct tmu_info *info)
 	__raw_writel(te_temp, info->tmu_base + INTEN);
 
 	if (get_cur_temp(info) <= data->ts.start_mif_vc) {
+#ifdef CONFIG_BUSFREQ_OPP
 		busfreq_set_volt_offset(37500);
+#endif
 		info->tmu_state = TMU_STATUS_MIF_VC;
 		mifvolt_up = 1;
 		pr_info("MIF VC is completed...!\n");
@@ -1128,7 +1134,9 @@ static int tmu_resume(struct platform_device *pdev)
 #endif
 #if defined(CONFIG_MIF_VC)
 	if (get_cur_temp(info) <= data->ts.start_mif_vc) {
+#ifdef CONFIG_BUSFREQ_OPP
 		busfreq_set_volt_offset(37500);
+#endif
 		info->tmu_state = TMU_STATUS_MIF_VC;
 		mifvolt_up = 1;
 		pr_info("MIF VC is completed...!\n");
