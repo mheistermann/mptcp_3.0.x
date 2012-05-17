@@ -1562,12 +1562,17 @@ static int fimc_is_scalerp_video_s_ctrl(struct file *file, void *priv,
 #ifdef AE_AWB_LOCK_UNLOCK
 		ret = fimc_is_v4l2_ae_awb_lockunlock(isp, ctrl->value);
 #else
-		err("WARN(%s) AE_AWB_LOCK_UNLOCK is not available now.\n", __func__);
+		err("WARN(%s) AE_AWB_LOCK_UNLOCK is not available now.\n",
+								__func__);
 #endif
 		break;
 	/* FLASH */
 	case V4L2_CID_CAMERA_FLASH_MODE:
+#ifdef FLASH_ENABLE
 		ret = fimc_is_v4l2_isp_flash_mode(isp, ctrl->value);
+#else
+		err("WARN(%s) FLASH_MODE is not available now.\n", __func__);
+#endif
 		break;
 	case V4L2_CID_IS_CAMERA_AWB_MODE:
 		ret = fimc_is_v4l2_awb_mode(isp, ctrl->value);

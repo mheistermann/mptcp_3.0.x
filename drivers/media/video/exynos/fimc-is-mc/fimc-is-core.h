@@ -18,6 +18,7 @@
 #define TDNR_ENABLE
 #define DIS_ENABLE
 #define FD_ENABLE
+/*#define FLASH_ENABLE*/
 #define FW_SUPPORT_FACE_AF
 /*#define TASKLET*/
 #define FIMCLITE
