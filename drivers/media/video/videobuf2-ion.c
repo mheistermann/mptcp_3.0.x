@@ -536,7 +536,7 @@ void vb2_ion_sync_for_device(void *cookie, off_t offset, size_t size,
 	if (WARN_ON((offset + size) > vb2cookie->size))
 		return;
 
-	dmac_map_area(vb2cookie->kva + offset, size, dir);
+	dmac_map_area(vb2cookie->kva + vb2cookie->offset + offset, size, dir);
 
 #ifdef CONFIG_OUTER_CACHE
 	{
@@ -571,7 +571,7 @@ void vb2_ion_sync_for_cpu(void *cookie, off_t offset, size_t size,
 	if (WARN_ON((offset + size) > vb2cookie->size))
 		return;
 
-	dmac_unmap_area(vb2cookie->kva + offset, size, dir);
+	dmac_unmap_area(vb2cookie->kva + vb2cookie->offset + offset, size, dir);
 
 #ifdef CONFIG_OUTER_CACHE
 	if (dir != DMA_TO_DEVICE) {
@@ -609,7 +609,8 @@ int vb2_ion_buf_prepare(struct vb2_buffer *vb)
 		if (!buf->cookie.cached)
 			continue;
 
-		dmac_map_area(buf->cookie.kva, buf->cookie.size, dir);
+		dmac_map_area(buf->cookie.kva + buf->cookie.offset,
+				buf->cookie.size, dir);
 		size += buf->cookie.size;
 	}
 
@@ -632,19 +633,27 @@ int vb2_ion_buf_prepare(struct vb2_buffer *vb)
 		offset = buf->cookie.offset;
 
 		for_each_sg(buf->cookie.sg, sg, buf->cookie.nents, j) {
+			phys_addr_t phys;
+			size_t sz_op;
+
 			if (offset >= sg_dma_len(sg)) {
-				offset -= sg_dma_len;
+				offset -= sg_dma_len(sg);
 				continue;
 			}
 
+			phys = sg_phys(sg) + offset;
+			sz_op = min_t(size_t, sg_dma_len(sg) - offset, size);
+
 			if (dir == DMA_FROM_DEVICE)
-				outer_inv_range(sg_phys(sg) + offset,
-					sg_phys(sg) + sg_dma_len(sg));
+				outer_inv_range(phys, phys + sz_op);
 			else
-				outer_clean_range(sg_phys(sg) + offset,
-					sg_phys(sg) + sg_dma_len(sg));
+				outer_clean_range(phys, phys + sz_op);
 
 			offset = 0;
+			size -= sz_op;
+
+			if (size == 0)
+				break;
 		}
 	}
 #endif
@@ -670,7 +679,8 @@ int vb2_ion_buf_finish(struct vb2_buffer *vb)
 		if (!buf->cookie.cached)
 			continue;
 
-		dmac_unmap_area(buf->cookie.kva, buf->cookie.size, dir);
+		dmac_unmap_area(buf->cookie.kva + buf->cookie.offset,
+				buf->cookie.size, dir);
 		size += buf->cookie.size;
 	}
 
@@ -693,15 +703,24 @@ int vb2_ion_buf_finish(struct vb2_buffer *vb)
 		offset = buf->cookie.offset;
 
 		for_each_sg(buf->cookie.sg, sg, buf->cookie.nents, j) {
+			phys_addr_t phys;
+			size_t sz_op;
+
 			if (offset >= sg_dma_len(sg)) {
-				offset -= sg_dma_len;
+				offset -= sg_dma_len(sg);
 				continue;
 			}
 
-			outer_inv_range(sg_phys(sg) + offset,
-					sg_phys(sg) + sg_dma_len(sg));
+			phys = sg_phys(sg) + offset;
+			sz_op = min_t(size_t, sg_dma_len(sg) - offset, size);
+
+			outer_inv_range(phys, sz_op);
 
 			offset = 0;
+			size -= sz_op;
+
+			if (size == 0)
+				break;
 		}
 	}
 #endif
