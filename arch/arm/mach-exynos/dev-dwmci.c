@@ -88,17 +88,31 @@ static void exynos_dwmci_set_io_timing(void *data, unsigned char timing)
 
 	if (timing == MMC_TIMING_MMC_HS200 ||
 			timing == MMC_TIMING_UHS_SDR104) {
+		if(host->bus_hz != 200 * 1000 * 1000) {
+			host->bus_hz = 200 * 1000 * 1000;
+			clk_set_rate(host->cclk, 400 * 1000 * 1000);
+		}
 		clksel = __raw_readl(host->regs + DWMCI_CLKSEL);
 		clksel = (clksel & 0xfff8ffff) | (host->pdata->clk_drv << 16);
 		__raw_writel(clksel, host->regs + DWMCI_CLKSEL);
 	} else if (timing == MMC_TIMING_UHS_DDR50) {
-		__raw_writel(host->pdata->ddr_timing,
-			host->regs + DWMCI_CLKSEL);
-	}
-	else {
 		if(host->bus_hz != 100 * 1000 * 1000) {
 			host->bus_hz = 100 * 1000 * 1000;
 			clk_set_rate(host->cclk, 400 * 1000 * 1000);
+		}
+		__raw_writel(host->pdata->ddr_timing,
+			host->regs + DWMCI_CLKSEL);
+	} else {
+		if (timing == MMC_TIMING_MMC_HS) {
+			if(host->bus_hz != 100 * 1000 * 1000) {
+				host->bus_hz = 100 * 1000 * 1000;
+				clk_set_rate(host->cclk, 400 * 1000 * 1000);
+			}
+		} else if (timing == MMC_TIMING_SD_HS) {
+			if(host->bus_hz != 50 * 1000 * 1000) {
+				host->bus_hz = 50 * 1000 * 1000;
+				clk_set_rate(host->cclk, 200 * 1000 * 1000);
+			}
 		}
 		__raw_writel(host->pdata->sdr_timing,
 			host->regs + DWMCI_CLKSEL);

@@ -2778,7 +2778,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 
 	clk_set_parent(&exynos5_clk_sclk_mmc0.clk, &exynos5_clk_mout_mpll_user.clk);
 	clk_set_rate(&exynos5_clk_sclk_mmc0.clk, 800*MHZ);
-	clk_set_rate(&exynos5_clk_sclk_mmc2.clk, 400*MHZ);
+	clk_set_rate(&exynos5_clk_sclk_mmc2.clk, 200*MHZ);
 
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_clksrcs); ptr++) {
 		if (exynos5_clksrcs[ptr].clk.devname &&
@@ -2792,7 +2792,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 				!strcmp(exynos5_clksrcs[ptr].clk.devname, "s3c-sdhci.2")) {
 			struct clksrc_clk * clksrc;
 			clksrc = &exynos5_clksrcs[ptr];
-			clk_set_rate(&clksrc->clk, 400*MHZ);
+			clk_set_rate(&clksrc->clk, 200*MHZ);
 		}
 
 	}
