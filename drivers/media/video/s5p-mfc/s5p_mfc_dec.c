@@ -919,6 +919,7 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
 {
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int value = 0;
 
 	list_for_each_entry(buf_ctrl, head, list) {
@@ -957,6 +958,9 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 
 		buf_ctrl->has_new = 0;
 		buf_ctrl->updated = 1;
+
+		if (buf_ctrl->id == V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG)
+			dec->eos_tag = buf_ctrl->val;
 
 		mfc_debug(8, "Set buffer control "
 				"id: 0x%08x val: %d\n",
@@ -1036,6 +1040,22 @@ static int dec_recover_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *
 	return 0;
 }
 
+static int dec_get_buf_update_val(struct s5p_mfc_ctx *ctx, struct list_head *head, unsigned int id, int value)
+{
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if ((buf_ctrl->id == id)) {
+			buf_ctrl->val = value;
+			mfc_debug(5, "++id: 0x%08x val: %d\n",
+					buf_ctrl->id, buf_ctrl->val);
+			break;
+		}
+	}
+
+	return 0;
+}
+
 static struct s5p_mfc_codec_ops decoder_codec_ops = {
 	.pre_seq_start		= NULL,
 	.post_seq_start		= NULL,
@@ -1050,6 +1070,7 @@ static struct s5p_mfc_codec_ops decoder_codec_ops = {
 	.set_buf_ctrls_val	= dec_set_buf_ctrls_val,
 	.get_buf_ctrls_val	= dec_get_buf_ctrls_val,
 	.recover_buf_ctrls_val	= dec_recover_buf_ctrls_val,
+	.get_buf_update_val	= dec_get_buf_update_val,
 };
 
 /* Query capabilities of the device */
