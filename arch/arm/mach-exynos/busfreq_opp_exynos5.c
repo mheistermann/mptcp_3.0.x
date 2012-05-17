@@ -187,7 +187,7 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	}
 
 	mutex_unlock(&busfreq_lock);
-	queue_delayed_work(system_freezable_wq, &data->worker, 10 * data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
 }
 
 static int exynos_buspm_notifier_event(struct notifier_block *this,
