@@ -69,7 +69,13 @@ static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
 /***********************************************************/
 /*  This table and variable are using the check time share of GPU Clock  */
 /***********************************************************/
-static unsigned long long prev_time = 0;
+
+#if MALI_DVFS_START_MAX_STEP
+int prev_level = MALI_DVFS_STEP-1;
+#else
+int prev_level = 0;
+#endif
+unsigned long long prev_time = 0;
 
 mali_time_in_state time_in_state[MALI_DVFS_STEP]=
 {
@@ -776,20 +782,15 @@ int kbase_platform_dvfs_get_level(int freq)
 
 void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level)
 {
-#if MALI_DVFS_START_MAX_STEP
-	static int level_prev = MALI_DVFS_STEP-1;
-#else
-	static int level_prev = 0;
-#endif
 	unsigned long long current_time;
 
-	if (level == level_prev)
+	if (level == prev_level)
 		return;
 
 	if (WARN_ON((level >= MALI_DVFS_STEP)||(level < 0)))
 		panic("invalid level");
 
-	if (level > level_prev) {
+	if (level > prev_level) {
 		kbase_platform_dvfs_set_vol(mali_dvfs_infotbl[level].voltage);
 		kbase_platform_dvfs_set_clock(kbdev, mali_dvfs_infotbl[level].clock);
 	}else{
@@ -799,10 +800,10 @@ void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level)
 	// Calculate the time share of input DVFS level.
 	current_time = get_jiffies_64();
 
-	time_in_state[level_prev].time = cputime64_add(time_in_state[level_prev].time, cputime_sub(current_time, prev_time));
+	time_in_state[prev_level].time = cputime64_add(time_in_state[prev_level].time, cputime_sub(current_time, prev_time));
 
 	prev_time = current_time;
-	level_prev = level;
+	prev_level = level;
 }
 
 int kbase_platform_dvfs_sprint_avs_table(char *buf)
