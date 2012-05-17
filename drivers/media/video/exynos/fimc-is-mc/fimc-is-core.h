@@ -457,6 +457,7 @@ struct is_af_info {
 
 struct is_misc {
 	int face_zoom_on;
+	bool awb_lock_flag;
 };
 
 struct flite_frame {
