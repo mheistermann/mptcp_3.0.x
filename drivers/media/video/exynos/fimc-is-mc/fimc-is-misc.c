@@ -2622,26 +2622,31 @@ int fimc_is_v4l2_awb_mode(struct fimc_is_dev *dev, int value)
 	case IS_AWB_AUTO:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+		dev->misc.awb_lock_flag = false;
 		break;
 	case IS_AWB_DAYLIGHT:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 				ISP_AWB_ILLUMINATION_DAYLIGHT);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case IS_AWB_CLOUDY:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 				ISP_AWB_ILLUMINATION_CLOUDY);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case IS_AWB_TUNGSTEN:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 			ISP_AWB_ILLUMINATION_TUNGSTEN);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case IS_AWB_FLUORESCENT:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 			ISP_AWB_ILLUMINATION_FLUORESCENT);
+		dev->misc.awb_lock_flag = true;
 		break;
 	}
 	if (value >= IS_AWB_AUTO && value < IS_AWB_MAX) {
@@ -2661,26 +2666,31 @@ int fimc_is_v4l2_awb_mode_legacy(struct fimc_is_dev *dev, int value)
 	case WHITE_BALANCE_AUTO:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+		dev->misc.awb_lock_flag = false;
 		break;
 	case WHITE_BALANCE_SUNNY:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 				ISP_AWB_ILLUMINATION_DAYLIGHT);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case WHITE_BALANCE_CLOUDY:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 				ISP_AWB_ILLUMINATION_CLOUDY);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case WHITE_BALANCE_TUNGSTEN:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 			ISP_AWB_ILLUMINATION_TUNGSTEN);
+		dev->misc.awb_lock_flag = true;
 		break;
 	case WHITE_BALANCE_FLUORESCENT:
 		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
 			ISP_AWB_ILLUMINATION_FLUORESCENT);
+		dev->misc.awb_lock_flag = true;
 		break;
 	}
 	if (value > WHITE_BALANCE_BASE && value < WHITE_BALANCE_MAX) {
@@ -3382,7 +3392,6 @@ int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 int fimc_is_v4l2_ae_awb_lockunlock(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
-	printk("ae_awb");
 	switch (value) {
 	case AE_UNLOCK_AWB_UNLOCK:
 		if (!dev->misc.awb_lock_flag) {
