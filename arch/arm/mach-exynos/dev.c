@@ -148,6 +148,10 @@ unsigned long dev_max_freq(struct device *device)
 	struct device_domain *domain;
 	struct domain_lock *lock;
 	unsigned long freq = 0;
+	unsigned long miffreq = 0;
+	unsigned long intfreq = 0;
+	unsigned long miftmp;
+	unsigned long inttmp;
 
 	domain = find_device_domain(device);
 	if (IS_ERR(domain)) {
@@ -156,10 +160,16 @@ unsigned long dev_max_freq(struct device *device)
 	}
 
 	mutex_lock(&domains_mutex);
-	list_for_each_entry(lock, &domain->domain_list, node)
-		if (lock->freq > freq)
-			freq = lock->freq;
+	list_for_each_entry(lock, &domain->domain_list, node) {
+		miftmp = (lock->freq / 1000) * 1000;
+		inttmp = (lock->freq % 1000) * 1000;
+		if (miftmp > miffreq)
+			miffreq = miftmp;
+		if (inttmp > intfreq)
+			intfreq = inttmp;
+	}
 
+	freq = miffreq + (intfreq / 1000);
 	mutex_unlock(&domains_mutex);
 
 	return freq;
