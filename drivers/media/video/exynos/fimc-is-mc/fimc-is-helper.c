@@ -2224,9 +2224,23 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	if (dev->back.dis_on) {
 		dis_width = back_width * 125 / 100;
 		dis_height = back_height * 125 / 100;
+
+		/*TODO: ScalerC sclaeri-up limitation for DZOOM*/
+		if ((dis_width > DEFAULT_DIS_MAX_WIDTH) ||
+				(dis_height > DEFAULT_DIS_MAX_HEIGHT)) {
+			dis_height = DEFAULT_DIS_MAX_HEIGHT;
+			dis_width = (DEFAULT_DIS_MAX_HEIGHT
+				* (back_crop_ratio * 100 / 1000)) / 100;
+
+			back_width = (dis_width * 100 * 100 / 125) / 100;
+			back_height = (dis_height * 100 * 100 / 125) / 100;
+		}
+
 	} else {
 		dis_width = back_width;
 		dis_height = back_height;
+		//dis_width = ALIGN(dis_width, 8);
+		//dis_height = ALIGN(dis_height, 8);
 	}
 
 	IS_SCALERC_SET_PARAM_INPUT_CROP_OUT_WIDTH(dev,
