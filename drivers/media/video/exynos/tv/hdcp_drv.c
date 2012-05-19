@@ -9,13 +9,14 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#include "hdmi.h"
+
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
 
-#include "hdmi.h"
 #include "regs-hdmi-5250.h"
 
 #define AN_SIZE			8
@@ -805,12 +806,17 @@ check_ri_err:
 static void hdcp_work(struct work_struct *work)
 {
 	struct hdmi_device *hdev = container_of(work, struct hdmi_device, work);
+	struct device *dev = hdev->dev;
 
-	if (!hdev->hdcp_info.hdcp_start)
+	if (!hdev->hdcp_info.hdcp_start) {
+		dev_dbg(dev, "%s: hdcp is not started\n", __func__);
 		return;
+	}
 
-	if (!is_hdmi_streaming(hdev))
+	if (!is_hdmi_streaming(hdev)) {
+		dev_dbg(dev, "%s: hdmi is not streaming\n", __func__);
 		return;
+	}
 
 	if (hdev->hdcp_info.event & HDCP_EVENT_READ_BKSV_START) {
 		if (hdcp_bksv(hdev) < 0)
@@ -857,13 +863,9 @@ irqreturn_t hdcp_irq_handler(struct hdmi_device *hdev)
 	u8 flag;
 	event = 0;
 
-	if (!hdev->streaming) {
-		hdev->hdcp_info.event		= HDCP_EVENT_STOP;
-		hdev->hdcp_info.auth_status	= NOT_AUTHENTICATED;
-		return IRQ_HANDLED;
-	}
-
 	flag = hdmi_readb(hdev, HDMI_STATUS);
+
+	dev_dbg(dev, "%s: HDCP interrupt flag = 0x%x\n", __func__, flag);
 
 	if (flag & HDMI_WTFORACTIVERX_INT_OCC) {
 		event |= HDCP_EVENT_READ_BKSV_START;

@@ -345,6 +345,8 @@ void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev);
 void hdmi_audio_enable(struct hdmi_device *hdev, int on);
 void hdmi_bluescreen_enable(struct hdmi_device *hdev, int on);
 void hdmi_reg_mute(struct hdmi_device *hdev, int on);
+void hdmi_reg_set_int_hpd(struct hdmi_device *hdev);
+void hdmi_reg_set_ext_hpd(struct hdmi_device *hdev);
 int hdmi_hpd_status(struct hdmi_device *hdev);
 int is_hdmi_streaming(struct hdmi_device *hdev);
 u8 hdmi_get_int_mask(struct hdmi_device *hdev);

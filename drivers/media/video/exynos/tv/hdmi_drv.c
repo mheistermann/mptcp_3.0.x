@@ -247,13 +247,7 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	hdmi_enable(hdev, 1);
 	hdmi_tg_enable(hdev, 1);
 
-	mdelay(5);
-	val0 = hdmi_read(hdev, HDMI_ACR_MCTS0);
-	val1 = hdmi_read(hdev, HDMI_ACR_MCTS1);
-	val2 = hdmi_read(hdev, HDMI_ACR_MCTS2);
-	dev_dbg(dev, "HDMI_ACR_MCTS0 : 0x%08x\n", val0);
-	dev_dbg(dev, "HDMI_ACR_MCTS1 : 0x%08x\n", val1);
-	dev_dbg(dev, "HDMI_ACR_MCTS2 : 0x%08x\n", val2);
+	hdmi_reg_set_int_hpd(hdev);
 
 	/* start HDCP if enabled */
 	if (hdev->hdcp_info.hdcp_enable) {
@@ -261,6 +255,13 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 		if (ret)
 			return ret;
 	}
+
+	val0 = hdmi_read(hdev, HDMI_ACR_MCTS0);
+	val1 = hdmi_read(hdev, HDMI_ACR_MCTS1);
+	val2 = hdmi_read(hdev, HDMI_ACR_MCTS2);
+	dev_dbg(dev, "HDMI_ACR_MCTS0 : 0x%08x\n", val0);
+	dev_dbg(dev, "HDMI_ACR_MCTS1 : 0x%08x\n", val1);
+	dev_dbg(dev, "HDMI_ACR_MCTS2 : 0x%08x\n", val2);
 
 	hdmi_dumpregs(hdev, "streamon");
 	return 0;
@@ -273,7 +274,9 @@ static int hdmi_streamoff(struct hdmi_device *hdev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	if (hdev->hdcp_info.hdcp_enable)
+	hdmi_reg_set_ext_hpd(hdev);
+
+	if (hdev->hdcp_info.hdcp_enable && hdev->hdcp_info.hdcp_start)
 		hdcp_stop(hdev);
 
 	hdmi_audio_enable(hdev, 0);
@@ -328,11 +331,9 @@ static int hdmi_s_power(struct v4l2_subdev *sd, int on)
 
 	if (on) {
 		clk_enable(hdev->res.hdmi);
-		hdmi_hpd_enable(hdev, 1);
 		ret = pm_runtime_get_sync(hdev->dev);
 		set_internal_hpd_int(hdev);
 	} else {
-		hdmi_hpd_enable(hdev, 0);
 		set_external_hpd_int(hdev);
 		ret = pm_runtime_put_sync(hdev->dev);
 		clk_disable(hdev->res.hdmi);
@@ -342,11 +343,9 @@ static int hdmi_s_power(struct v4l2_subdev *sd, int on)
 #else
 	if (on) {
 		clk_enable(hdev->res.hdmi);
-		hdmi_hpd_enable(hdev, 1);
 		set_internal_hpd_int(hdev);
 		hdmi_runtime_resume(hdev->dev);
 	} else {
-		hdmi_hpd_enable(hdev, 0);
 		set_external_hpd_int(hdev);
 		clk_disable(hdev->res.hdmi);
 		hdmi_runtime_suspend(hdev->dev);
@@ -389,7 +388,7 @@ int hdmi_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ctrl->value = hdev->dvi_mode;
 		break;
 	case V4L2_CID_TV_HPD_STATUS:
-		if (!pm_runtime_suspended(hdev->dev) && !hdev->hpd_user_checked)
+		if (hdev->curr_irq == hdev->int_irq && !hdev->hpd_user_checked)
 			ctrl->value = hdmi_hpd_status(hdev);
 		else
 			ctrl->value = atomic_read(&hdev->hpd_state);
@@ -693,12 +692,6 @@ static void s5p_hpd_kobject_uevent(struct work_struct *work)
 	char **envp = NULL;
 	int state = atomic_read(&hdev->hpd_state);
 
-	/* irq setting by TV power on/off status */
-	if (!pm_runtime_suspended(hdev->dev))
-		set_internal_hpd_int(hdev);
-	else
-		set_external_hpd_int(hdev);
-
 	if (state)
 		envp = connected;
 	else
@@ -708,6 +701,11 @@ static void s5p_hpd_kobject_uevent(struct work_struct *work)
 
 	kobject_uevent_env(&hdev->dev->kobj, KOBJ_CHANGE, envp);
 	pr_info("%s: sent uevent %s\n", __func__, envp[0]);
+
+	if (state)
+		set_internal_hpd_int(hdev);
+	else
+		set_external_hpd_int(hdev);
 }
 
 static int __devinit hdmi_probe(struct platform_device *pdev)
@@ -815,7 +813,7 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 	pm_runtime_enable(dev);
 
 	/* irq setting by TV power on/off status */
-	if (!pm_runtime_suspended(hdmi_dev->dev)) {
+	if (hdmi_dev->curr_irq == hdmi_dev->int_irq) {
 		hdmi_dev->curr_irq = hdmi_dev->int_irq;
 		irq_type = 0;
 		s5p_v4l2_int_src_hdmi_hpd();
