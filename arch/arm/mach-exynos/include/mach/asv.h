@@ -75,7 +75,8 @@ static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
 		__raw_writel(tmp, S5P_ABB_ARM);
 	} else {
 		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_INT));
-		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_MIF));
+		if (exynos_lot_id)
+			__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_MIF));
 		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_G3D));
 		__raw_writel(tmp, EXYNOS5_ABB_MEMBER(ABB_ARM));
 	}

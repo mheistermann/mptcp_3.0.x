@@ -41,6 +41,7 @@
 #include <mach/cpufreq.h>
 #include <mach/dev.h>
 #include <mach/busfreq_exynos5.h>
+#include <mach/asv.h>
 
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
@@ -149,6 +150,8 @@ static void _target(struct busfreq_data *data,
 				voltage + 25000);
 		if (type == PPMU_MIF && data->busfreq_prepare)
 			data->busfreq_prepare(index);
+		if (type == PPMU_MIF && index == LV_0)
+			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
 	}
 
 	data->target(data, type, index);
@@ -158,6 +161,8 @@ static void _target(struct busfreq_data *data,
 			voltage += volt_offset;
 		if (type == PPMU_MIF && data->busfreq_post)
 			data->busfreq_post(index);
+		if (type == PPMU_MIF && index > LV_0)
+			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_BYPASS);
 		regulator_set_voltage(data->vdd_reg[type], voltage,
 				voltage + 25000);
 	}
@@ -226,6 +231,8 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 		voltage[i] = opp_get_voltage(opp);
 
 		regulator_set_voltage(data->vdd_reg[i], voltage[i], voltage[i] + 25000);
+		if (i == PPMU_MIF)
+			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
 	}
 	data->use = false;
 
