@@ -765,7 +765,7 @@ static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const
 	return count;
 }
 
-static ssize_t show_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t show_upper_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct kbase_device *kbdev;
 	ssize_t ret = 0;
@@ -784,10 +784,10 @@ static ssize_t show_lock_dvfs(struct device *dev, struct device_attribute *attr,
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Upper Lock Level = %dMhz", locked_level );
 	else
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Upper Lock Level");
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, 100, If you want to unlock : 533");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, 100, If you want to unlock : 533 or off");
 
 #else
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not setting the Upper Lock level.");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not set");
 #endif
 
 	if (ret < PAGE_SIZE - 1)
@@ -802,7 +802,7 @@ static ssize_t show_lock_dvfs(struct device *dev, struct device_attribute *attr,
 	return ret;
 }
 
-static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t set_upper_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct kbase_device *kbdev;
 	kbdev = dev_get_drvdata(dev);
@@ -811,7 +811,9 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR_DVFS
-	if (sysfs_streq("533", buf)) {
+	if (sysfs_streq("off", buf)) {
+		mali_dvfs_freq_unlock();
+	} else if (sysfs_streq("533", buf)) {
 		mali_dvfs_freq_unlock();
 	} else if (sysfs_streq("450", buf)) {
 		mali_dvfs_freq_lock(5);
@@ -831,11 +833,86 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 		return -ENOENT;
 	}
 #else // CONFIG_VITHAR_DVFS
-	printk("G3D DVFS is disabled. You can not setting the Upper Lock level.\n");
+	printk("G3D DVFS is disabled. You can not set\n");
 #endif
 
 	return count;
 }
+
+static ssize_t show_under_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+#ifdef CONFIG_VITHAR_DVFS
+	unsigned int locked_level = -1;
+#endif
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+	locked_level = mali_get_dvfs_under_locked_freq();
+	if( locked_level > 0 )
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Under Lock Level = %dMhz", locked_level );
+	else
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Under Lock Level");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 266, 160, If you want to unlock : 100 or off");
+
+#else
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not set");
+#endif
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_under_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+	if (sysfs_streq("off", buf)) {
+		mali_dvfs_freq_under_unlock();
+	} else if (sysfs_streq("533", buf)) {
+		mali_dvfs_freq_under_lock(6);
+	} else if (sysfs_streq("450", buf)) {
+		mali_dvfs_freq_under_lock(5);
+	} else if (sysfs_streq("400", buf)) {
+		mali_dvfs_freq_under_lock(4);
+	} else if (sysfs_streq("350", buf)) {
+		mali_dvfs_freq_under_lock(3);
+	} else if (sysfs_streq("266", buf)) {
+		mali_dvfs_freq_under_lock(2);
+	} else if (sysfs_streq("160", buf)) {
+		mali_dvfs_freq_under_lock(1);
+	} else if (sysfs_streq("100", buf)) {
+		mali_dvfs_freq_under_unlock();
+	} else {
+		dev_err(dev, "set_clock: invalid value\n");
+		dev_err(dev, "Possible settings : 533, 450, 400, 266, 160, If you want to unlock : 100 or off\n");
+		return -ENOENT;
+	}
+#else // CONFIG_VITHAR_DVFS
+	printk("G3D DVFS is disabled. You can not set\n");
+#endif
+
+	return count;
+}
+
 static ssize_t show_asv(struct device *dev, struct device_attribute *attr, char *buf)
 {
 
@@ -920,7 +997,8 @@ DEVICE_ATTR(dtlb, S_IRUGO|S_IWUSR, show_dtlb, set_dtlb);
 DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, NULL);
 DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
-DEVICE_ATTR(dvfs_lock, S_IRUGO|S_IWUSR, show_lock_dvfs, set_lock_dvfs);
+DEVICE_ATTR(dvfs_upper_lock, S_IRUGO|S_IWUSR, show_upper_lock_dvfs, set_upper_lock_dvfs);
+DEVICE_ATTR(dvfs_under_lock, S_IRUGO|S_IWUSR, show_under_lock_dvfs, set_under_lock_dvfs);
 DEVICE_ATTR(asv, S_IRUGO|S_IWUSR, show_asv, set_asv);
 DEVICE_ATTR(time_in_state, S_IRUGO|S_IWUSR, show_time_in_state, set_time_in_state);
 
@@ -962,9 +1040,15 @@ static int kbase_platform_create_sysfs_file(struct device *dev)
 		goto out;
 	}
 
-	if (device_create_file(dev, &dev_attr_dvfs_lock))
+	if (device_create_file(dev, &dev_attr_dvfs_upper_lock))
 	{
-		dev_err(dev, "Couldn't create sysfs file [dvfs_lock]\n");
+		dev_err(dev, "Couldn't create sysfs file [dvfs_upper_lock]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_dvfs_under_lock))
+	{
+		dev_err(dev, "Couldn't create sysfs file [dvfs_under_lock]\n");
 		goto out;
 	}
 
@@ -992,7 +1076,8 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_vol);
 	device_remove_file(dev, &dev_attr_clkout);
 	device_remove_file(dev, &dev_attr_dvfs);
-	device_remove_file(dev, &dev_attr_dvfs_lock);
+	device_remove_file(dev, &dev_attr_dvfs_upper_lock);
+	device_remove_file(dev, &dev_attr_dvfs_under_lock);
 	device_remove_file(dev, &dev_attr_asv);
 	device_remove_file(dev, &dev_attr_time_in_state);
 }

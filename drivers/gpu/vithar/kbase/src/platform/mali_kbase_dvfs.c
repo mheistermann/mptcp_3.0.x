@@ -367,9 +367,6 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	if ((dvfs_status.upper_lock >= 0)&&(dvfs_status.step > dvfs_status.upper_lock)) {
 		dvfs_status.step = dvfs_status.upper_lock;
-		if ((dvfs_status.under_lock > 0)&&(dvfs_status.under_lock > dvfs_status.upper_lock)) {
-			dvfs_status.under_lock = dvfs_status.upper_lock;
-		}
 	}
 	if (dvfs_status.under_lock > 0) {
 		if (dvfs_status.step < dvfs_status.under_lock)
@@ -524,8 +521,15 @@ int mali_dvfs_freq_lock(int level)
 {
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
+	if (mali_dvfs_status_current.under_lock >= 0) {
+		printk( KERN_ERR "[G3D] Upper lock Error : Under lock is already set\n");
+		osk_spinlock_unlock(&mali_dvfs_spinlock);
+		return -1;
+	}
 	mali_dvfs_status_current.upper_lock = level;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
+
+	printk( "[G3D] Upper Lock Set : %d\n", level );
 #endif
 	return 0;
 }
@@ -536,14 +540,23 @@ void mali_dvfs_freq_unlock(void)
 	mali_dvfs_status_current.upper_lock = -1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 #endif
+
+	printk("[G3D] Upper Lock Unset\n");
 }
 
 int mali_dvfs_freq_under_lock(int level)
 {
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	osk_spinlock_lock(&mali_dvfs_spinlock);
+	if (mali_dvfs_status_current.upper_lock >= 0) {
+		printk( KERN_ERR "[G3D] Under lock Error : Upper lock is already set\n");
+		osk_spinlock_unlock(&mali_dvfs_spinlock);
+		return -1;
+	}
 	mali_dvfs_status_current.under_lock = level;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
+
+	printk( "[G3D] Under Lock Set : %d\n", level );
 #endif
 	return 0;
 }
@@ -554,6 +567,8 @@ void mali_dvfs_freq_under_unlock(void)
 	mali_dvfs_status_current.under_lock = -1;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 #endif
+
+	printk("[G3D] Under Lock Unset\n");
 }
 
 int kbase_platform_regulator_init(struct device *dev)
