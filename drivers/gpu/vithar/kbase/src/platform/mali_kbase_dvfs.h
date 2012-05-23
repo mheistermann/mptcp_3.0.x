@@ -64,6 +64,7 @@ int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
 int kbase_platform_dvfs_get_utilisation(void);
 #endif
 
+int mali_get_dvfs_current_level(void);
 int mali_get_dvfs_upper_locked_freq(void);
 int mali_get_dvfs_under_locked_freq(void);
 int mali_dvfs_freq_lock(int level);

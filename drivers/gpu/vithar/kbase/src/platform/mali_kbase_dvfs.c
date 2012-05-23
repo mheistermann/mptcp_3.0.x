@@ -255,6 +255,9 @@ static int mali_dvfs_update_asv(int group)
 		else
 			mali_dvfs_infotbl[i].voltage = mali_dvfs_asv_vol_tbl[group][i];
 	}
+
+	printk("VDD_G3D : Voltage table set with %d Group, exynos_lot_id : %d\n", group, exynos_lot_id);
+
 	return 0;
 }
 #endif
@@ -516,6 +519,18 @@ int mali_get_dvfs_under_locked_freq(void)
 	return locked_level;
 }
 
+int mali_get_dvfs_current_level(void)
+{
+	unsigned int current_level = -1;
+
+#ifdef CONFIG_VITHAR_FREQ_LOCK
+	osk_spinlock_lock(&mali_dvfs_spinlock);
+	current_level = mali_dvfs_status_current.step;
+	osk_spinlock_unlock(&mali_dvfs_spinlock);
+#endif
+
+	return current_level;
+}
 
 int mali_dvfs_freq_lock(int level)
 {
