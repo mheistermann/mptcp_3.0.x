@@ -987,8 +987,7 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	s8 retry = 3;
 	int i;
 
-	if (opcode != MMC_SEND_TUNING_BLOCK_HS200 &&
-			opcode != MMC_SEND_TUNING_BLOCK) {
+	if (opcode != MMC_SEND_TUNING_BLOCK_HS200) {
 		dev_err(&mmc->class_dev,
 			"Undefined command(%d) for tuning\n",
 			opcode);
@@ -1241,12 +1240,12 @@ static void dw_mci_tasklet_func(unsigned long priv)
 
 			if (data && cmd->error &&
 					cmd != data->stop) {
-				host->data = host->mrq->data;
 				if (host->mrq->data->stop) {
+					host->data = host->mrq->data;
 					send_stop_cmd(host, host->mrq->data);
+					state = STATE_SENDING_STOP;
+					break;
 				}
-				state = STATE_SENDING_STOP;
-				break;
 			}
 
 			if (!host->mrq->data || cmd->error) {
@@ -1650,6 +1649,27 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static bool mci_wait_reset(struct device *dev, struct dw_mci *host)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(500);
+	unsigned int ctrl;
+
+	mci_writel(host, CTRL, (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET |
+				SDMMC_CTRL_DMA_RESET));
+
+	/* wait till resets clear */
+	do {
+		ctrl = mci_readl(host, CTRL);
+		if (!(ctrl & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET |
+			      SDMMC_CTRL_DMA_RESET)))
+			return true;
+	} while (time_before(jiffies, timeout));
+
+	dev_err(dev, "Timeout resetting block (ctrl %#x)\n", ctrl);
+
+	return false;
+}
+
 static void dw_mci_tasklet_card(unsigned long data)
 {
 	struct dw_mci *host = (struct dw_mci *)data;
@@ -1743,16 +1763,15 @@ static void dw_mci_tasklet_card(unsigned long data)
 				sg_miter_stop(&host->sg_miter);
 				host->sg = NULL;
 
-				ctrl = mci_readl(host, CTRL);
-				ctrl |= SDMMC_CTRL_FIFO_RESET;
-				mci_writel(host, CTRL, ctrl);
+				mci_wait_reset(&host->pdev->dev, host);
+				mci_writel(host, CTRL, SDMMC_CTRL_INT_ENABLE);
+
 
 #ifdef CONFIG_MMC_DW_IDMAC
 				ctrl = mci_readl(host, BMOD);
 				ctrl |= 0x01; /* Software reset of DMA */
 				mci_writel(host, BMOD, ctrl);
 #endif
-
 			}
 
 			spin_unlock(&host->lock);
@@ -1926,27 +1945,6 @@ no_dma:
 	dev_info(&host->pdev->dev, "Using PIO mode.\n");
 	host->use_dma = 0;
 	return;
-}
-
-static bool mci_wait_reset(struct device *dev, struct dw_mci *host)
-{
-	unsigned long timeout = jiffies + msecs_to_jiffies(500);
-	unsigned int ctrl;
-
-	mci_writel(host, CTRL, (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET |
-				SDMMC_CTRL_DMA_RESET));
-
-	/* wait till resets clear */
-	do {
-		ctrl = mci_readl(host, CTRL);
-		if (!(ctrl & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET |
-			      SDMMC_CTRL_DMA_RESET)))
-			return true;
-	} while (time_before(jiffies, timeout));
-
-	dev_err(dev, "Timeout resetting block (ctrl %#x)\n", ctrl);
-
-	return false;
 }
 
 static int dw_mci_probe(struct platform_device *pdev)
