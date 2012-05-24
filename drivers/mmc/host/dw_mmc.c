@@ -1705,10 +1705,10 @@ static void dw_mci_tasklet_card(unsigned long data)
 					case STATE_DATA_ERROR:
 						if (mrq->data->error == -EINPROGRESS)
 							mrq->data->error = -ENOMEDIUM;
-						if (!mrq->stop)
-							break;
 						/* fall through */
 					case STATE_SENDING_STOP:
+						if (!mrq->stop)
+							break;
 						mrq->stop->error = -ENOMEDIUM;
 						break;
 					}
