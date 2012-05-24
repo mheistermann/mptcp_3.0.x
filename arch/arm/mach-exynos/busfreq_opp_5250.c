@@ -59,6 +59,8 @@
 
 #define INT_RBB		6	/* +300mV */
 
+static bool init_done;
+
 static const unsigned int max_threshold[PPMU_TYPE_END] = {
 	MIF_MAX_THRESHOLD,
 	INT_MAX_THRESHOLD,
@@ -684,7 +686,7 @@ int exynos5250_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq)
 	int i;
 
 	/* check if req_volt has value or not */
-	if (!req_volt) {
+	if (!init_done || !req_volt) {
 		pr_err("%s: req_volt has no value.\n", __func__);
 		return -EINVAL;
 	}
@@ -1082,5 +1084,6 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		__raw_writel(tmp, EXYNOS5_ABBG_INT_CONTROL);
 	}
 
+	init_done = true;
 	return 0;
 }

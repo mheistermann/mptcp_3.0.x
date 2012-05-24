@@ -41,6 +41,7 @@
 #include <mach/cpufreq.h>
 #include <mach/dev.h>
 #include <mach/busfreq_exynos5.h>
+#include <mach/smc.h>
 #include <mach/asv.h>
 
 #include <plat/map-s5p.h>
@@ -383,6 +384,20 @@ void exynos_request_apply(unsigned long freq)
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
+	unsigned int val = 0;
+
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc_readsfr(EXYNOS5_PA_DREXII + 0x4, &val);
+#else
+	val = __raw_readl(S5P_VA_DREXII + 0x4);
+#endif
+	val = (val >> 8) & 0xf;
+
+	/* Check Memory Type Only support -> 0x5: 0xLPDDR2, 0x7: LPDDR3 */
+	if (val != 0x5 && val != 0x7) {
+		pr_err("[ %x ] Memory is not LPDDR type.\n", val);
+		return -ENODEV;
+	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
 	if (!data) {
