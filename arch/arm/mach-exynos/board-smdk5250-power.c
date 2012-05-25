@@ -9,6 +9,7 @@
 */
 
 #include <linux/platform_device.h>
+#include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/regulator/machine.h>
 #include <linux/mfd/max8997.h>
@@ -21,15 +22,15 @@
 #include <plat/devs.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
+#include <plat/gpio-cfg.h>
 
 #include <mach/ppmu.h>
 #include <mach/dev.h>
 #include <mach/regs-pmu.h>
+#include <mach/irqs.h>
 
-#ifdef CONFIG_REGULATOR_S5M8767
 #include <linux/mfd/s5m87xx/s5m-core.h>
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
-#endif
 
 #if defined(CONFIG_EXYNOS_THERMAL)
 #include <mach/tmu.h>
@@ -535,7 +536,6 @@ static struct max77686_platform_data smdk5250_max77686_info = {
 	.buck4_voltage[7] = 900000,	/* 0.9V */
 };
 
-#ifdef CONFIG_REGULATOR_S5M8767
 /* S5M8767 Regulator */
 static int s5m_cfg_irq(void)
 {
@@ -544,6 +544,9 @@ static int s5m_cfg_irq(void)
 	s3c_gpio_setpull(EXYNOS5_GPX3(2), S3C_GPIO_PULL_UP);
 	return 0;
 }
+
+static struct regulator_consumer_supply s5m8767_ldo4_consumer =
+	REGULATOR_SUPPLY("vdd_ldo4", NULL);
 
 static struct regulator_consumer_supply s5m8767_buck1_consumer =
 	REGULATOR_SUPPLY("vdd_mif", NULL);
@@ -560,7 +563,7 @@ static struct regulator_consumer_supply s5m8767_buck4_consumer =
 static struct regulator_init_data s5m8767_buck1_data = {
 	.constraints	= {
 		.name		= "vdd_mif range",
-		.min_uV		= 950000,
+		.min_uV		=  950000,
 		.max_uV		= 1300000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
@@ -608,7 +611,7 @@ static struct regulator_init_data s5m8767_buck3_data = {
 static struct regulator_init_data s5m8767_buck4_data = {
 	.constraints	= {
 		.name		= "vdd_g3d range",
-		.min_uV		=  850000,
+		.min_uV		=  700000,
 		.max_uV		= 1300000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
@@ -621,7 +624,23 @@ static struct regulator_init_data s5m8767_buck4_data = {
 	.consumer_supplies = &s5m8767_buck4_consumer,
 };
 
+static struct regulator_init_data s5m8767_ldo4_data = {
+	.constraints	= {
+		.name		= "vdd_ldo4",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_ldo4_consumer,
+};
+
 static struct s5m_regulator_data gaia_regulators[] = {
+	{S5M8767_LDO4, &s5m8767_ldo4_data},
 	{S5M8767_BUCK1, &s5m8767_buck1_data},
 	{S5M8767_BUCK2, &s5m8767_buck2_data},
 	{S5M8767_BUCK3, &s5m8767_buck3_data},
@@ -629,6 +648,7 @@ static struct s5m_regulator_data gaia_regulators[] = {
 };
 
 struct s5m_opmode_data s5m8767_opmode_data[S5M8767_REG_MAX] = {
+	[S5M8767_LDO4] = {S5M8767_LDO4, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK1] = {S5M8767_BUCK1, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK2] = {S5M8767_BUCK2, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK3] = {S5M8767_BUCK3, S5M_OPMODE_STANDBY},
@@ -645,57 +665,38 @@ static struct s5m_platform_data smdk5250_s5m8767_pdata = {
 	.opmode_data		= s5m8767_opmode_data,
 	.wtsr_smpl		= 1,
 
-	.buck2_voltage[0]	= 1250000,
-	.buck2_voltage[1]	= 1200000,
-	.buck2_voltage[2]	= 1150000,
-	.buck2_voltage[3]	= 1100000,
-	.buck2_voltage[4]	= 1050000,
-	.buck2_voltage[5]	= 1000000,
-	.buck2_voltage[6]	=  950000,
-	.buck2_voltage[7]	=  900000,
+	.buck_default_idx	= 1,
+	.buck_gpios[0]		= EXYNOS5_GPD1(0),
+	.buck_gpios[1]		= EXYNOS5_GPD1(1),
+	.buck_gpios[2]		= EXYNOS5_GPD1(2),
 
-	.buck3_voltage[0]	= 1100000,
-	.buck3_voltage[1]	= 1000000,
-	.buck3_voltage[2]	= 950000,
-	.buck3_voltage[3]	= 900000,
-	.buck3_voltage[4]	= 1100000,
-	.buck3_voltage[5]	= 1000000,
-	.buck3_voltage[6]	= 950000,
-	.buck3_voltage[7]	= 900000,
-
-	.buck4_voltage[0]	= 1200000,
-	.buck4_voltage[1]	= 1150000,
-	.buck4_voltage[2]	= 1200000,
-	.buck4_voltage[3]	= 1100000,
-	.buck4_voltage[4]	= 1100000,
-	.buck4_voltage[5]	= 1100000,
-	.buck4_voltage[6]	= 1100000,
-	.buck4_voltage[7]	= 1100000,
+	.buck_ds[0]		= EXYNOS5_GPX2(3),
+	.buck_ds[1]		= EXYNOS5_GPX2(4),
+	.buck_ds[2]		= EXYNOS5_GPX2(5),
 
 	.buck_ramp_delay        = 25,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
+
+	.buck2_init		= 1200000,
+	.buck3_init		= 1200000,
+	.buck4_init		= 1200000,
 };
 /* End of S5M8767 */
-#endif
 
 static struct i2c_board_info i2c_devs0[] __initdata = {
-#ifdef CONFIG_REGULATOR_S5M8767
 	{
 		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
 		.platform_data = &smdk5250_s5m8767_pdata,
 		.irq		= IRQ_EINT(26),
-	},
-#else
-	{
+	}, {
 		I2C_BOARD_INFO("max8997", 0x66),
 		.platform_data	= &smdk5250_max8997_info,
 	}, {
 		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
 		.platform_data	= &smdk5250_max77686_info,
 	},
-#endif
 };
 
 #ifdef CONFIG_BATTERY_SAMSUNG

@@ -144,11 +144,10 @@ static int s5m87xx_i2c_probe(struct i2c_client *i2c,
 		dev_info(s5m87xx->dev, "S5M MFD Detected. DEVICE ID = %x\n", data);
 	else {
 		dev_err(s5m87xx->dev,
-			"device not found on this channel (this is not an error)\n");
+			"device not found on this channel ID = %x(this is not an error)\n", data);
 		ret = -ENODEV;
 		goto err_mfd;
 	}
-
 	s5m87xx->rtc = i2c_new_dummy(i2c->adapter, RTC_I2C_ADDR);
 	i2c_set_clientdata(s5m87xx->rtc, s5m87xx);
 
