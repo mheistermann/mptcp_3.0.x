@@ -194,7 +194,13 @@ static struct map_desc exynos5250_rev_1_iodesc[] __initdata = {
 		.pfn		= __phys_to_pfn(EXYNOS5250_REV1_PA_GIC_DIST),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_DREXII,
+		.pfn		= __phys_to_pfn(EXYNOS5_PA_DREXII),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
 	},
+
 };
 
 static void exynos5_idle(void)
