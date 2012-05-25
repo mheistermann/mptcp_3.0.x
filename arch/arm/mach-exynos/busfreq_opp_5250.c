@@ -52,9 +52,9 @@
 #define INT_IDLE_THRESHOLD	2
 
 #ifdef CONFIG_S5P_DP
-#define MIF_LOCK_LCD		300160
+#define MIF_LOCK_LCD		300000
 #else
-#define MIF_LOCK_LCD		300133
+#define MIF_LOCK_LCD		100000
 #endif
 
 #define INT_RBB		6	/* +300mV */
