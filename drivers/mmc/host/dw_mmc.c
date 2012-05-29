@@ -1226,8 +1226,8 @@ static void dw_mci_tasklet_func(unsigned long priv)
 			break;
 
 		case STATE_SENDING_CMD:
-			if (!test_and_clear_bit(EVENT_CMD_COMPLETE,
-						&host->pending_events))
+			if (!test_and_clear_bit(EVENT_CMD_COMPLETE, &host->pending_events)
+					&& test_bit(DW_MMC_CARD_PRESENT, &host->cur_slot->flags))
 				break;
 
 			cmd = host->cmd;
@@ -1625,6 +1625,7 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 		if (pending & SDMMC_INT_CD) {
 			mci_writel(host, RINTSTS, SDMMC_INT_CD);
 			tasklet_schedule(&host->card_tasklet);
+			tasklet_schedule(&host->tasklet);
 		}
 
 		/* Handle SDIO Interrupts */
