@@ -37,6 +37,8 @@
 						struct s3c_fb_user_ion_client)
 #define S3CFB_PAN_DISPLAY_INDEX		_IOW('F', 209, __u32)
 
+#define S3CFB_GET_CUR_WIN_BUF_ADDR	_IOR('F', 311, __u32)
+
 /**
  * struct s3c_fb_pd_win - per window setup data
  * @win_mode: The display parameters to initialise (not for window 0)

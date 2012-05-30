@@ -446,3 +446,6 @@
 /* Window alpha control */
 #define VIDW0ALPHA0				(0x200)
 #define VIDW0ALPHA1				(0x204)
+
+/* Shadow Video buffer addresses */
+#define SHD_VIDW_BUF_START(_buff)		(0x40A0 + ((_buff) * 8))

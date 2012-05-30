@@ -1346,6 +1346,17 @@ int s3c_fb_set_chroma_key(struct fb_info *info,
 	return 0;
 }
 
+int s3c_fb_get_cur_win_buf_addr(struct fb_info *info, int id)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	dma_addr_t start_addr = 0;
+
+	start_addr = readl(sfb->regs + SHD_VIDW_BUF_START(id));
+
+	return start_addr;
+}
+
 #ifdef CONFIG_ION_EXYNOS
 static int s3c_fb_get_user_ion_handle(struct s3c_fb *sfb,
 				struct s3c_fb_win *win,
@@ -1379,6 +1390,7 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	u32 buf_index;
 	u32 size;
 #endif
+	dma_addr_t start_addr = 0;
 
 	union {
 		struct s3c_fb_user_window user_window;
@@ -1440,6 +1452,16 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 	case S3CFB_SET_VSYNC_INT:
 		/* unnecessary, but for compatibility */
+		ret = 0;
+		break;
+
+	case S3CFB_GET_CUR_WIN_BUF_ADDR:
+		start_addr = s3c_fb_get_cur_win_buf_addr(info, win->index);
+		if (copy_to_user((void *)arg, &start_addr,
+				sizeof(unsigned int))) {
+			ret = -EFAULT;
+			break;
+		}
 		ret = 0;
 		break;
 
