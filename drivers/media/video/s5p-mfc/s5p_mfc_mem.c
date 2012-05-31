@@ -281,7 +281,7 @@ int s5p_mfc_mem_clean_vb(struct vb2_buffer *vb, u32 num_planes)
 		if (!cookie)
 			continue;
 
-		vb2_ion_sync_for_device(cookie, cookie->offset,
+		vb2_ion_sync_for_device(cookie, 0,
 					cookie->size, DMA_TO_DEVICE);
 	}
 
@@ -298,7 +298,7 @@ int s5p_mfc_mem_inv_vb(struct vb2_buffer *vb, u32 num_planes)
 		if (!cookie)
 			continue;
 
-		vb2_ion_sync_for_device(cookie, cookie->offset,
+		vb2_ion_sync_for_device(cookie, 0,
 					cookie->size, DMA_FROM_DEVICE);
 	}
 
@@ -319,7 +319,7 @@ int s5p_mfc_mem_flush_vb(struct vb2_buffer *vb, u32 num_planes)
 		if (!cookie)
 			continue;
 
-		vb2_ion_sync_for_device(cookie, cookie->offset,
+		vb2_ion_sync_for_device(cookie, 0,
 					cookie->size, dir);
 	}
 
