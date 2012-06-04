@@ -63,5 +63,5 @@ extern struct asv_info *asv_get(enum asv_type_id exynos_asv_type_id);
 extern unsigned int get_match_volt(enum asv_type_id target_type, unsigned int target_freq);
 
 /* define function for initialize of SoC */
-
+extern int exynos5250_init_asv(struct asv_common *asv_info);
 #endif /* __ASM_ARCH_NEW_ASV_H */

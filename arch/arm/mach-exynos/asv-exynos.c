@@ -49,7 +49,7 @@ unsigned int get_match_volt(enum asv_type_id target_type, unsigned int target_fr
 	unsigned int target_dvfs_level = match_asv_info->dvfs_level_nr;
 	unsigned int i;
 
-	for (i = 0; i < target_dvfs_level; i++){
+	for (i = 0; i < target_dvfs_level; i++) {
 		if (match_asv_info->asv_volt[i].asv_freq == target_freq)
 			return match_asv_info->asv_volt[i].asv_volt;
 	}
@@ -69,6 +69,10 @@ static void set_asv_info(struct asv_common *exynos_asv_common, bool show_volt)
 		pr_info("%s ASV group is %d\n", exynos_asv_info->name,
 						exynos_asv_info->result_asv_grp);
 		exynos_asv_info->ops->set_asv_info(exynos_asv_info, show_volt);
+
+		/* If need to set abb, call abb set function */
+		if (exynos_asv_info->abb_info)
+			exynos_asv_info->abb_info->set_target_abb(exynos_asv_info);
 	}
 }
 
@@ -82,6 +86,19 @@ static int __init asv_init(void)
 	if (!exynos_asv_common) {
 		pr_err("ASV : Allocation failed\n");
 		goto out1;
+	}
+
+	/* Define init function for each SoC types */
+	if (soc_is_exynos5250())
+		ret = exynos5250_init_asv(exynos_asv_common);
+	else {
+		pr_err("ASV : Unknown SoC type\n");
+		goto out2;
+	}
+
+	if (ret) {
+		pr_err("ASV : asv initialize failed\n");
+		goto out2;
 	}
 
 	/* If it is need to initialize, run init function */
@@ -102,9 +119,10 @@ static int __init asv_init(void)
 
 	set_asv_info(exynos_asv_common, false);
 
+	return 0;
 out2:
 	kfree(exynos_asv_common);
 out1:
 	return -EINVAL;
 }
-device_initcall_sync(asv_init);
+arch_initcall_sync(asv_init);
