@@ -887,14 +887,18 @@ static int gsc_capture_streamon(struct file *file, void *priv,
 {
 	struct gsc_dev *gsc = video_drvdata(file);
 	struct gsc_pipeline *p = &gsc->pipeline;
+#ifdef CONFIG_BUSFREQ_OPP
 	struct device *dev = &gsc->pdev->dev;
+#endif
 	int ret;
 
 	if (gsc_cap_active(gsc))
 		return -EBUSY;
 
 	if (p->disp) {
+#ifdef CONFIG_BUSFREQ_OPP
 		dev_lock(gsc->bus_dev, dev, 267200);
+#endif
 		media_entity_pipeline_start(&p->disp->entity, p->pipe);
 	} else if (p->sensor) {
 		media_entity_pipeline_start(&p->sensor->entity, p->pipe);
@@ -913,7 +917,9 @@ static int gsc_capture_streamoff(struct file *file, void *priv,
 	struct gsc_dev *gsc = video_drvdata(file);
 	struct v4l2_subdev *sd;
 	struct gsc_pipeline *p = &gsc->pipeline;
+#ifdef CONFIG_BUSFREQ_OPP
 	struct device *dev = &gsc->pdev->dev;
+#endif
 	int ret;
 
 	if (p->disp) {
@@ -928,7 +934,9 @@ static int gsc_capture_streamoff(struct file *file, void *priv,
 	ret = vb2_streamoff(&gsc->cap.vbq, type);
 	if (ret == 0) {
 		if (p->disp) {
+#ifdef CONFIG_BUSFREQ_OPP
 			dev_unlock(gsc->bus_dev, dev);
+#endif
 			media_entity_pipeline_stop(&p->disp->entity);
 		} else if (p->sensor) {
 			media_entity_pipeline_stop(&p->sensor->entity);

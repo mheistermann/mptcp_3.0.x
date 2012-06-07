@@ -835,8 +835,10 @@ static int gsc_g_ctrl(struct v4l2_ctrl *ctrl)
 static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct gsc_ctx *ctx = ctrl_to_ctx(ctrl);
+#ifdef CONFIG_BUSFREQ_OPP
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct device *dev = &gsc->pdev->dev;
+#endif
 	int ret;
 
 	switch (ctrl->id) {
@@ -875,16 +877,18 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_USE_SYSMMU:
 		update_ctrl_value(ctx->gsc_ctrls.use_sysmmu, ctrl->val);
 		break;
-#ifdef CONFIG_BUSFREQ_OPP
 	case V4L2_CID_BUSFREQ_LOCK:
+#ifdef CONFIG_BUSFREQ_OPP
 		/* lock bus frequency */
 		dev_lock(gsc->bus_dev, dev, (unsigned long)ctrl->val);
+#endif
 		break;
 	case V4L2_CID_BUSFREQ_UNLOCK:
+#ifdef CONFIG_BUSFREQ_OPP
 		/* unlock bus frequency */
 		dev_unlock(gsc->bus_dev, dev);
-		break;
 #endif
+		break;
 	default:
 		ret = gsc_s_ctrl_to_mxr(ctrl);
 		if (ret) {
@@ -1012,9 +1016,7 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.flags = V4L2_CTRL_FLAG_SLIDER,
 		.max = DEFAULT_USE_SYSMMU,
 		.def = DEFAULT_USE_SYSMMU,
-	},
-#ifdef CONFIG_BUSFREQ_OPP
-	{
+	}, {
 		.ops = &gsc_ctrl_ops,
 		.id = V4L2_CID_BUSFREQ_LOCK,
 		.name = "lock bus frequency",
@@ -1035,7 +1037,6 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.max = GSC_MAX_FREQ,
 		.def = 0,
 	},
-#endif
 };
 
 int gsc_ctrls_create(struct gsc_ctx *ctx)
@@ -1084,12 +1085,10 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 	ctx->gsc_ctrls.use_sysmmu = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[12], NULL);
 
-#ifdef CONFIG_BUSFREQ_OPP
 	ctx->gsc_ctrls.bus_freq = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[13], NULL);
 	ctx->gsc_ctrls.bus_freq = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[14], NULL);
-#endif
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
 	if (ctx->ctrl_handler.error) {

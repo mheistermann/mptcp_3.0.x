@@ -110,9 +110,7 @@ extern int gsc_dbg;
 #define GSC_SC_DOWN_RATIO_3_8		174762
 #define GSC_SC_DOWN_RATIO_2_8		262144
 
-#ifdef CONFIG_BUSFREQ_OPP
 #define EXYNOS_BUSFREQ_NAME	"exynos-busfreq"
-#endif
 
 enum gsc_dev_flags {
 	/* for global */
@@ -550,10 +548,8 @@ struct gsc_dev {
 	struct exynos_md		*mdev[2];
 	struct gsc_pipeline		pipeline;
 	struct exynos_entity_data	md_data;
-	bool 				use_sysmmu;
-#ifdef CONFIG_BUSFREQ_OPP
+	bool				use_sysmmu;
 	struct device			*bus_dev;
-#endif
 };
 
 /**
