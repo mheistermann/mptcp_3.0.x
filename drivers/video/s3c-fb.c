@@ -222,6 +222,7 @@ struct s3c_fb_win {
 	struct media_pad pads[FIMD_PADS_NUM];	/* window's pad : 1 sink */
 	struct v4l2_subdev sd;		/* Take a window as a v4l2_subdevice */
 	int end_stream;
+	int last_frame;
 #endif
 };
 
@@ -1163,7 +1164,8 @@ static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 		shadow_protect_win(win, 0);
 
 		sfb->windows[0]->end_stream = 0;
-	}
+	} else if (sfb->windows[0]->last_frame)
+		sfb->windows[0]->last_frame = 0;
 #endif
 
 	irq_sts_reg = readl(regs + VIDINTCON1);
@@ -2107,7 +2109,14 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 		sfb->windows[0]->end_stream = 1;
 		ret = s3c_fb_wait_for_vsync(sfb, 0);
 		if (ret) {
-			dev_err(sfb->dev, "wait timeout(writeback) : %s\n",
+			dev_err(sfb->dev, "wait timeout(end_stream) : %s\n",
+				__func__);
+			return ret;
+		}
+		sfb->windows[0]->last_frame = 1;
+		ret = s3c_fb_wait_for_vsync(sfb, 0);
+		if (ret) {
+			dev_err(sfb->dev, "wait timeout(last_frame) : %s\n",
 				__func__);
 			return ret;
 		}
