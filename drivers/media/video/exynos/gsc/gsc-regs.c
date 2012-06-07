@@ -100,11 +100,6 @@ void gsc_hw_set_in_chrom_stride(struct gsc_ctx *ctx)
 	struct gsc_frame *frame = &ctx->s_frame;
 	u32 chrom_size, cfg;
 
-	cfg = readl(dev->regs + GSC_IN_CON);
-	cfg |= GSC_IN_CHROM_STRIDE_SEPAR;
-	writel(cfg, dev->regs + GSC_IN_CON);
-
-	cfg &= ~GSC_IN_CHROM_STRIDE_MASK;
 	chrom_size = ALIGN(frame->f_width / 2, 16) * 2;
 	cfg = GSC_IN_CHROM_STRIDE_VALUE(chrom_size);
 	writel(cfg, dev->regs + GSC_IN_CHROM_STRIDE);
@@ -116,11 +111,6 @@ void gsc_hw_set_out_chrom_stride(struct gsc_ctx *ctx)
 	struct gsc_frame *frame = &ctx->d_frame;
 	u32 chrom_size, cfg;
 
-	cfg = readl(dev->regs + GSC_OUT_CON);
-	cfg |= GSC_OUT_CHROM_STRIDE_SEPAR;
-	writel(cfg, dev->regs + GSC_OUT_CON);
-
-	cfg &= ~GSC_OUT_CHROM_STRIDE_MASK;
 	chrom_size = ALIGN(frame->f_width / 2, 16) * 2;
 	cfg = GSC_OUT_CHROM_STRIDE_VALUE(chrom_size);
 	writel(cfg, dev->regs + GSC_OUT_CHROM_STRIDE);
@@ -487,8 +477,10 @@ void gsc_hw_set_in_image_format(struct gsc_ctx *ctx)
 		break;
 	};
 
-	if (is_AYV12(frame->fmt->pixelformat))
+	if (is_AYV12(frame->fmt->pixelformat)){
+		cfg |= GSC_IN_CHROM_STRIDE_SEPAR;
 		gsc_hw_set_in_chrom_stride(ctx);
+	}
 
 	if (is_tiled(frame->fmt))
 		cfg |= GSC_IN_TILE_C_16x8 | GSC_IN_TILE_MODE;
@@ -620,8 +612,10 @@ void gsc_hw_set_out_image_format(struct gsc_ctx *ctx)
 		break;
 	};
 
-	if (is_AYV12(frame->fmt->pixelformat))
+	if (is_AYV12(frame->fmt->pixelformat)) {
+		cfg |= GSC_OUT_CHROM_STRIDE_SEPAR;
 		gsc_hw_set_out_chrom_stride(ctx);
+	}
 end_set:
 	writel(cfg, dev->regs + GSC_OUT_CON);
 }
