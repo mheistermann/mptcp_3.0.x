@@ -3155,8 +3155,6 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 					  0);
 	}
 
-	ctx->state = MFCINST_FINISHED;
-
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
