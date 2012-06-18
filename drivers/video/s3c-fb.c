@@ -226,15 +226,19 @@ struct s3c_fb_win {
 
 /**
  * struct s3c_fb_vsync - vsync information
- * @wait:	a queue for processes waiting for vsync
- * @timestamp:	the time of the last vsync interrupt
- * @active:	whether userspace is requesting vsync uevents
- * @thread:	uevent-generating thread
+ * @wait:		a queue for processes waiting for vsync
+ * @timestamp:		the time of the last vsync interrupt
+ * @active:		whether userspace is requesting vsync uevents
+ * @irq_refcount:	reference count for the underlying irq
+ * @irq_lock:		mutex protecting the irq refcount and register
+ * @thread:		uevent-generating thread
  */
 struct s3c_fb_vsync {
 	wait_queue_head_t	wait;
 	ktime_t			timestamp;
 	bool			active;
+	int			irq_refcount;
+	struct mutex		irq_lock;
 	struct task_struct	*thread;
 };
 
@@ -1117,6 +1121,33 @@ static void s3c_fb_disable_irq(struct s3c_fb *sfb)
 	writel(irq_ctrl_reg, regs + VIDINTCON0);
 }
 
+static void s3c_fb_activate_vsync(struct s3c_fb *sfb)
+{
+	int prev_refcount;
+
+	mutex_lock(&sfb->vsync_info.irq_lock);
+
+	prev_refcount = sfb->vsync_info.irq_refcount++;
+	if (!prev_refcount)
+		s3c_fb_enable_irq(sfb);
+
+	mutex_unlock(&sfb->vsync_info.irq_lock);
+}
+
+static void s3c_fb_deactivate_vsync(struct s3c_fb *sfb)
+{
+	int new_refcount;
+
+	mutex_lock(&sfb->vsync_info.irq_lock);
+
+	new_refcount = --sfb->vsync_info.irq_refcount;
+	WARN_ON(new_refcount < 0);
+	if (!new_refcount)
+		s3c_fb_disable_irq(sfb);
+
+	mutex_unlock(&sfb->vsync_info.irq_lock);
+}
+
 static irqreturn_t s3c_fb_irq(int irq, void *dev_id)
 {
 	struct s3c_fb *sfb = dev_id;
@@ -1188,6 +1219,7 @@ static int s3c_fb_wait_for_vsync(struct s3c_fb *sfb, u32 timeout)
 	int ret;
 
 	timestamp = sfb->vsync_info.timestamp;
+	s3c_fb_activate_vsync(sfb);
 	if (timeout) {
 		ret = wait_event_interruptible_timeout(sfb->vsync_info.wait,
 				!ktime_equal(timestamp,
@@ -1198,6 +1230,7 @@ static int s3c_fb_wait_for_vsync(struct s3c_fb *sfb, u32 timeout)
 				!ktime_equal(timestamp,
 						sfb->vsync_info.timestamp));
 	}
+	s3c_fb_deactivate_vsync(sfb);
 
 	if (timeout && ret == 0)
 		return -ETIMEDOUT;
@@ -1304,6 +1337,23 @@ int s3c_fb_set_plane_alpha_blending(struct fb_info *info,
 	}
 
 	shadow_protect_win(win, 0);
+
+	return 0;
+}
+
+int s3c_fb_set_vsync_int(struct fb_info *info,
+		bool active)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	bool prev_active = sfb->vsync_info.active;
+
+	sfb->vsync_info.active = active;
+
+	if (active && !prev_active)
+		s3c_fb_activate_vsync(sfb);
+	else if (!active && prev_active)
+		s3c_fb_deactivate_vsync(sfb);
 
 	return 0;
 }
@@ -1456,8 +1506,7 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		sfb->vsync_info.active = p.vsync;
-		ret = 0;
+		ret = s3c_fb_set_vsync_int(info, p.vsync);
 		break;
 
 	case S3CFB_GET_CUR_WIN_BUF_ADDR:
@@ -2852,6 +2901,8 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	register_early_suspend(&sfb->early_suspend);
 #endif
 
+	mutex_init(&sfb->vsync_info.irq_lock);
+
 	sfb->vsync_info.thread = kthread_run(s3c_fb_wait_for_vsync_thread,
 			sfb, "s3c-fb-vsync");
 	if (sfb->vsync_info.thread == ERR_PTR(-ENOMEM)) {
@@ -2859,7 +2910,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		sfb->vsync_info.thread = NULL;
 	}
 
-	s3c_fb_enable_irq(sfb);
+	s3c_fb_wait_for_vsync(sfb, 0);
 
 	return 0;
 
@@ -3045,6 +3096,12 @@ static int s3c_fb_resume(struct device *dev)
 #ifdef CONFIG_LCD_MIPI_TC358764
 	fb_notifier_call_chain(FB_EVENT_RESUME, NULL);
 #endif
+	mutex_lock(&sfb->vsync_info.irq_lock);
+	if (sfb->vsync_info.irq_refcount)
+		s3c_fb_enable_irq(sfb);
+	mutex_unlock(&sfb->vsync_info.irq_lock);
+
+	s3c_fb_wait_for_vsync(sfb, 0);
 
 #ifdef CONFIG_S5P_DP
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
