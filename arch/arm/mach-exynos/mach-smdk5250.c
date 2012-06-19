@@ -440,6 +440,21 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 #endif
 };
 
+static struct i2c_board_info i2c_devs3[] __initdata = {
+	{
+		I2C_BOARD_INFO("pixcir_ts", 0x5C),
+		.irq		= IRQ_EINT(21),
+	},
+};
+
+struct s3c2410_platform_i2c i2c_data3 __initdata = {
+	.bus_num	= 3,
+	.flags		= 0,
+	.slave_addr	= 0x10,
+	.frequency	= 200*1000,
+	.sda_delay	= 100,
+};
+
 #ifdef CONFIG_S3C_DEV_HWMON
 static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
 	/* Reference voltage (1.2V) */
@@ -472,6 +487,7 @@ static struct notifier_block exynos5_reboot_notifier = {
 static struct platform_device *smdk5250_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c2,
+	&s3c_device_i2c3,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
@@ -964,6 +980,9 @@ static void __init smdk5250_machine_init(void)
 
 	s3c_i2c2_set_platdata(NULL);
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
+
+	s3c_i2c3_set_platdata(&i2c_data3);
+	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
 	s3c_i2c5_set_platdata(NULL);
