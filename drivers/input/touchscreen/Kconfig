@@ -219,6 +219,12 @@ config TOUCHSCREEN_EGALAX
 	help
 	  Say Y here if you have the Egalax 10.1\" touchscreen.
 
+config TOUCHSCREEN_COASIA
+	tristate "COASIA WXVGA 10.1\" touchscreen input driver"
+	depends on ARCH_EXYNOS5
+	help
+	  Say Y here if you have the CoAsia 10.1\" touchscreen.
+
 config TOUCHSCREEN_GUNZE
 	tristate "Gunze AHL-51S touchscreen"
 	select SERIO
