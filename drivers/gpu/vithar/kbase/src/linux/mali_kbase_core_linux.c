@@ -206,7 +206,7 @@ mali_error kbasep_kds_allocate_resource_list_data( kbase_context * kctx,
 		struct kds_resource * kds_res = NULL;
 
 		exclusive = res->ext_resource & BASE_EXT_RES_ACCESS_EXCLUSIVE;
-		reg = kbase_region_lookup(kctx, res->ext_resource & ~BASE_EXT_RES_ACCESS_EXCLUSIVE);
+		reg = kbase_region_tracker_find_region_enclosing_address(kctx, res->ext_resource & ~BASE_EXT_RES_ACCESS_EXCLUSIVE);
 
 		/* did we find a matching region object? */
 		if (NULL == reg)
@@ -744,9 +744,9 @@ bad_type:
 		{
 			kbase_error_params params = ((kbase_uk_error_params*)args)->params;
 			/*mutex lock*/
-			osk_spinlock_lock(&kbdev->osdev.reg_op_lock);
+			osk_spinlock_irq_lock(&kbdev->osdev.reg_op_lock);
 			ukh->ret = job_atom_inject_error(&params);
-			osk_spinlock_unlock(&kbdev->osdev.reg_op_lock);
+			osk_spinlock_irq_unlock(&kbdev->osdev.reg_op_lock);
 			/*mutex unlock*/
 
 			break;
@@ -757,13 +757,26 @@ bad_type:
 		{
 			kbase_model_control_params params = ((kbase_uk_model_control_params*)args)->params;
 			/*mutex lock*/
-			osk_spinlock_lock(&kbdev->osdev.reg_op_lock);
+			osk_spinlock_irq_lock(&kbdev->osdev.reg_op_lock);
 			ukh->ret = midg_model_control(kbdev->osdev.model, &params);
-			osk_spinlock_unlock(&kbdev->osdev.reg_op_lock);
+			osk_spinlock_irq_unlock(&kbdev->osdev.reg_op_lock);
 			/*mutex unlock*/
 			break;
 		}
 #endif /* MALI_NO_MALI */
+#ifdef CONFIG_VITHAR_DVFS
+		case KBASE_FUNC_REPORT_VSYNC:
+		{
+			kbase_uk_vsync_report *vr = (kbase_uk_vsync_report *)args;
+
+			if (sizeof(*vr) != args_size)
+			{
+				goto bad_size;
+			}
+			kbase_pm_report_vsync(kbdev, vr->val);
+			break;
+		}
+#endif
 		default:
 			dev_err(kbdev->osdev.dev, "unknown syscall %08x", ukh->id);
 			goto out_bad;
@@ -1577,6 +1590,7 @@ static int kbase_common_device_init(kbase_device *kbdev)
 #if BASE_HW_ISSUE_8401
 		,inited_workaround  = (1u << 7)
 #endif
+		,inited_pm_runtime_init = (1u << 8)
 	};
 
 	int inited = 0;
@@ -1627,13 +1641,12 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_file;
 	}
 
-#ifdef CONFIG_VITHAR
-	if(kbase_platform_init(osdev->dev))
+	/* Initialize platform specific context */
+	if(MALI_FALSE == kbasep_platform_device_init(kbdev))
 	{
-		dev_err(osdev->dev, "kbase_platform_init failed\n");
-		goto out_file;
+		goto out_plat_dev;
 	}
-#endif
+
 	down(&kbase_dev_list_lock);
 	list_add(&osdev->entry, &kbase_dev_list);
 	up(&kbase_dev_list_lock);
@@ -1654,6 +1667,16 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_partial;
 	}
 	inited |= inited_pm;
+
+	if(kbdev->pm.callback_power_runtime_init)
+	{
+		mali_err = kbdev->pm.callback_power_runtime_init(kbdev);
+		if (MALI_ERROR_NONE != mali_err)
+		{
+			goto out_partial;
+		}
+		inited |= inited_pm_runtime_init;
+	}
 
 	mali_err = kbase_mem_init(kbdev);
 	if (MALI_ERROR_NONE != mali_err)
@@ -1775,6 +1798,15 @@ out_partial:
 	{
 		kbase_mem_term(kbdev);
 	}
+
+	if (inited & inited_pm_runtime_init)
+	{
+		if(kbdev->pm.callback_power_runtime_term)
+		{
+			kbdev->pm.callback_power_runtime_term(kbdev);
+		}
+	}
+
 	if (inited & inited_pm)
 	{
 		kbase_pm_term(kbdev);
@@ -1786,14 +1818,13 @@ out_kbdev:
 #endif
 
 #if MALI_LICENSE_IS_GPL
+	kbasep_platform_device_term(kbdev);
 	down(&kbase_dev_list_lock);
 	list_del(&osdev->entry);
 	up(&kbase_dev_list_lock);
 
+out_plat_dev:
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
-#ifdef CONFIG_VITHAR
-	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
-#endif
 out_file:
 	misc_deregister(&kbdev->osdev.mdev);
 out_misc:
@@ -1819,7 +1850,24 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	int			i;
 
 	dev_info = (kbase_device_info *)pdev->id_entry->driver_data;
-	kbdev = kbase_device_create(dev_info);
+
+	platform_data = (kbase_attribute *)pdev->dev.platform_data;
+
+	if (NULL == platform_data)
+	{
+		dev_err(&pdev->dev, "Platform data not specified\n");
+		err = -ENOENT;
+		goto out;
+	}
+
+	if (MALI_TRUE != kbasep_validate_configuration_attributes(platform_data))
+	{
+		dev_err(&pdev->dev, "Configuration attributes failed to validate\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	kbdev = kbase_device_create(dev_info, platform_data);
 
 	if (!kbdev)
 	{
@@ -1830,22 +1878,6 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 
 	osdev = &kbdev->osdev;
 	osdev->dev = &pdev->dev;
-	platform_data = (kbase_attribute *)osdev->dev->platform_data;
-
-	if (NULL == platform_data)
-	{
-		dev_err(osdev->dev, "Platform data not specified\n");
-		err = -ENOENT;
-		goto out_free_dev;
-	}
-
-	if (MALI_TRUE != kbasep_validate_configuration_attributes(platform_data))
-	{
-		dev_err(osdev->dev, "Configuration attributes failed to validate\n");
-		err = -EINVAL;
-		goto out_free_dev;
-	}
-	kbdev->config_attributes = platform_data;
 
 	kbdev->memdev.ump_device_id = kbasep_get_config_value(platform_data,
 			KBASE_CONFIG_ATTR_UMP_DEVICE);
@@ -1921,16 +1953,18 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 #if BASE_HW_ISSUE_8401
 	kbasep_8401_workaround_term(kbdev);
 #endif
+
+	if(kbdev->pm.callback_power_runtime_term)
+	{
+		kbdev->pm.callback_power_runtime_term(kbdev);
+	}
+
 #if MALI_LICENSE_IS_GPL
 	/* Remove the sys power policy file */
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
 #if MALI_DEBUG
 	device_remove_file(kbdev->osdev.dev, &dev_attr_debug_command);
 #endif
-#endif
-#ifdef CONFIG_VITHAR
-	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
-	kbase_platform_term(kbdev->osdev.dev);
 #endif
 
 	kbasep_js_devdata_halt(kbdev);
@@ -1953,6 +1987,8 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 	down(&kbase_dev_list_lock);
 	list_del(&kbdev->osdev.entry);
 	up(&kbase_dev_list_lock);
+	kbasep_platform_device_term(kbdev);
+
 	misc_deregister(&kbdev->osdev.mdev);
 	put_device(kbdev->osdev.dev);
 #endif
@@ -1983,7 +2019,7 @@ static int kbase_platform_device_remove(struct platform_device *pdev)
  *
  * This is called by Linux when the device should suspend.
  *
- * @param dev	The device to suspend
+ * @param dev  The device to suspend
  *
  * @return A standard Linux error code
  */
@@ -2002,10 +2038,6 @@ static int kbase_device_suspend(struct device *dev)
 	/* Wait for the policy to suspend the device */
 	kbase_pm_wait_for_power_down(kbdev);
 
-#ifdef CONFIG_VITHAR
-	kbase_platform_cmu_pmu_control(dev, 0);
-#endif
-
 	return 0;
 }
 
@@ -2013,7 +2045,7 @@ static int kbase_device_suspend(struct device *dev)
  *
  * This is called by Linux when the device should resume from suspension.
  *
- * @param dev	The device to resume
+ * @param dev  The device to resume
  *
  * @return A standard Linux error code
  */
@@ -2025,9 +2057,6 @@ static int kbase_device_resume(struct device *dev)
 	{
 		return -ENODEV;
 	}
-#ifdef CONFIG_VITHAR
-	kbase_platform_cmu_pmu_control(dev, 1);
-#endif
 
 	/* Send the event to the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SYSTEM_RESUME);
@@ -2037,6 +2066,81 @@ static int kbase_device_resume(struct device *dev)
 
 	return 0;
 }
+
+/** Runtime suspend callback from the OS.
+ *
+ * This is called by Linux when the device should prepare for a condition in which it will
+ * not be able to communicate with the CPU(s) and RAM due to power management.
+ *
+ * @param dev  The device to suspend
+ *
+ * @return A standard Linux error code
+ */
+#ifdef CONFIG_PM_RUNTIME
+static int kbase_device_runtime_suspend(struct device *dev)
+{
+	struct kbase_device *kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	if(kbdev->pm.callback_power_runtime_off)
+	{
+		kbdev->pm.callback_power_runtime_off(kbdev);
+		OSK_PRINT_INFO(OSK_BASE_PM,"runtime suspend\n");
+	}
+	return 0;
+}
+#endif /* CONFIG_PM_RUNTIME */
+
+/** Runtime resume callback from the OS.
+ *
+ * This is called by Linux when the device should go into a fully active state.
+ *
+ * @param dev  The device to suspend
+ *
+ * @return A standard Linux error code
+ */
+
+#ifdef CONFIG_PM_RUNTIME
+int kbase_device_runtime_resume(struct device *dev)
+{
+	int ret = 0;
+	struct kbase_device *kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	if(kbdev->pm.callback_power_runtime_on)
+	{
+		ret = kbdev->pm.callback_power_runtime_on(kbdev);
+		OSK_PRINT_INFO(OSK_BASE_PM,"runtime resume\n");
+	}
+	return ret;
+}
+#endif /* CONFIG_PM_RUNTIME */
+
+/** Runtime idle callback from the OS.
+ *
+ * This is called by Linux when the device appears to be inactive and it might be
+ * placed into a low power state
+ *
+ * @param dev  The device to suspend
+ *
+ * @return A standard Linux error code
+ */
+
+#ifdef CONFIG_PM_RUNTIME
+static int kbase_device_runtime_idle(struct device *dev)
+{
+	/* Avoid pm_runtime_suspend being called */
+	return 1;
+}
+#endif /* CONFIG_PM_RUNTIME */
 
 #define kbdev_info(x) ((kernel_ulong_t)&kbase_dev_info[(x)])
 
@@ -2071,8 +2175,13 @@ MODULE_DEVICE_TABLE(platform, kbase_platform_id_table);
  */
 static struct dev_pm_ops kbase_pm_ops =
 {
-	.suspend	= kbase_device_suspend,
-	.resume		= kbase_device_resume,
+	.suspend         = kbase_device_suspend,
+	.resume          = kbase_device_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend = kbase_device_runtime_suspend,
+	.runtime_resume  = kbase_device_runtime_resume,
+	.runtime_idle    = kbase_device_runtime_idle,
+#endif /* CONFIG_PM_RUNTIME */
 };
 
 static struct platform_driver kbase_platform_driver =
@@ -2125,7 +2234,16 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 	int err;
 
 	dev_info = &kbase_dev_info[pci_id->driver_data];
-	kbdev = kbase_device_create(dev_info);
+
+	if (MALI_TRUE != kbasep_validate_configuration_attributes(pci_attributes))
+	{
+		err = -EINVAL;
+		goto out;
+	}
+
+	platform_data = (kbase_attribute *)pdev->dev.platform_data;
+	/* Use the master passed in instead of the pci attributes */
+	kbdev = kbase_device_create(dev_info, platform_data);
 	if (!kbdev)
 	{
 		dev_err(&pdev->dev, "Can't allocate device\n");
@@ -2135,7 +2253,6 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 
 	osdev = &kbdev->osdev;
 	osdev->dev = &pdev->dev;
-	platform_data = (kbase_attribute *)osdev->dev->platform_data;
 
 	err = pci_enable_device(pdev);
 	if (err)
@@ -2156,14 +2273,6 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 	osdev->irqs[2].irq = pdev->irq;
 
 	pci_set_master(pdev);
-
-	if (MALI_TRUE != kbasep_validate_configuration_attributes(pci_attributes))
-	{
-		err = -EINVAL;
-		goto out_disable;
-	}
-	/* Use the master passed in instead of the pci attributes */
-	kbdev->config_attributes = platform_data;
 
 	kbdev->memdev.ump_device_id = kbasep_get_config_value(pci_attributes,
 			KBASE_CONFIG_ATTR_UMP_DEVICE);
@@ -2295,6 +2404,7 @@ static int __init kbase_driver_init(void)
 		return err;
 	}
 #endif
+
 	return 0;
 }
 #else
@@ -2346,14 +2456,13 @@ static int __init kbase_driver_init(void)
 	}
 
 	dev_info = &kbase_dev_info[config->midgard_type];
-	kbdev = kbase_device_create(dev_info);
+	kbdev = kbase_device_create(dev_info, config->attributes);
 	if (!kbdev)
 	{
 		dev_err(&pdev->dev, "Can't allocate device\n");
 		err = -ENOMEM;
 		goto out_device_create;
 	}
-	kbdev->config_attributes = config->attributes;
 
 
 	osdev = &kbdev->osdev;

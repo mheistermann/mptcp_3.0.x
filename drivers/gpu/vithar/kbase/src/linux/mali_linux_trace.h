@@ -50,9 +50,9 @@ TRACE_EVENT(mali_job_slots_event,
  */
 TRACE_EVENT(mali_timeline_event,
 
-	TP_PROTO(unsigned int event_id, unsigned int d0, unsigned int d1, unsigned int d2, unsigned int d3, unsigned int d4),
+	TP_PROTO(unsigned int event_id),
 
-	TP_ARGS(event_id, d0, d1, d2, d3, d4),
+	TP_ARGS(event_id),
 
 	TP_STRUCT__entry(
 		__field(	int,	event_id	)

@@ -40,6 +40,11 @@
 #endif /*MALI_DEBUG*/
 #endif /*KBASE_TRACE_ENABLE*/
 
+/* Maximum number of outstanding atoms per kbase context
+ * this is set for security reasons to prevent a malicious app
+ * from hanging the driver */
+#define MAX_KCTX_OUTSTANDING_ATOMS (1ul << 6)
+
 /** Dump Job slot trace on error (only active if KBASE_TRACE_ENABLE != 0) */
 #define KBASE_TRACE_DUMP_ON_JOB_SLOT_ERROR 1
 
@@ -235,6 +240,8 @@ typedef struct kbase_jd_atom {
 #if BASE_HW_ISSUE_8316
 	int             poking;
 #endif /* BASE_HW_ISSUE_8316 */
+	/*this pointer needed to keep external resources not corruptible by userspace*/
+	base_external_resource *resources;
 } kbase_jd_atom;
 
 /*
@@ -534,6 +541,9 @@ struct kbase_device {
 	u32                      shader_needed_cnt[64];
 	u32                      tiler_needed_cnt[64];
 
+	/* Refcount for tracking users of the l2 cache, e.g. when using hardware counter instrumentation. */
+	u32                      l2_users_count;
+
 	/* Bitmaps of cores that are currently available (powered up and the power policy is happy for jobs to be
 	 * submitted to these cores. These are updated by the power management code. The job scheduler should avoid
 	 * submitting new jobs to any cores that are not marked as available.
@@ -612,12 +622,10 @@ struct kbase_device {
 	u32                     js_reset_ticks_ss;
 	u32                     js_reset_ticks_nss;
 #endif
-
-#ifdef CONFIG_VITHAR
-	struct clk *sclk_g3d;
+	/* Platform specific private data to be accessed by mali_kbase_config_xxx.c only */
+	void                    *platform_context;
 #ifdef CONFIG_VITHAR_RT_PM
 	struct delayed_work runtime_pm_workqueue;
-#endif
 #endif
 };
 
@@ -633,12 +641,21 @@ struct kbase_context
 	u64                     *mmu_teardown_pages;
 
 	osk_mutex               reg_lock; /* To be converted to a rwlock? */
-	osk_dlist               reg_list; /* Ordered list of GPU regions */
+#if MALI_KBASEP_REGION_RBTREE
+	struct rb_root			reg_rbtree; /* Red-Black tree of GPU regions (live regions) */
+#else
+	osk_dlist               reg_list;   /* Ordered list of GPU regions (all regions) */
+#endif
 
 	kbase_os_context        osctx;
 	kbase_jd_context        jctx;
 	kbasep_mem_usage        usage;
 	ukk_session             ukk_session;
+	u32                     nr_outstanding_atoms;
+	osk_waitq           	complete_outstanding_waitq; /*if there are too many outstanding atoms
+														 *per context we wait on this waitqueue
+														 *to be signaled before submitting more jobs
+														 */
 
 	/** This is effectively part of the Run Pool, because it only has a valid
 	 * setting (!=KBASEP_AS_NR_INVALID) whilst the context is scheduled in

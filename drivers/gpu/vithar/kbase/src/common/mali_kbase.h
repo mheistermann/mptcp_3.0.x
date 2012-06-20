@@ -26,7 +26,7 @@
 #include "mali_kbase_cpuprops.h"
 #include "mali_kbase_gpuprops.h"
 
-#if defined(CSTD_OS_LINUX_KERNEL)
+#if CSTD_OS_LINUX_KERNEL
 #include <kbase/src/linux/mali_kbase_linux.h>
 #elif defined(MALI_KBASE_USERSPACE)
 #include <kbase/src/userspace/mali_kbase_userspace.h>
@@ -59,7 +59,7 @@
 
 extern const kbase_device_info kbase_dev_info[];
 
-kbase_device *kbase_device_create(const kbase_device_info *dev_info);
+kbase_device *kbase_device_create(const kbase_device_info *dev_info, kbase_attribute     *platform_data);
 void kbase_device_destroy(kbase_device *kbdev);
 void kbase_device_free(kbase_device *kbdev);
 int kbase_device_has_feature(kbase_device *kbdev, u32 feature);

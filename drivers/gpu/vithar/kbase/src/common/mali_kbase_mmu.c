@@ -81,6 +81,8 @@ static void page_fault_worker(osk_workq_work *data)
 	kbase_va_region *region;
 	mali_error err;
 
+	u32 fault_status;
+
 	faulting_as = CONTAINER_OF(data, kbase_as, work_pagefault);
 	fault_pfn = faulting_as->fault_addr >> OSK_PAGE_SHIFT;
 	as_no = faulting_as->number;
@@ -111,13 +113,14 @@ static void page_fault_worker(osk_workq_work *data)
 		return;
 	}
 
+	fault_status = kbase_reg_read(kbdev, MMU_AS_REG(as_no, ASn_FAULTSTATUS), NULL);
 
 	OSK_ASSERT( kctx->kbdev == kbdev );
 
 	kbase_gpu_vm_lock(kctx);
 
 	/* find the region object for this VA */
-	region = kbase_region_lookup(kctx, faulting_as->fault_addr);
+	region = kbase_region_tracker_find_region_enclosing_address(kctx, faulting_as->fault_addr);
 	if (NULL == region || (GROWABLE_FLAGS_REQUIRED != (region->flags & GROWABLE_FLAGS_MASK)))
 	{
 		kbase_gpu_vm_unlock(kctx);
@@ -126,10 +129,33 @@ static void page_fault_worker(osk_workq_work *data)
 		goto fault_done;
 	}
 
+	if ((((fault_status & ASn_FAULTSTATUS_ACCESS_TYPE_MASK) == ASn_FAULTSTATUS_ACCESS_TYPE_READ) &&
+	        !(region->flags & KBASE_REG_GPU_RD)) ||
+	    (((fault_status & ASn_FAULTSTATUS_ACCESS_TYPE_MASK) == ASn_FAULTSTATUS_ACCESS_TYPE_WRITE) &&
+	        !(region->flags & KBASE_REG_GPU_WR)) ||
+	    (((fault_status & ASn_FAULTSTATUS_ACCESS_TYPE_MASK) == ASn_FAULTSTATUS_ACCESS_TYPE_EX) &&
+	        (region->flags & KBASE_REG_GPU_NX)))
+	{
+		OSK_PRINT_WARN(OSK_BASE_MMU, "Access permissions don't match: region->flags=0x%x", region->flags);
+		kbase_gpu_vm_unlock(kctx);
+		kbase_mmu_report_fault_and_kill(kctx, faulting_as, faulting_as->fault_addr);
+		goto fault_done;
+	}
+
 	/* find the size we need to grow it by */
-	/* we know the result fit in a u32 due to kbase_region_lookup
+	/* we know the result fit in a u32 due to kbase_region_tracker_find_region_enclosing_address
 	 * validating the fault_adress to be within a u32 from the start_pfn */
 	fault_rel_pfn = fault_pfn - region->start_pfn;
+
+	if (fault_rel_pfn < region->nr_alloc_pages)
+	{
+		OSK_PRINT_WARN(OSK_BASE_MMU, "Fault in allocated region of growable TMEM: Ignoring");
+		kbase_reg_write(kbdev, MMU_REG(MMU_IRQ_CLEAR), (1UL << as_no), NULL);
+		mmu_mask_reenable(kbdev, kctx, faulting_as);
+		kbase_gpu_vm_unlock(kctx);
+		goto fault_done;
+	}
+
 	new_pages = make_multiple(fault_rel_pfn - region->nr_alloc_pages + 1, region->extent);
 	if (new_pages + region->nr_alloc_pages > region->nr_pages)
 	{
@@ -185,6 +211,18 @@ static void page_fault_worker(osk_workq_work *data)
 		/* wait for the flush to complete */
 		while (kbase_reg_read(kbdev, MMU_AS_REG(as_no, ASn_STATUS), kctx) & 1);
 
+#if BASE_HW_ISSUE_9630 != 0
+		/* Issue an UNLOCK command to ensure that valid page tables are re-read by the GPU after an update.
+		Note that, the FLUSH command should perform all the actions necessary, however the bus logs show
+		that if multiple page faults occur within an 8 page region the MMU does not always re-read the
+		updated page table entries for later faults or is only partially read, it subsequently raises the 
+		page fault IRQ for the same addresses, the unlock ensures that the MMU cache is flushed, so updates 
+		can be re-read.  As the region is now unlocked we need to issue 2 UNLOCK commands in order to flush the
+		MMU/uTLB, see PRLAM-8812.
+                */
+		kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_COMMAND), ASn_COMMAND_UNLOCK, kctx);
+		kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_COMMAND), ASn_COMMAND_UNLOCK, kctx);
+#endif
 		osk_mutex_unlock(&faulting_as->transaction_mutex);
 		/* AS transaction end */
 
@@ -594,6 +632,19 @@ KBASE_EXPORT_TEST_API(kbase_mmu_insert_pages)
 
 			/* wait for the flush to complete */
 			while (kbase_reg_read(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_STATUS), kctx) & ASn_STATUS_FLUSH_ACTIVE);
+
+#if BASE_HW_ISSUE_9630 != 0
+			/* Issue an UNLOCK command to ensure that valid page tables are re-read by the GPU after an update.
+			Note that, the FLUSH command should perform all the actions necessary, however the bus logs show
+			that if multiple page faults occur within an 8 page region the MMU does not always re-read the
+			updated page table entries for later faults or is only partially read, it subsequently raises the 
+			page fault IRQ for the same addresses, the unlock ensures that the MMU cache is flushed, so updates 
+			can be re-read.  As the region is now unlocked we need to issue 2 UNLOCK commands in order to flush the
+			MMU/uTLB, see PRLAM-8812.
+		        */
+			kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_COMMAND), ASn_COMMAND_UNLOCK, kctx);
+			kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_COMMAND), ASn_COMMAND_UNLOCK, kctx);
+#endif
 
 			osk_mutex_unlock(&kbdev->as[kctx->as_nr].transaction_mutex);
 			/* AS transaction end */
@@ -1138,8 +1189,11 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	    (kbdev->hwcnt.kctx->as_nr == as_no) && 
 		(kbdev->hwcnt.state == KBASE_INSTR_STATE_DUMPING))
 	{
-		/* See MIDBASE-1631 */
-		kbdev->hwcnt.state = KBASE_INSTR_STATE_FAULT;
+		u32 num_core_groups = kbdev->gpu_props.num_core_groups;
+		if ((fault_addr >= kbdev->hwcnt.addr) && (fault_addr < (kbdev->hwcnt.addr + (num_core_groups * 2048))))
+		{
+			kbdev->hwcnt.state = KBASE_INSTR_STATE_FAULT;
+		}
 	}
 
 	/* Stop the kctx from submitting more jobs and cause it to be scheduled

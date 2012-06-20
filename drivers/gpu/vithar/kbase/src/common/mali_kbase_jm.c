@@ -996,6 +996,8 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 
 	OSK_ASSERT(kbdev);
 
+	kbase_pm_context_active(kbdev);
+
 	js_devdata = &kbdev->js_data;
 
 	/* All slot have been soft-stopped and we've waited SOFT_STOP_RESET_TIMEOUT for the slots to clear, at this point
@@ -1066,27 +1068,11 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	kbdev->hwcnt.state = bckp_state;
 	osk_spinlock_irq_unlock(&kbdev->hwcnt.lock);
 
-	/* Pretend there is a context active - this is to satisify the precondition of KBASE_PM_EVENT_POLICY_INIT.
-	 * Note that we cannot use kbase_pm_context_active here because that waits for the power up which must happen
-	 * after the KBASE_PM_EVENT_POLICY_INIT message is sent
-	 */
-	osk_spinlock_irq_lock(&kbdev->pm.active_count_lock);
-	c = ++kbdev->pm.active_count;
-	osk_spinlock_irq_unlock(&kbdev->pm.active_count_lock);
-
-	if (c == 1)
-	{
-		kbasep_pm_record_gpu_active(kbdev);
-	}
-
 	/* Re-init the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_POLICY_INIT);
 
 	/* Wait for the policy to power up the GPU */
 	kbase_pm_wait_for_power_up(kbdev);
-
-	/* Idle the fake context */
-	kbase_pm_context_idle(kbdev);
 
 	/* Complete any jobs that were still on the GPU */
 	for (i = 0; i < kbdev->nr_job_slots; i++)
@@ -1126,6 +1112,8 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	KBASE_TRACE_ADD( kbdev, JM_SUBMIT_AFTER_RESET, NULL, NULL, 0u, 0 );
 	kbasep_js_try_run_next_job(kbdev);
 	osk_mutex_unlock( &js_devdata->runpool_mutex );
+
+	kbase_pm_context_idle(kbdev);
 }
 
 void kbasep_reset_timer_callback(void *data)
@@ -1140,7 +1128,6 @@ void kbasep_reset_timer_callback(void *data)
 		/* Reset has been cancelled or has already occurred */
 		return;
 	}
-
 	osk_workq_submit(&kbdev->reset_workq, &kbdev->reset_work);
 }
 
@@ -1177,7 +1164,6 @@ static void kbasep_try_reset_gpu_early(kbase_device *kbdev)
 		/* Reset has already occurred */
 		return;
 	}
-
 	osk_workq_submit(&kbdev->reset_workq, &kbdev->reset_work);
 }
 

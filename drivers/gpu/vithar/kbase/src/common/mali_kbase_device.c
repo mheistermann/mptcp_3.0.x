@@ -71,7 +71,7 @@ void kbasep_as_do_poke(osk_workq_work * work);
 void kbasep_reset_timer_callback(void *data);
 void kbasep_reset_timeout_worker(osk_workq_work *data);
 
-kbase_device *kbase_device_create(const kbase_device_info *dev_info)
+kbase_device *kbase_device_create(const kbase_device_info *dev_info, kbase_attribute *platform_data)
 {
 	kbase_device *kbdev;
 	osk_error osk_err;
@@ -84,6 +84,7 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 	}
 
 	kbdev->dev_info = dev_info;
+	kbdev->config_attributes = platform_data;
 
 	/* NOTE: Add Property Query here */
 	kbdev->nr_hw_address_spaces = GPU_NUM_ADDRESS_SPACES;
@@ -207,10 +208,6 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 	{
 		goto free_reset_timer;
 	}
-
-#ifdef CONFIG_VITHAR
-	kbdev->sclk_g3d = 0;
-#endif
 
 	osk_debug_assert_register_hook( &kbasep_trace_hook_wrapper, kbdev );
 	return kbdev;
@@ -364,7 +361,6 @@ void kbase_reg_write(kbase_device *kbdev, u16 offset, u32 value, kbase_context *
 {
 	OSK_ASSERT(kbdev->pm.gpu_powered);
 	OSK_ASSERT(kctx==NULL || kctx->as_nr != KBASEP_AS_NR_INVALID);
-	/*OSK_ASSERT(kbdev->pm.gpu_powered); Disabled due to MIDBASE-1560*/
 	OSK_PRINT_INFO(OSK_BASE_CORE, "w: reg %04x val %08x", offset, value);
 	kbase_os_reg_write(kbdev, offset, value);
 	if (kctx && kctx->jctx.tb) kbase_device_trace_register_access(kctx, REG_WRITE, offset, value);

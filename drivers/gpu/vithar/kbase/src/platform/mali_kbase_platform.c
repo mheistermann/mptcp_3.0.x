@@ -46,6 +46,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/regs-pmu5.h>
 #include <asm/delay.h>
+#include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
@@ -56,16 +57,20 @@
 static struct clk *clk_g3d = NULL;
 static int clk_g3d_status = 0;
 
-static int kbase_platform_power_clock_init(struct device *dev)
+static int kbase_platform_power_clock_init(kbase_device *kbdev)
 {
+	struct device *dev =  kbdev->osdev.dev;
 	int timeout;
 #ifndef CONFIG_VITHAR_HWVER_R0P0
 	struct clk *mpll = NULL;
 #endif
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-	if (!kbdev)
+	struct exynos_context *platform;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if(NULL == platform)
+	{
 		panic("oops");
+	}
 
 	/* Turn on G3D power */
 	__raw_writel(0x7, EXYNOS5_G3D_CONFIGURATION);
@@ -84,21 +89,22 @@ static int kbase_platform_power_clock_init(struct device *dev)
 	/* Turn on G3D clock */
 	clk_g3d = clk_get(dev, "g3d");
 	if(IS_ERR(clk_g3d)) {
+		clk_g3d = NULL;
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [clk_g3d]\n");
-		goto out;
+	}else{
+		clk_enable(clk_g3d);
+		clk_g3d_status = 1;
 	}
-	clk_enable(clk_g3d);
-	clk_g3d_status = 1;
 
 #ifdef CONFIG_VITHAR_HWVER_R0P0
-	kbdev->sclk_g3d = clk_get(dev, "aclk_400");
-	if(IS_ERR(kbdev->sclk_g3d)) {
+	platform->sclk_g3d = clk_get(dev, "aclk_400");
+	if(IS_ERR(platform->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
 		goto out;
 	}
 
-	clk_set_rate(kbdev->sclk_g3d, VITHAR_DEFAULT_CLOCK);
-	if(IS_ERR(kbdev->sclk_g3d)) {
+	clk_set_rate(platform->sclk_g3d, VITHAR_DEFAULT_CLOCK);
+	if(IS_ERR(platform->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_rate [sclk_g3d] = %d\n", VITHAR_DEFAULT_CLOCK);
 		goto out;
 	}
@@ -109,65 +115,91 @@ static int kbase_platform_power_clock_init(struct device *dev)
 		goto out;
 	}
 
-	kbdev->sclk_g3d = clk_get(dev, "sclk_g3d");
-	if(IS_ERR(kbdev->sclk_g3d)) {
+	platform->sclk_g3d = clk_get(dev, "sclk_g3d");
+	if(IS_ERR(platform->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
 		goto out;
 	}
 
-	clk_set_parent(kbdev->sclk_g3d, mpll);
+	clk_set_parent(platform->sclk_g3d, mpll);
 	if(IS_ERR(kbdev->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_parent\n");
 		goto out;
 	}
 
-	clk_set_rate(kbdev->sclk_g3d, VITHAR_DEFAULT_CLOCK);
-	if(IS_ERR(kbdev->sclk_g3d)) {
+	clk_set_rate(platform->sclk_g3d, VITHAR_DEFAULT_CLOCK);
+	if(IS_ERR(platform->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_rate [sclk_g3d] = %d\n", VITHAR_DEFAULT_CLOCK);
 		goto out;
 	}
 
 #endif
-	(void) clk_enable(kbdev->sclk_g3d);
+	(void) clk_enable(platform->sclk_g3d);
 
 	return 0;
 out:
 	return -EPERM;
 }
 
-int kbase_platform_clock_on(struct device *dev)
+int kbase_platform_clock_on(struct kbase_device *kbdev)
 {
-	UNUSED(dev);
+	struct exynos_context *platform;
+	if (!kbdev)
+		return -ENODEV;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if (!platform)
+		return -ENODEV;
+
 	if (clk_g3d_status == 1)
 		return 0;
-	(void) clk_enable(clk_g3d);
+
+	if(clk_g3d)
+	{
+		(void) clk_enable(clk_g3d);
+	}
+	else
+	{
+		(void) clk_enable(platform->sclk_g3d);
+	}
 	clk_g3d_status=1;
+
 	return 0;
 }
 
-int kbase_platform_clock_off(struct device *dev)
+int kbase_platform_clock_off(struct kbase_device *kbdev)
 {
-	UNUSED(dev);
+	struct exynos_context *platform;
+	if (!kbdev)
+		return -ENODEV;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if (!platform)
+		return -ENODEV;
+
 	if (clk_g3d_status == 0)
 		return 0;
-	(void)clk_disable(clk_g3d);
+
+	if(clk_g3d)
+	{
+		(void)clk_disable(clk_g3d);
+	}
+	else
+	{
+		(void)clk_disable(platform->sclk_g3d);
+	}
 	clk_g3d_status=0;
 	return 0;
 }
 
-static inline int kbase_platform_is_power_on(void)
+int kbase_platform_is_power_on(void)
 {
 	return ((__raw_readl(EXYNOS5_G3D_STATUS) & 0x7) == 0x7) ? 1 : 0;
 }
 
-static int kbase_platform_power_on(struct device *dev)
+static int kbase_platform_power_on(void)
 {
 	int timeout;
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
-	if (!kbdev)
-		return -ENODEV;
 
 	/* Turn on G3D  */
 	__raw_writel(0x7, EXYNOS5_G3D_CONFIGURATION);
@@ -188,14 +220,9 @@ static int kbase_platform_power_on(struct device *dev)
 	return 0;
 }
 
-static int kbase_platform_power_off(struct device *dev)
+static int kbase_platform_power_off(void)
 {
 	int timeout;
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
-	if (!kbdev)
-		return -ENODEV;
 
 	/* Turn off G3D  */
 	__raw_writel(0x0, EXYNOS5_G3D_CONFIGURATION);
@@ -216,65 +243,74 @@ static int kbase_platform_power_off(struct device *dev)
 	return 0;
 }
 
-int kbase_platform_cmu_pmu_control(struct device *dev, int control)
+int kbase_platform_cmu_pmu_control(struct kbase_device *kbdev, int control)
 {
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
+	unsigned long flags;
+	struct exynos_context *platform;
 	if (!kbdev)
+	{
 		return -ENODEV;
+	}
 
-	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if (!platform)
+	{
+		return -ENODEV;
+	}
+
+	spin_lock_irqsave(&platform->cmu_pmu_lock, flags);
 
 #if MALI_GATOR_SUPPORT
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM) | control);
 #endif
-	if(control == 0) // off
+	if(control == 0)
 	{
-		if(kbdev->pm.cmu_pmu_status == 0)
+		if(platform->cmu_pmu_status == 0)
 		{
-			osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
+			spin_unlock_irqrestore(&platform->cmu_pmu_lock, flags);
 			return 0;
 		}
 
-		if(kbase_platform_power_off(dev))
+		if(kbase_platform_power_off())
 			panic("failed to turn off g3d power\n");
-		if(kbase_platform_clock_off(dev))
+		if(kbase_platform_clock_off(kbdev))
+
 			panic("failed to turn off sclk_g3d\n");
 
-		kbdev->pm.cmu_pmu_status = 0;
+		platform->cmu_pmu_status = 0;
 #if MALI_RTPM_DEBUG
 		printk( KERN_ERR "3D cmu_pmu_control - off\n" );
 #endif
 	}
 	else // on
 	{
-		if(kbdev->pm.cmu_pmu_status == 1)
+		if(platform->cmu_pmu_status == 1)
 		{
-			osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
+			spin_unlock_irqrestore(&platform->cmu_pmu_lock, flags);
 			return 0;
 		}
 
-		if(kbase_platform_clock_on(dev))
+		if(kbase_platform_clock_on(kbdev))
 			panic("failed to turn on sclk_g3d\n");
-		if(kbase_platform_power_on(dev))
+		if(kbase_platform_power_on())
 			panic("failed to turn on g3d power\n");
 
-		kbdev->pm.cmu_pmu_status = 1;
+		platform->cmu_pmu_status = 1;
 #if MALI_RTPM_DEBUG
 		printk( KERN_ERR "3D cmu_pmu_control - on\n");
 #endif
-
 	}
 
-	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
+	spin_unlock_irqrestore(&platform->cmu_pmu_lock, flags);
 
 	return 0;
 }
 
+#ifdef CONFIG_VITHAR_DEBUG_SYS
 static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct kbase_device *kbdev;
+	struct exynos_context *platform;
 	ssize_t ret = 0;
 	unsigned int clkrate;
 
@@ -283,10 +319,14 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	if (!kbdev)
 		return -ENODEV;
 
-	if(!kbdev->sclk_g3d)
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if(!platform)
 		return -ENODEV;
 
-	clkrate = clk_get_rate(kbdev->sclk_g3d);
+	if(!platform->sclk_g3d)
+		return -ENODEV;
+
+	clkrate = clk_get_rate(platform->sclk_g3d);
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
@@ -307,10 +347,18 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct kbase_device *kbdev;
+	struct exynos_context *platform;
 	unsigned int tmp = 0, freq = 0;
 	kbdev = dev_get_drvdata(dev);
 
-	if ((!kbdev) || (!kbdev->sclk_g3d) || (!buf))
+	if (!kbdev)
+		return -ENODEV;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if(!platform)
+		return -ENODEV;
+
+	if(!platform->sclk_g3d)
 		return -ENODEV;
 
 	if (sysfs_streq("533", buf)) {
@@ -648,6 +696,7 @@ static int get_clkout_cmu_top(int *val)
 
 static void set_clkout_for_3d(void)
 {
+#ifdef PMU_XCLKOUT_SET
 	int tmp;
 
 	tmp = 0x0;
@@ -655,9 +704,6 @@ static void set_clkout_for_3d(void)
 	tmp |= 9 << 8; // divided by (9 + 1)
 	__raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
 
-#ifdef PMU_XCLKOUT_SET
-	exynos5_pmu_xclkout_set(1, XCLKOUT_CMU_TOP);
-#else
 	tmp = 0x0;
 	tmp |= 7 << 8; // CLKOUT_CMU_TOP selected
 	__raw_writel(tmp, S5P_PMU_DEBUG);
@@ -1002,7 +1048,7 @@ DEVICE_ATTR(dvfs_under_lock, S_IRUGO|S_IWUSR, show_under_lock_dvfs, set_under_lo
 DEVICE_ATTR(asv, S_IRUGO|S_IWUSR, show_asv, set_asv);
 DEVICE_ATTR(time_in_state, S_IRUGO|S_IWUSR, show_time_in_state, set_time_in_state);
 
-static int kbase_platform_create_sysfs_file(struct device *dev)
+int kbase_platform_create_sysfs_file(struct device *dev)
 {
 	if (device_create_file(dev, &dev_attr_clock))
 	{
@@ -1081,45 +1127,72 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_asv);
 	device_remove_file(dev, &dev_attr_time_in_state);
 }
+#endif /* CONFIG_VITHAR_DEBUG_SYS */
 
-int kbase_platform_init(struct device *dev)
+mali_error kbase_platform_init(struct kbase_device *kbdev)
 {
-	if(kbase_platform_power_clock_init(dev)){
-		return -ENOENT;
+	struct exynos_context *platform;
+
+	platform = osk_malloc(sizeof(struct exynos_context));
+
+	if(NULL == platform)
+	{
+		return MALI_ERROR_OUT_OF_MEMORY;
 	}
+
+	kbdev->platform_context = (void *) platform;
+
+	platform->cmu_pmu_status = 0;
+	spin_lock_init(&platform->cmu_pmu_lock);
+
+	if(kbase_platform_power_clock_init(kbdev))
+	{
+		goto clock_init_fail;
+	}
+
 #ifdef CONFIG_REGULATOR
-	if(kbase_platform_regulator_init(dev)){
-		return -ENOENT;
+	if(kbase_platform_regulator_init())
+	{
+		goto regulator_init_fail;
 	}
-#endif
+#endif /* CONFIG_REGULATOR */
 
-	if(kbase_platform_create_sysfs_file(dev)){
-		return -ENOENT;
-	}
 
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_init(dev);
-#endif
 #ifdef CONFIG_VITHAR_DVFS
-	kbase_platform_dvfs_init(dev);
-#endif
+	kbase_platform_dvfs_init(kbdev);
+#endif /* CONFIG_VITHAR_DVFS */
 
-	return 0;
+	/* Enable power */
+	kbase_platform_cmu_pmu_control(kbdev, 1);
+	return MALI_ERROR_NONE;
+
+#ifdef CONFIG_REGULATOR
+	kbase_platform_regulator_disable();
+#endif /* CONFIG_REGULATOR */
+regulator_init_fail:
+clock_init_fail:
+	osk_free(platform);
+
+	return MALI_ERROR_FUNCTION_FAILED;
 }
 
-void kbase_platform_term(struct device *dev)
+void kbase_platform_term(kbase_device *kbdev)
 {
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_disable(dev);
-#endif
+	struct exynos_context *platform;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
 
 #ifdef CONFIG_VITHAR_DVFS
 	kbase_platform_dvfs_term();
-#endif
+#endif /* CONFIG_VITHAR_DVFS */
 
+	/* Disable power */
+	kbase_platform_cmu_pmu_control(kbdev, 0);
 #ifdef CONFIG_REGULATOR
-	kbase_platform_regulator_disable(dev);
-#endif
-
+	kbase_platform_regulator_disable();
+#endif /* CONFIG_REGULATOR */
+	osk_free(kbdev->platform_context);
+	kbdev->platform_context = 0;
 	return;
 }
+

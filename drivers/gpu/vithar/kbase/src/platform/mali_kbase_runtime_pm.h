@@ -20,10 +20,10 @@
 
 /* All things that are needed for the Linux port. */
 
-void kbase_device_runtime_disable(struct device *dev);
+void kbase_device_runtime_disable(struct kbase_device *kbdev);
 void kbase_device_runtime_get_sync(struct device *dev);
 void kbase_device_runtime_put_sync(struct device *dev);
-void kbase_device_runtime_init(struct device *dev);
+mali_error kbase_device_runtime_init(struct kbase_device *kbdev);
 
 #ifdef CONFIG_VITHAR_RTPM_DEBUG
 #define MALI_RTPM_DEBUG 1

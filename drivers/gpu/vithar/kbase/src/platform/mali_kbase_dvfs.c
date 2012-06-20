@@ -45,6 +45,7 @@
 #include <asm/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
+#include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 #include <kbase/src/common/mali_kbase_gator.h>
 #ifdef CONFIG_EXYNOS5_CPUFREQ
@@ -102,12 +103,12 @@ typedef struct _mali_dvfs_info{
 static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
 #if (MALI_DVFS_STEP == 7)
-	{912500, 100, 0, 85},
-	{925000, 160, 48, 85},
-	{1025000, 266, 51, 87},
-	{1075000, 350, 70, 80},
-	{1125000, 400, 70, 80},
-	{1150000, 450, 76, 99},
+	{912500, 100, 0, 89},
+	{925000, 160, 48, 89},
+	{1025000, 266, 51, 89},
+	{1075000, 350, 70, 94},
+	{1125000, 400, 94, 99},
+	{1150000, 450, 94, 99},
 	{1250000, 533, 99, 100}
 #else
 #error no table
@@ -326,31 +327,41 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #if MALI_DVFS_START_MAX_STEP
 	/*If no input is keeping for longtime, first step will be max step. */
 	if (dvfs_status.noutilcnt > 20 && dvfs_status.utilisation > 0) {
-		dvfs_status.step=kbase_platform_dvfs_get_level(266);
+		dvfs_status.step=kbase_platform_dvfs_get_level(350);
 	}
 #endif
+	if ((dvfs_status.kbdev->pm.metrics.vsync_hit < 5) &&
+			(dvfs_status.utilisation > 60)) {
+		dvfs_status.utilisation = 100;
+	}
+
 	if (dvfs_status.utilisation == 100) {
 		allow_up_cnt = 1;
 	} else if (mali_dvfs_infotbl[dvfs_status.step].clock < 266) {
 		allow_up_cnt = 2;
-		//mali_dvfs_set_cpulock(0);
 	} else if (mali_dvfs_infotbl[dvfs_status.step].clock == 266){
 		allow_up_cnt = 10;
-		//mali_dvfs_set_cpulock(400);
+		//mali_dvfs_set_cpulock(0);
 	} else {
+		//mali_dvfs_set_cpulock(800);
 		allow_up_cnt = 3;
 		allow_down_cnt = 2;
 	}
 
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
-		dvfs_status.up_keepcnt++;
-		dvfs_status.down_keepcnt=0;
-		if (dvfs_status.up_keepcnt > allow_up_cnt)
-		{
-			dvfs_status.step++;
-			dvfs_status.up_keepcnt=0;
-			OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
+		if ((dvfs_status.kbdev->pm.metrics.vsync_hit >= 5) &&
+			(dvfs_status.utilisation > 90)) {
+			//DO nothing
+		} else {
+			dvfs_status.up_keepcnt++;
+			dvfs_status.down_keepcnt=0;
+			if (dvfs_status.up_keepcnt > allow_up_cnt)
+			{
+				dvfs_status.step++;
+				dvfs_status.up_keepcnt=0;
+				OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
+			}
 		}
 	}else if ((dvfs_status.step>0) &&
 			(dvfs_status.utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
@@ -394,12 +405,14 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 
 #if MALI_DVFS_DEBUG
-	printk("[mali_dvfs] utilisation: %d step: %d[%d,%d] cnt: %d/%d\n",
+	printk("[mali_dvfs] utilisation: %d step: %d[%d,%d] cnt: %d/%d vsync %d\n",
 			dvfs_status.utilisation, dvfs_status.step,
 			mali_dvfs_infotbl[dvfs_status.step].min_threshold,
 			mali_dvfs_infotbl[dvfs_status.step].max_threshold,
-			dvfs_status.up_keepcnt,dvfs_status.down_keepcnt);
+			dvfs_status.up_keepcnt,dvfs_status.down_keepcnt, dvfs_status.kbdev->pm.metrics.vsync_hit);
 #endif
+
+	kbase_pm_report_vsync(dvfs_status.kbdev, 0);
 
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	mali_dvfs_status_current=dvfs_status;
@@ -448,11 +461,8 @@ int kbase_platform_dvfs_set_control_status(int onoff)
 	return MALI_FALSE;
 }
 
-int kbase_platform_dvfs_init(struct device *dev)
+int kbase_platform_dvfs_init(struct kbase_device *kbdev)
 {
-	struct kbase_device *kbdev;
-	kbdev = dev_get_drvdata(dev);
-
 	/*default status
 	  add here with the right function to get initilization value.
 	 */
@@ -586,7 +596,7 @@ void mali_dvfs_freq_under_unlock(void)
 	printk("[G3D] Under Lock Unset\n");
 }
 
-int kbase_platform_regulator_init(struct device *dev)
+int kbase_platform_regulator_init(void)
 {
 
 #ifdef CONFIG_REGULATOR
@@ -613,7 +623,7 @@ int kbase_platform_regulator_init(struct device *dev)
 	return 0;
 }
 
-int kbase_platform_regulator_disable(struct device *dev)
+int kbase_platform_regulator_disable(void)
 {
 #ifdef CONFIG_REGULATOR
 	if(!g3d_regulator)
@@ -631,7 +641,7 @@ int kbase_platform_regulator_disable(struct device *dev)
 	return 0;
 }
 
-int kbase_platform_regulator_enable(struct device *dev)
+int kbase_platform_regulator_enable(void)
 {
 #ifdef CONFIG_REGULATOR
 	if(!g3d_regulator)
@@ -702,9 +712,16 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	static unsigned long gpll_rate_prev = 0;
 	unsigned long gpll_rate = 0, aclk_400_rate = 0;
 	unsigned long tmp = 0;
+	struct exynos_context *platform;
 
 	if (!kbdev)
 		panic("oops");
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if(NULL == platform)
+	{
+		panic("oops");
+	}
 
 	if (mout_gpll==NULL) {
 		mout_gpll = clk_get(kbdev->osdev.dev, "mout_gpll");
@@ -714,7 +731,7 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 			panic("clk_get ERROR");
 	}
 
-	if(kbdev->sclk_g3d == 0)
+	if(platform->sclk_g3d == 0)
 		return;
 
 	if (freq == _freq)
@@ -757,7 +774,7 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	/* if changed the GPLL rate, set rate for GPLL and wait for lock time */
 	if( gpll_rate != gpll_rate_prev) {
 		/*for stable clock input.*/
-		clk_set_rate(kbdev->sclk_g3d, 100000000);
+		clk_set_rate(platform->sclk_g3d, 100000000);
 		clk_set_parent(mout_gpll, fin_gpll);
 
 		/*change gpll*/
@@ -769,7 +786,7 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	}
 
 	_freq = freq;
-	clk_set_rate(kbdev->sclk_g3d, aclk_400_rate);
+	clk_set_rate(platform->sclk_g3d, aclk_400_rate);
 
 	/* Waiting for clock is stable */
 	do {
@@ -777,7 +794,7 @@ void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq)
 	} while (tmp & 0x1000000);
 #ifdef CONFIG_VITHAR_DVFS
 #if MALI_DVFS_DEBUG
-	printk("aclk400 %u[%d]\n", (unsigned int)clk_get_rate(kbdev->sclk_g3d),mali_dvfs_status_current.utilisation);
+	printk("aclk400 %u[%d]\n", (unsigned int)clk_get_rate(platform->sclk_g3d),mali_dvfs_status_current.utilisation);
 	printk("dvfs_set_clock GPLL : %lu, ACLK_400 : %luMhz\n", gpll_rate, aclk_400_rate );
 #endif
 #endif

@@ -70,7 +70,7 @@ static base_jd_event_code kbase_dump_cpu_gpu_time(kbase_context *kctx, mali_addr
 		return BASE_JD_EVENT_JOB_CANCELLED;
 	}
 
-	reg = kbase_region_lookup(kctx, jc);
+	reg = kbase_region_tracker_find_region_enclosing_address(kctx, jc);
 	if (!reg)
 	{
 		return BASE_JD_EVENT_JOB_CANCELLED;

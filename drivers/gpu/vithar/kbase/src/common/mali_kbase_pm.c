@@ -65,11 +65,19 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 	{
 		kbdev->pm.callback_power_on = callbacks->power_on_callback;
 		kbdev->pm.callback_power_off = callbacks->power_off_callback;
+		kbdev->pm.callback_power_runtime_init = callbacks->power_runtime_init_callback;
+		kbdev->pm.callback_power_runtime_term = callbacks->power_runtime_term_callback;
+		kbdev->pm.callback_power_runtime_on = callbacks->power_runtime_on_callback;
+		kbdev->pm.callback_power_runtime_off = callbacks->power_runtime_off_callback;
 	}
 	else
 	{
 		kbdev->pm.callback_power_on = NULL;
 		kbdev->pm.callback_power_off = NULL;
+		kbdev->pm.callback_power_runtime_init = NULL;
+		kbdev->pm.callback_power_runtime_term = NULL;
+		kbdev->pm.callback_power_runtime_on = NULL;
+		kbdev->pm.callback_power_runtime_off = NULL;
 	}
 
 	/* Initialise the metrics subsystem */
@@ -77,6 +85,11 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 	if (MALI_ERROR_NONE != ret)
 	{
 		return ret;
+	}
+	osk_err = osk_waitq_init(&kbdev->pm.l2_powered_waitqueue);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto l2_powered_waitq_fail;
 	}
 
 	osk_err = osk_waitq_init(&kbdev->pm.power_up_waitqueue);
@@ -97,7 +110,6 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 		goto policy_outstanding_event_waitq_fail;
 	}
 	osk_waitq_set(&kbdev->pm.policy_outstanding_event);
-
 
 	osk_err = osk_workq_init(&kbdev->pm.workqueue, "kbase_pm", OSK_WORKQ_NON_REENTRANT);
 	if (OSK_ERR_NONE != osk_err)
@@ -123,13 +135,6 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 		goto gpu_cycle_counter_requests_lock_fail;
 	}
 
-#ifdef CONFIG_VITHAR_RT_PM
-	osk_err = osk_spinlock_irq_init(&kbdev->pm.cmu_pmu_lock, OSK_LOCK_ORDER_CMU_PMU);
-	if (OSK_ERR_NONE != osk_err)
-	{
-		goto cmu_pmu_lock_fail;
-	}
-#endif
 	osk_err = osk_spinlock_irq_init(&kbdev->pm.gpu_powered_lock, OSK_LOCK_ORDER_POWER_MGMT);
 	if (OSK_ERR_NONE != osk_err)
 	{
@@ -138,10 +143,6 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 
 	return MALI_ERROR_NONE;
 
-#ifdef CONFIG_VITHAR_RT_PM
-cmu_pmu_lock_fail:
-    osk_spinlock_irq_term(&kbdev->pm.active_count_lock);
-#endif
 gpu_powered_lock_fail:
 	osk_spinlock_irq_term(&kbdev->pm.gpu_cycle_counter_requests_lock);
 gpu_cycle_counter_requests_lock_fail:
@@ -157,6 +158,8 @@ policy_outstanding_event_waitq_fail:
 power_down_waitq_fail:
 	osk_waitq_term(&kbdev->pm.power_up_waitqueue);
 power_up_waitq_fail:
+	osk_waitq_term( &kbdev->pm.l2_powered_waitqueue);
+l2_powered_waitq_fail:
 	kbasep_pm_metrics_term(kbdev);
 	return MALI_ERROR_FUNCTION_FAILED;
 }
@@ -251,7 +254,7 @@ void kbase_pm_context_active(kbase_device *kbdev)
 	int c;
 
 	OSK_ASSERT(kbdev != NULL);
-	
+
 	osk_spinlock_irq_lock(&kbdev->pm.active_count_lock);
 	c = ++kbdev->pm.active_count;
 	osk_spinlock_irq_unlock(&kbdev->pm.active_count_lock);
@@ -331,6 +334,7 @@ void kbase_pm_term(kbase_device *kbdev)
 	}
 
 	/* Free the wait queues */
+	osk_waitq_term(&kbdev->pm.l2_powered_waitqueue );
 	osk_waitq_term(&kbdev->pm.power_up_waitqueue);
 	osk_waitq_term(&kbdev->pm.power_down_waitqueue);
 	osk_waitq_term(&kbdev->pm.policy_outstanding_event);
@@ -344,6 +348,7 @@ void kbase_pm_term(kbase_device *kbdev)
 	osk_spinlock_irq_term(&kbdev->pm.active_count_lock);
 	osk_spinlock_irq_term(&kbdev->pm.gpu_cycle_counter_requests_lock);
 	osk_spinlock_irq_term(&kbdev->pm.gpu_powered_lock);
+
 	/* Shut down the metrics subsystem */
 	kbasep_pm_metrics_term(kbdev);
 }
@@ -576,6 +581,5 @@ void kbase_pm_send_event(kbase_device *kbdev, kbase_pm_event event)
 		osk_workq_submit(&kbdev->pm.workqueue, &kbdev->pm.work);
 	}
 }
-
 
 KBASE_EXPORT_TEST_API(kbase_pm_send_event)

@@ -1111,7 +1111,17 @@ STATIC kbasep_js_release_result kbasep_js_runpool_release_ctx_internal( kbase_de
 	new_ref_count = --(js_per_as_data->as_busy_refcount);
 
 	KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_RELEASE_CTX, kctx, NULL, 0u,
-							  new_ref_count);
+	                          new_ref_count);
+	
+	if ( new_ref_count == 1 && kctx->jctx.sched_info.ctx.flags & KBASE_CTX_FLAG_PRIVILEGED )
+	{
+		/* Context is kept scheduled into an address space even when there are no jobs, in this case we have
+ 		 * to handle the situation where all jobs have been evicted from the GPU and submission is disabled.
+ 		 *
+ 		 * At this point we re-enable submission to allow further jobs to be executed
+ 		 */
+		kbasep_js_set_submit_allowed( js_devdata, kctx );
+	}
 
 	/* Make a set of checks to see if the context should be scheduled out */
 	if ( new_ref_count == 0
@@ -1120,10 +1130,10 @@ STATIC kbasep_js_release_result kbasep_js_runpool_release_ctx_internal( kbase_de
 	{
 		/* Last reference, and we've been told to remove this context from the Run Pool */
 		OSK_PRINT_INFO(OSK_BASE_JM, "JS: RunPool Remove Context %p because as_busy_refcount=%d, jobs=%d, allowed=%d",
-					   kctx,
-					   new_ref_count,
-					   js_kctx_info->ctx.nr_jobs,
-					   kbasep_js_is_submit_allowed( js_devdata, kctx ) );
+		               kctx,
+		               new_ref_count,
+		               js_kctx_info->ctx.nr_jobs,
+		               kbasep_js_is_submit_allowed( js_devdata, kctx ) );
 
 		kbasep_js_policy_runpool_remove_ctx( js_policy, kctx );
 
@@ -1810,6 +1820,8 @@ void kbasep_js_schedule_privileged_ctx( kbase_device *kbdev, kbase_context *kctx
 	js_devdata = &kbdev->js_data;
 	js_kctx_info = &kctx->jctx.sched_info;
 
+	kbase_pm_request_l2_caches(kbdev);
+
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 	/* Mark the context as privileged */
 	js_kctx_info->ctx.flags |= KBASE_CTX_FLAG_PRIVILEGED;
@@ -1842,7 +1854,11 @@ void kbasep_js_schedule_privileged_ctx( kbase_device *kbdev, kbase_context *kctx
 			/* Evict non-running contexts from the runpool */
 			kbasep_js_runpool_attempt_fast_start_ctx( kbdev, NULL );
 		}
-		/* The context will be retained and marked as active when scheduled in */
+		/* Try to schedule the context in */
+		kbasep_js_try_schedule_head_ctx( kbdev );
+
+		/* Wait for the context to be scheduled in */
+		osk_waitq_wait(&kctx->jctx.sched_info.ctx.scheduled_waitq);
 	}
 	else 
 	{
@@ -1850,15 +1866,6 @@ void kbasep_js_schedule_privileged_ctx( kbase_device *kbdev, kbase_context *kctx
 		kbasep_js_runpool_retain_ctx(kbdev, kctx);
 		osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 		
-	}
-
-	if (is_scheduled == MALI_FALSE)
-	{
-		/* Try to schedule the context in */
-		kbasep_js_try_schedule_head_ctx( kbdev );
-
-		/* Wait for the context to be scheduled in */
-		osk_waitq_wait(&kctx->jctx.sched_info.ctx.scheduled_waitq);
 	}
 }
 
@@ -1872,6 +1879,8 @@ void kbasep_js_release_privileged_ctx( kbase_device *kbdev, kbase_context *kctx 
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 	js_kctx_info->ctx.flags &= (~KBASE_CTX_FLAG_PRIVILEGED);
 	osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
+
+	kbase_pm_release_l2_caches( kbdev );
 
 	/* Release the context - it wil lbe scheduled out if there is no pending job */
 	kbasep_js_runpool_release_ctx(kbdev, kctx);

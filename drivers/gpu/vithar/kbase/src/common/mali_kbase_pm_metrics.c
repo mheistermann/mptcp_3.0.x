@@ -91,9 +91,6 @@ mali_error kbasep_pm_metrics_init(kbase_device *kbdev)
 	kbdev->pm.metrics.time_idle = 0;
 	kbdev->pm.metrics.gpu_active = MALI_TRUE;
 	kbdev->pm.metrics.timer_active = MALI_TRUE;
-#ifdef CONFIG_VITHAR_RT_PM
-	kbdev->pm.cmu_pmu_status = 0;
-#endif
 
 	osk_err = osk_spinlock_irq_init(&kbdev->pm.metrics.lock, OSK_LOCK_ORDER_PM_METRICS);
 	if (OSK_ERR_NONE != osk_err)
@@ -147,6 +144,82 @@ void kbasep_pm_metrics_term(kbase_device *kbdev)
 }
 KBASE_EXPORT_TEST_API(kbasep_pm_metrics_term)
 
+#ifdef CONFIG_VITHAR_DVFS
+
+void kbasep_pm_record_gpu_idle(kbase_device *kbdev)
+{
+	struct timespec ts;
+	osk_ticks now;
+
+	getnstimeofday(&ts);
+
+	now = ts.tv_sec*1000+ts.tv_nsec/1000000;
+
+	OSK_ASSERT(kbdev != NULL);
+
+	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+
+	OSK_ASSERT(kbdev->pm.metrics.gpu_active == MALI_TRUE);
+
+	kbdev->pm.metrics.gpu_active = MALI_FALSE;
+
+	kbdev->pm.metrics.time_busy += now - kbdev->pm.metrics.time_period_start;
+	kbdev->pm.metrics.time_period_start = now;
+
+	osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+}
+KBASE_EXPORT_TEST_API(kbasep_pm_record_gpu_idle)
+
+void kbasep_pm_record_gpu_active(kbase_device *kbdev)
+{
+	struct timespec ts;
+	osk_ticks now;
+
+	getnstimeofday(&ts);
+
+	now = ts.tv_sec*1000+ts.tv_nsec/1000000;
+
+	OSK_ASSERT(kbdev != NULL);
+
+	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+
+	OSK_ASSERT(kbdev->pm.metrics.gpu_active == MALI_FALSE);
+
+	kbdev->pm.metrics.gpu_active = MALI_TRUE;
+
+	kbdev->pm.metrics.time_idle += now-kbdev->pm.metrics.time_period_start;
+	kbdev->pm.metrics.time_period_start = now;
+
+	osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+}
+KBASE_EXPORT_TEST_API(kbasep_pm_record_gpu_active)
+
+void kbase_pm_report_vsync(kbase_device *kbdev, int buffer_updated)
+{
+#if	MALI_DVFS_DEBUG
+	static int _from_where = 0;
+
+	if (_from_where!=buffer_updated) {
+		if (buffer_updated == 1)
+			printk("vsync report from FBPOST\n");
+		else if (buffer_updated == 2)
+			printk("vsync report from HWC\n");
+
+		if (buffer_updated != 0)
+			_from_where=buffer_updated;
+	}
+#endif
+
+	OSK_ASSERT(kbdev != NULL);
+
+	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+	if (buffer_updated == 0)
+		kbdev->pm.metrics.vsync_hit = 0;
+	else
+		kbdev->pm.metrics.vsync_hit++;
+	osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+}
+#else
 void kbasep_pm_record_gpu_idle(kbase_device *kbdev)
 {
 	osk_ticks now = osk_time_now();
@@ -193,6 +266,7 @@ void kbase_pm_report_vsync(kbase_device *kbdev, int buffer_updated)
 	kbdev->pm.metrics.vsync_hit = buffer_updated;
 	osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
 }
+#endif
 KBASE_EXPORT_TEST_API(kbase_pm_report_vsync)
 
 kbase_pm_dvfs_action kbase_pm_get_dvfs_action(kbase_device *kbdev)
@@ -271,8 +345,12 @@ KBASE_EXPORT_TEST_API(kbase_pm_get_dvfs_action)
 #ifdef CONFIG_VITHAR_DVFS
 int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev)
 {
+	struct timespec ts;
+	osk_ticks now;
 	int utilisation=0;
-	osk_ticks now = osk_time_now();
+
+	getnstimeofday(&ts);
+	now = ts.tv_sec*1000+ts.tv_nsec/1000000;
 
 	OSK_ASSERT(kbdev != NULL);
 
@@ -280,12 +358,12 @@ int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev)
 
 	if (kbdev->pm.metrics.gpu_active)
 	{
-		kbdev->pm.metrics.time_busy += osk_time_elapsed(kbdev->pm.metrics.time_period_start, now);
+		kbdev->pm.metrics.time_busy += now - kbdev->pm.metrics.time_period_start;
 		kbdev->pm.metrics.time_period_start = now;
 	}
 	else
 	{
-		kbdev->pm.metrics.time_idle += osk_time_elapsed(kbdev->pm.metrics.time_period_start, now);
+		kbdev->pm.metrics.time_idle += now - kbdev->pm.metrics.time_period_start;
 		kbdev->pm.metrics.time_period_start = now;
 	}
 

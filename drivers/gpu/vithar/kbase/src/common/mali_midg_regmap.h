@@ -300,6 +300,11 @@
  */
 #define ASn_STATUS_FLUSH_ACTIVE 0x01
 
+#define ASn_FAULTSTATUS_ACCESS_TYPE_MASK    (0x3<<8)
+#define ASn_FAULTSTATUS_ACCESS_TYPE_EX      (0x1<<8)
+#define ASn_FAULTSTATUS_ACCESS_TYPE_READ    (0x2<<8)
+#define ASn_FAULTSTATUS_ACCESS_TYPE_WRITE   (0x3<<8)
+
 /*
  * Begin Command Values
  */

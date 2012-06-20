@@ -85,19 +85,19 @@
 #define BASE_HW_ISSUE_7144  1
 
 /* Write of PRFCNT_CONFIG_MODE_MANUAL to PRFCNT_CONFIG causes a instr. dump if PRFCNT_TILER_EN is enabled */
-#define BASE_HW_ISSUE_8186  1
+#define BASE_HW_ISSUE_8186  0
 
 /* TIB: Reports faults from a vtile which has not yet been allocated */
-#define BASE_HW_ISSUE_8245  1
+#define BASE_HW_ISSUE_8245  0
 
 /** Hierz doesn't work when stenciling is enabled */
-#define BASE_HW_ISSUE_8260  1
+#define BASE_HW_ISSUE_8260  0
 
 /* Livelock in L0 icache */
-#define BASE_HW_ISSUE_8280  1
+#define BASE_HW_ISSUE_8280  0
 
 /** uTLB deadlock could occur when writing to an invalid page at the same time as access to a valid page in the same uTLB cache line */
-#define BASE_HW_ISSUE_8316  1
+#define BASE_HW_ISSUE_8316  0
 
 /* HT: TERMINATE for RUN command ignored if previous LOAD_DESCRIPTOR is still executing */
 #define BASE_HW_ISSUE_8394  0
@@ -134,10 +134,10 @@
 #define BASE_HW_ISSUE_8896  0
 
 /* 8xMSAA does not work with CRC */
-#define BASE_HW_ISSUE_8975  0
+#define BASE_HW_ISSUE_8975  1
 
 /* Boolean occlusion queries don't work properly due to sdc issue. */
-#define BASE_HW_ISSUE_8986  1			/* TODO: Review - could be fixed accordign to JIRA */
+#define BASE_HW_ISSUE_8986  0
 
 /* Change in RMUs in use causes problems related with the core's SDC */
 #define BASE_HW_ISSUE_8987  0
@@ -153,5 +153,8 @@
 
 /* HT: Tiler returns TERMINATED for command that hasn't been terminated */
 #define BASE_HW_ISSUE_9510 1
+
+/* Occasionally the GPU will issue multiple page faults for the same address before the MMU page table has been read by the GPU */
+#define BASE_HW_ISSUE_9630 0
 
 #endif /* _BASE_HWCONFIG_H_ */

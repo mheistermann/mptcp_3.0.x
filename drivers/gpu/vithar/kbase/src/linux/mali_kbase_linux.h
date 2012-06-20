@@ -63,7 +63,7 @@ typedef struct kbase_os_device
 	osk_atomic serving_job_irq;
 	osk_atomic serving_gpu_irq;
 	osk_atomic serving_mmu_irq;
-	osk_spinlock reg_op_lock;
+	osk_spinlock_irq reg_op_lock;
 #endif
 } kbase_os_device;
 

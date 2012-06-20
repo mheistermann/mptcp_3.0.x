@@ -65,9 +65,16 @@ void oskp_debug_print(const char *fmt, ...);
 #define OSKP_CHANNEL_RAW       ((u32)0x00000008)      /**< @brief Raw output*/
 #define OSKP_CHANNEL_ALL       ((u32)0xFFFFFFFF)      /**< @brief All the channels at the same time*/
 
-/** @brief Disable the asserts tests if set to 1. Default is to enable the asserts. */
+/** @brief Disable the asserts tests if set to 1. Default is to disable the asserts in release. */
 #ifndef OSK_DISABLE_ASSERT
-#define OSK_DISABLE_ASSERTS 0    
+#define OSK_DISABLE_ASSERTS (MALI_DEBUG == 0)
+#endif
+
+/* Lock order assertion check requires macro to define the order variable on the stack */
+#if OSK_DISABLE_ASSERTS == 0 
+#define OSK_ORDER_VAR_DEFINITION(order) osk_lock_order __oskp_order__ = (order);
+#else
+#define OSK_ORDER_VAR_DEFINITION(order) CSTD_NOP()
 #endif
 
 /** @brief If equals to 0, a trace containing the file, line, and function will be displayed before each message. */

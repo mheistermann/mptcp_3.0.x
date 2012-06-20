@@ -196,6 +196,7 @@ void kbasep_pm_read_present_cores(kbase_device *kbdev)
 	kbdev->tiler_needed_bitmap = 0;
 	kbdev->shader_available_bitmap = 0;
 	kbdev->tiler_available_bitmap = 0;
+	kbdev->l2_users_count = 0;
 
 	OSK_MEMSET(kbdev->shader_needed_cnt, 0, sizeof(kbdev->shader_needed_cnt));
 	OSK_MEMSET(kbdev->shader_needed_cnt, 0, sizeof(kbdev->tiler_needed_cnt));
@@ -310,16 +311,13 @@ STATIC mali_bool kbase_pm_transition_core_type(kbase_device *kbdev, kbase_pm_cor
 	 */
 	desired_state |= in_use;
 
-	/* Workaround for MIDBASE-1258 (L2 usage should be refcounted).
-	 * Keep the L2 from being turned off.
-	 */
-	if (type == KBASE_PM_CORE_L2)
-	{
-		desired_state = present;
-	}
-
 	if (desired_state == ready && trans == 0)
 	{
+		/* If l2 cache user registered and l2 cache powered, notify the users waiting */
+		if ( ( type == KBASE_PM_CORE_L2 ) && ( kbdev->l2_users_count > 0 ) && (ready == present) )
+		{
+			osk_waitq_set(&kbdev->pm.l2_powered_waitqueue);
+		}
 		return MALI_TRUE;
 	}
 
@@ -617,6 +615,43 @@ mali_bool kbase_pm_register_inuse_cores(kbase_device *kbdev, u64 shader_cores, u
 }
 KBASE_EXPORT_TEST_API(kbase_pm_register_inuse_cores)
 
+void kbase_pm_request_l2_caches( kbase_device *kbdev )
+{
+	u32 prior_l2_users_count;
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
+
+	prior_l2_users_count = kbdev->l2_users_count++;
+
+	OSK_ASSERT( kbdev->l2_users_count != 0 );
+
+	if ( !prior_l2_users_count )
+	{
+		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
+	}
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+	osk_waitq_wait(&kbdev->pm.l2_powered_waitqueue);
+}
+KBASE_EXPORT_TEST_API(kbase_pm_request_l2_caches)
+
+void kbase_pm_release_l2_caches(kbase_device *kbdev )
+{
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
+
+	OSK_ASSERT( kbdev->l2_users_count > 0 );
+
+	--kbdev->l2_users_count;
+
+	if ( !kbdev->l2_users_count )
+	{
+		/* Any new requesters must now wait for the l2 to be powered up. */
+		osk_waitq_clear(&kbdev->pm.l2_powered_waitqueue);
+		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
+	}
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+}
+KBASE_EXPORT_TEST_API(kbase_pm_release_l2_caches)
+
+
 void kbase_pm_release_cores(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
 {
 	mali_bool change_gpu_state = MALI_FALSE;
@@ -690,10 +725,17 @@ void MOCKABLE(kbase_pm_check_transitions)(kbase_device *kbdev)
 
 	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
 
-	cores_powered = (kbdev->pm.desired_shader_state | kbdev->pm.desired_tiler_state);
+	/* If any cores are already powered then, we must keep the caches on */
+	cores_powered = kbase_pm_get_ready_cores(kbdev, KBASE_PM_CORE_TILER);
+	cores_powered |= kbase_pm_get_ready_cores(kbdev, KBASE_PM_CORE_SHADER);
 
-	/* We need to keep the inuse cores powered */
-	cores_powered |= kbdev->shader_inuse_bitmap | kbdev->tiler_inuse_bitmap;
+	cores_powered |= (kbdev->pm.desired_shader_state | kbdev->pm.desired_tiler_state);
+
+	/* If there are l2 cache users registered, keep all l2s powered even if all other cores are off.*/
+	if ( kbdev->l2_users_count > 0 )
+	{
+		cores_powered |= kbdev->l2_present_bitmap;
+	}
 
 	desired_l2_state = get_desired_cache_status(kbdev->l2_present_bitmap, cores_powered);
 	desired_l3_state = get_desired_cache_status(kbdev->l3_present_bitmap, desired_l2_state);
@@ -816,7 +858,7 @@ void MOCKABLE(kbase_pm_clock_on)(kbase_device *kbdev)
 		/* GPU state was lost, reset GPU to ensure it is in a consistent state */
 		kbase_pm_init_hw(kbdev);
 	}
-
+	
 	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
 	kbdev->pm.gpu_powered = MALI_TRUE;
 	osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);

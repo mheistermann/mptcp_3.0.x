@@ -154,4 +154,7 @@
 /* HT: Tiler returns TERMINATED for command that hasn't been terminated */
 #define BASE_HW_ISSUE_9510 1
 
+/* Occasionally the GPU will issue multiple page faults for the same address before the MMU page table has been read by the GPU */
+#define BASE_HW_ISSUE_9630 1
+
 #endif /* _BASE_HWCONFIG_H_ */

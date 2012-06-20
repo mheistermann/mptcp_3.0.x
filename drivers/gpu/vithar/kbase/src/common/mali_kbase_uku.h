@@ -236,6 +236,14 @@ typedef struct kbase_uk_ext_buff_kds_data
 	kbase_pointer file_descriptor;
 } kbase_uk_ext_buff_kds_data;
 
+#ifdef CONFIG_VITHAR_DVFS
+typedef struct kbase_uk_vsync_report
+{
+	uk_header header;
+	/* IN */
+	u32       val;
+} kbase_uk_vsync_report;
+#endif
 
 typedef enum kbase_uk_function_id
 {
@@ -274,6 +282,9 @@ typedef enum kbase_uk_function_id
 #if MALI_NO_MALI
 	, KBASE_FUNC_MODEL_CONTROL
 #endif /* MALI_NO_MALI */
+#ifdef CONFIG_VITHAR_DVFS
+	, KBASE_FUNC_REPORT_VSYNC
+#endif
 
 } kbase_uk_function_id;
 

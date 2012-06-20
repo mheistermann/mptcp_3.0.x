@@ -382,6 +382,7 @@ mali_error kbase_instr_hwcnt_dump(kbase_context * kctx)
 
 	if (kbdev->hwcnt.state == KBASE_INSTR_STATE_FAULT)
 	{
+		err = MALI_ERROR_FUNCTION_FAILED;
 		kbdev->hwcnt.state = KBASE_INSTR_STATE_IDLE;
 	}
 	else

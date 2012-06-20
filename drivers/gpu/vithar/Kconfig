@@ -39,6 +39,12 @@ config VITHAR_ENABLE_DS5
 	help
 	  Choose this option to enable DS5 on vithar DDK.
 
+config VITHAR_DEBUG_SYS
+       bool "Enable sysfs for vithar"
+       depends on VITHAR
+       default y
+       help
+         Enables sysfs for vithar device. Set/Monitor Vithar Device
 config VITHAR_RTPM_DEBUG
 	bool "Enable Runtime Power Management DEBUG"
 	depends on VITHAR && VITHAR_RT_PM

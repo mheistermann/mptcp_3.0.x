@@ -253,6 +253,8 @@ uintptr_t kbasep_get_config_value(const kbase_attribute *attributes, int attribu
 		/* End scheduling defaults */
 		case KBASE_CONFIG_ATTR_POWER_MANAGEMENT_CALLBACKS:
 			return 0;
+		case KBASE_CONFIG_ATTR_PLATFORM_FUNCS:
+			return 0;
 		case  KBASE_CONFIG_ATTR_SECURE_BUT_LOSS_OF_PERFORMANCE:
 			return DEFAULT_SECURE_BUT_LOSS_OF_PERFORMANCE;
 		case KBASE_CONFIG_ATTR_CPU_SPEED_FUNC:
@@ -265,6 +267,34 @@ uintptr_t kbasep_get_config_value(const kbase_attribute *attributes, int attribu
 	}
 }
 
+mali_bool kbasep_platform_device_init(kbase_device *kbdev)
+{
+	kbase_platform_funcs_conf *platform_funcs;
+
+	platform_funcs = (kbase_platform_funcs_conf *) kbasep_get_config_value(kbdev->config_attributes, KBASE_CONFIG_ATTR_PLATFORM_FUNCS);
+	if(platform_funcs)
+	{
+		if(platform_funcs->platform_init_func)
+		{
+			return platform_funcs->platform_init_func(kbdev);
+		}
+	}
+	return MALI_TRUE;
+}
+
+void kbasep_platform_device_term(kbase_device *kbdev)
+{
+	kbase_platform_funcs_conf *platform_funcs;
+
+	platform_funcs = (kbase_platform_funcs_conf *) kbasep_get_config_value(kbdev->config_attributes, KBASE_CONFIG_ATTR_PLATFORM_FUNCS);
+	if(platform_funcs)
+	{
+		if(platform_funcs->platform_term_func)
+		{
+			platform_funcs->platform_term_func(kbdev);
+		}
+	}
+}
 
 void kbasep_get_memory_performance(const kbase_memory_resource *resource, kbase_memory_performance *cpu_performance,
 		kbase_memory_performance *gpu_performance)
@@ -575,6 +605,10 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
 					OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid function pointer in KBASE_CONFIG_ATTR_CPU_SPEED_FUNC");
 					return MALI_FALSE;
 				}
+				break;
+
+			case KBASE_CONFIG_ATTR_PLATFORM_FUNCS:
+				/* any value is allowed */
 				break;
 
 			default:

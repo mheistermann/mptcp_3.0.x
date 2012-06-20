@@ -177,12 +177,10 @@ static mali_error kbase_jd_pre_external_resources(kbase_jd_atom * katom)
 	{
 		int exclusive;
 		kbase_va_region * reg;
-		base_external_resource * res;
 		struct kds_resource * kds_res = NULL;
 
-		res = base_jd_get_external_resource(katom->user_atom, res_id);
-		exclusive = res->ext_resource & BASE_EXT_RES_ACCESS_EXCLUSIVE;
-		reg = kbase_region_lookup(katom->kctx, res->ext_resource & ~BASE_EXT_RES_ACCESS_EXCLUSIVE);
+		exclusive = katom->resources[res_id].ext_resource & BASE_EXT_RES_ACCESS_EXCLUSIVE;
+		reg = kbase_region_tracker_find_region_enclosing_address(katom->kctx, katom->resources[res_id].ext_resource & ~BASE_EXT_RES_ACCESS_EXCLUSIVE);
 
 		/* did we find a matching region object? */
 		if (NULL == reg)
@@ -241,6 +239,7 @@ void kbase_jd_post_external_resources(kbase_jd_atom * katom)
 		kds_resource_set_release(&katom->kds_rset);
 	}
 #endif
+	osk_free(katom->resources);
 }
 
 /*
@@ -300,27 +299,46 @@ STATIC INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 	dep_raise_sem(sem, pre_dep.dep[0]);
 	dep_raise_sem(sem, pre_dep.dep[1]);
 
+	/* We surely want to preallocate a pool of those, or have some
+	 * kind of slab allocator around */
+	katom = osk_calloc(sizeof(*katom));
+	if (!katom)
+		return NULL;    /* Ideally we should handle OOM more gracefully */
+
 	/* Check that the whole atom fits within the pool. */
 	if (core_req & BASE_JD_REQ_EXTERNAL_RESOURCES)
 	{
 		/* extres integrity will be verified when we parse them */
 		if ((char*)base_jd_get_external_resource(atom, nr_extres) > ((char*)jctx->pool + jctx->pool_size))
 		{
+			osk_free(katom);
 			return NULL;
+		}
+		else
+		{
+			unsigned int res_no;
+			katom->resources = osk_calloc(nr_extres*sizeof(base_external_resource));
+			if (!katom->resources)
+			{
+				osk_free(katom);
+				return NULL;
+			}
+			for (res_no = 0; res_no < nr_extres; res_no++)
+			{
+				base_external_resource* res = base_jd_get_external_resource(atom, res_no);
+				katom->resources[res_no].ext_resource = res->ext_resource;
+			}
 		}
 	}
 	else
 	{
 		/* syncsets integrity will be performed as we execute them */
 		if ((char *)base_jd_get_atom_syncset(atom, nr_syncsets) > ((char *)jctx->pool + jctx->pool_size))
+		{
+			osk_free(katom);
 			return NULL;
+		}
 	}
-
-	/* We surely want to preallocate a pool of those, or have some
-	 * kind of slab allocator around */
-	katom = osk_calloc(sizeof(*katom));
-	if (!katom)
-		return NULL;    /* Ideally we should handle OOM more gracefully */
 
 	katom->user_atom    = atom;
 	katom->pre_dep      = pre_dep;
@@ -375,6 +393,7 @@ STATIC INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 		if (MALI_ERROR_NONE != kbase_jd_pre_external_resources(katom))
 		{
 			/* setup failed (no access, bad resource, unknown resource types, etc.) */
+			osk_free(katom->resources);
 			osk_free(katom);
 			return NULL;
 		}
@@ -660,6 +679,11 @@ STATIC mali_bool jd_done_nolock(kbase_jd_atom *katom, int zapping)
 			kbase_event_post(kctx, &node->event);
 			beenthere("done atom %p\n", (void*)node);
 
+			OSK_ASSERT( kctx->nr_outstanding_atoms > 0 );
+			if (--kctx->nr_outstanding_atoms < MAX_KCTX_OUTSTANDING_ATOMS)
+			{
+				osk_waitq_set(&kctx->complete_outstanding_waitq);
+			}
 			if (--bag->nr_atoms == 0)
 			{
 				/* This atom was the last, signal userspace */
@@ -704,7 +728,6 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 	 * kbase_jd_submit isn't expected to fail and so all errors with the jobs
 	 * are reported by immediately falling them (through event system)
 	 */
-
 	kbdev = kctx->kbdev;
 
 	beenthere("%s", "Enter");
@@ -722,7 +745,12 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 	bag->event.data             = (void *)(uintptr_t)user_bag->bag_uaddr;
 
 	osk_mutex_lock(&jctx->lock);
-
+	while (kctx->nr_outstanding_atoms >= MAX_KCTX_OUTSTANDING_ATOMS)
+	{
+		osk_mutex_unlock(&jctx->lock);
+		osk_waitq_wait(&kctx->complete_outstanding_waitq);
+		osk_mutex_lock(&jctx->lock);
+	}
 	/*
 	 * Use a transient list to store all the validated atoms.
 	 * Once we're sure nothing is wrong, there's no going back.
@@ -742,6 +770,12 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 	{
 		err = MALI_ERROR_FUNCTION_FAILED;
 		goto out;
+	}
+
+	kctx->nr_outstanding_atoms += user_bag->nr_atoms;
+	if (kctx->nr_outstanding_atoms >= MAX_KCTX_OUTSTANDING_ATOMS )
+	{
+		osk_waitq_clear(&kctx->complete_outstanding_waitq);
 	}
 
 	while(!OSK_DLIST_IS_EMPTY(klistp))

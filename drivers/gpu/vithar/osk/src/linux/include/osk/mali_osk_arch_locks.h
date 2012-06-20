@@ -99,9 +99,10 @@ OSK_STATIC_INLINE osk_error osk_spinlock_irq_init(osk_spinlock_irq * const lock,
  * NOTE: the local variable must not conflict with an identifier in a wider scope */
 #define osk_rwlock_init( ARG_LOCK, ARG_ORDER ) \
 	({ \
-	osk_lock_order __oskp_order__ = (ARG_ORDER); \
+	OSK_ORDER_VAR_DEFINITION(ARG_ORDER); \
 	OSK_ASSERT( OSK_LOCK_ORDER_LAST <= __oskp_order__ && __oskp_order__ <= OSK_LOCK_ORDER_FIRST ); \
-	init_rwsem( OSKP_LOCK_PTR_ASSERT((ARG_LOCK)) ); \
+	OSKP_LOCK_PTR_ASSERT( (ARG_LOCK) ); \
+	init_rwsem( (ARG_LOCK) ); \
 	OSK_ERR_NONE;})
 
 OSK_STATIC_INLINE void osk_rwlock_term(osk_rwlock * lock)
@@ -141,9 +142,10 @@ OSK_STATIC_INLINE void osk_rwlock_write_unlock(osk_rwlock * lock)
  * NOTE: the local variable must not conflict with an identifier in a wider scope */
 #define osk_mutex_init( ARG_LOCK, ARG_ORDER ) \
 	({ \
-	osk_lock_order __oskp_order__ = (ARG_ORDER); \
+	OSK_ORDER_VAR_DEFINITION(ARG_ORDER); \
 	OSK_ASSERT( OSK_LOCK_ORDER_LAST <= __oskp_order__ && __oskp_order__ <= OSK_LOCK_ORDER_FIRST ); \
-	mutex_init( OSKP_LOCK_PTR_ASSERT((ARG_LOCK)) ); \
+	OSKP_LOCK_PTR_ASSERT( (ARG_LOCK) ); \
+	mutex_init( (ARG_LOCK) ); \
 	OSK_ERR_NONE;})
 
 
@@ -172,9 +174,10 @@ OSK_STATIC_INLINE void osk_mutex_unlock(osk_mutex * lock)
  * NOTE: the local variable must not conflict with an identifier in a wider scope */
 #define osk_spinlock_init( ARG_LOCK, ARG_ORDER ) \
 	({ \
-	osk_lock_order __oskp_order__ = (ARG_ORDER); \
+	OSK_ORDER_VAR_DEFINITION(ARG_ORDER); \
 	OSK_ASSERT( OSK_LOCK_ORDER_LAST <= __oskp_order__ && __oskp_order__ <= OSK_LOCK_ORDER_FIRST ); \
-	spin_lock_init( OSKP_LOCK_PTR_ASSERT((ARG_LOCK)) ); \
+	OSKP_LOCK_PTR_ASSERT( (ARG_LOCK) ); \
+	spin_lock_init( (ARG_LOCK) ); \
 	OSK_ERR_NONE;})
 
 OSK_STATIC_INLINE void osk_spinlock_term(osk_spinlock * lock)
@@ -202,9 +205,10 @@ OSK_STATIC_INLINE void osk_spinlock_unlock(osk_spinlock * lock)
  * NOTE: the local variable must not conflict with an identifier in a wider scope */
 #define osk_spinlock_irq_init( ARG_LOCK, ARG_ORDER ) \
 	({ \
-	osk_lock_order __oskp_order__ = (ARG_ORDER); \
+	OSK_ORDER_VAR_DEFINITION(ARG_ORDER); \
 	OSK_ASSERT( OSK_LOCK_ORDER_LAST <= __oskp_order__ && __oskp_order__ <= OSK_LOCK_ORDER_FIRST ); \
-	spin_lock_init( &(OSKP_LOCK_PTR_ASSERT((ARG_LOCK))->lock) ); \
+	OSKP_LOCK_PTR_ASSERT( (ARG_LOCK) ); \
+	spin_lock_init( &(ARG_LOCK)->lock ); \
 	OSK_ERR_NONE;})
 
 OSK_STATIC_INLINE void osk_spinlock_irq_term(osk_spinlock_irq * lock)

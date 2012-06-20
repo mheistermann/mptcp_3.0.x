@@ -518,19 +518,11 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 	else
 	{
 		/* TMEM case */
-		OSK_DLIST_FOREACH(&kctx->reg_list,
-				     struct kbase_va_region, link, reg)
-		{
-			if (reg->start_pfn <= vma->vm_pgoff &&
-			    (reg->start_pfn + reg->nr_alloc_pages) >= (vma->vm_pgoff + nr_pages) &&
-			    (reg->flags & (KBASE_REG_ZONE_MASK | KBASE_REG_FREE | KBASE_REG_NO_CPU_MAP)) == KBASE_REG_ZONE_TMEM)
-			{
-				/* Match! */
-				goto map;
-			}
-			    
+		reg = kbase_region_tracker_find_region_enclosing_range( kctx, vma->vm_pgoff, nr_pages );
+		if( reg && (reg->flags & (KBASE_REG_ZONE_MASK | KBASE_REG_FREE | KBASE_REG_NO_CPU_MAP)) == KBASE_REG_ZONE_TMEM )
+ 		{
+			goto map;
 		}
-
 		err = -ENOMEM;
 		goto out_unlock;
 	}
@@ -667,7 +659,7 @@ void kbase_va_free(kbase_context *kctx, void *va)
 	
 	kbase_gpu_vm_lock(kctx);
 	
-	reg = kbase_validate_region(kctx, (uintptr_t)va);
+	reg = kbase_region_tracker_find_region_base_address(kctx, (uintptr_t)va);
 	OSK_ASSERT(reg);
 
 	err = kbase_gpu_munmap(kctx, reg);

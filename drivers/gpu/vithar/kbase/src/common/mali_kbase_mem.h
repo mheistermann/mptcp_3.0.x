@@ -36,7 +36,13 @@
 #include "mali_kbase_pm.h"
 #include "mali_kbase_defs.h"
 
-#if BASE_HW_ISSUE_8316 != 0
+#if BASE_HW_ISSUE_9630 != 0
+/* Part of the workaround for PRLAM-9630 requires us to grow/shrink memory by 8 pages. 
+The MMU reads in 8 page table entries from memory at a time, if we have more than one page fault within the same 8 pages and 
+page tables are updated accordingly, the MMU does not re-read the page table entries from memory for the subsequent page table
+updates and generates duplicate page faults as the page table information used by the MMU is not valid.   */
+#define KBASEP_TMEM_GROWABLE_BLOCKSIZE_PAGES_LOG2 3 /* round to 8 pages */
+#elif BASE_HW_ISSUE_8316 != 0
 /* Part of the workaround for uTLB invalid pages is to ensure we grow/shrink tmem by 4 pages at a time */
 #define KBASEP_TMEM_GROWABLE_BLOCKSIZE_PAGES_LOG2 2 /* round to 4 pages */
 #else
@@ -77,6 +83,9 @@ typedef struct kbase_mem_commit
  */  
 typedef struct kbase_va_region
 {
+#if MALI_KBASEP_REGION_RBTREE
+	struct rb_node          rblink;
+#endif
 	osk_dlist_item          link;
 
 	struct kbase_context    *kctx; /* Backlink to base context */
@@ -290,13 +299,31 @@ mali_error kbase_mem_usage_request_pages(kbasep_mem_usage *usage, u32 nr_pages);
  */
 void kbase_mem_usage_release_pages(kbasep_mem_usage *usage, u32 nr_pages);
 
+
+mali_error kbase_region_tracker_init(struct kbase_context *kctx);
+void kbase_region_tracker_term(struct kbase_context *kctx);
+
+struct kbase_va_region * kbase_region_tracker_find_region_enclosing_range( 
+	struct kbase_context *kctx, u64 start_pgoff, u32 nr_pages );
+
+struct kbase_va_region * kbase_region_tracker_find_region_enclosing_address( 
+	struct kbase_context *kctx, mali_addr64 gpu_addr );
+
+/**
+ * @brief Check that a pointer is actually a valid region.
+ *
+ * Must be called with context lock held.
+ */
+struct kbase_va_region * kbase_region_tracker_find_region_base_address( 
+	struct kbase_context *kctx, mali_addr64 gpu_addr );
+
+
 struct kbase_va_region *kbase_alloc_free_region(struct kbase_context *kctx, u64 start_pfn, u32 nr_pages, u32 zone);
 void kbase_free_alloced_region(struct kbase_va_region *reg);
 mali_error kbase_add_va_region(struct kbase_context *kctx,
                                struct kbase_va_region *reg,
                                mali_addr64 addr, u32 nr_pages,
                                u32 align);
-kbase_va_region *kbase_region_lookup(kbase_context *kctx, mali_addr64 gpu_addr);
 
 mali_error kbase_gpu_mmap(struct kbase_context *kctx,
                           struct kbase_va_region *reg,
@@ -321,13 +348,6 @@ void kbase_mmu_free_pgd(struct kbase_context *kctx);
 mali_error kbase_mmu_insert_pages(struct kbase_context *kctx, u64 vpfn,
                                   osk_phy_addr *phys, u32 nr, u32 flags);
 mali_error kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr);
-
-/**
- * @brief Check that a pointer is actually a valid region.
- *
- * Must be called with context lock held.
- */
-struct kbase_va_region *kbase_validate_region(struct kbase_context *kctx, mali_addr64 gpu_addr);
 
 /**
  * @brief Register region and map it on the GPU.

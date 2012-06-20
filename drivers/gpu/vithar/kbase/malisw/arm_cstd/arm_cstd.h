@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2007-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2007-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -49,6 +49,10 @@
 ============================================================================ */
 #include "arm_cstd_compilers.h"
 #include "arm_cstd_types.h"
+
+#if 1 == CSTD_OS_ANDROID
+	#include <cutils/log.h>
+#endif
 
 /* ============================================================================
 	Min and Max Values
@@ -341,7 +345,6 @@ static INLINE void arm_cstd_compile_time_assertions( void )
 #elif 1 == CSTD_CPU_64BIT
 	CSTD_COMPILE_TIME_ASSERT( sizeof(uintptr_t) == 8 );
 #endif
-
 }
 
 /* ============================================================================
@@ -385,6 +388,49 @@ static INLINE void arm_cstd_compile_time_assertions( void )
  * numerical type.
  */
 #define CSTD_STATIC_CAST(type)      (type)
+
+/* ============================================================================
+	Streamline Annotations
+============================================================================ */
+#ifndef CSTD_ANNOTATION
+#define CSTD_ANNOTATION 0
+#endif
+
+#if CSTD_ANNOTATION && ((1 == CSTD_OS_LINUX) || (1 == CSTD_OS_ANDROID))
+
+#include <stdio.h>
+
+#define CSTD_ANNOTATE(...)                                                    \
+do {                                                                          \
+	FILE * cstd_annotate;                                                     \
+	cstd_annotate = fopen( "/dev/gator/annotate", "wb" );                     \
+	if( cstd_annotate )                                                       \
+	{                                                                         \
+		fprintf( cstd_annotate, __VA_ARGS__);                                 \
+		fputc( '\0', cstd_annotate );                                         \
+		fclose( cstd_annotate );                                              \
+	}                                                                         \
+} while(0)
+
+#define CSTD_ANNOTATE_POINT(...)                                              \
+do {                                                                          \
+	FILE * cstd_annotate;                                                     \
+	cstd_annotate = fopen( "/dev/gator/annotate", "wb" );                     \
+	if( cstd_annotate )                                                       \
+	{                                                                         \
+		fprintf( cstd_annotate, __VA_ARGS__);                                 \
+		fputc( '\0', cstd_annotate );                                         \
+		fputc( '\0', cstd_annotate );                                         \
+		fclose( cstd_annotate );                                              \
+	}                                                                         \
+} while(0)
+
+#else
+
+#define CSTD_ANNOTATE(...)
+#define CSTD_ANNOTATE_POINT(...)
+
+#endif
 
 /* ============================================================================
 	Useful bit constants

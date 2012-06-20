@@ -42,22 +42,22 @@ typedef struct _time_in_state {
 } mali_time_in_state;
 
 struct regulator *kbase_platform_get_regulator(void);
-int kbase_platform_regulator_init(struct device *dev);
-int kbase_platform_regulator_disable(struct device *dev);
-int kbase_platform_regulator_enable(struct device *dev);
+int kbase_platform_regulator_init(void);
+int kbase_platform_regulator_disable(void);
+int kbase_platform_regulator_enable(void);
 int kbase_platform_get_default_voltage(struct device *dev, int *vol);
 int kbase_platform_get_voltage(struct device *dev, int *vol);
 int kbase_platform_set_voltage(struct device *dev, int vol);
 void kbase_platform_dvfs_set_clock(kbase_device *kbdev, int freq);
 int kbase_platform_dvfs_sprint_avs_table(char *buf);
 int kbase_platform_dvfs_set(int enable);
-void kbase_platform_dvfs_set_level(kbase_device *kbdev, int level);
+void kbase_platform_dvfs_set_level(struct kbase_device *kbdev, int level);
 int kbase_platform_dvfs_get_level(int freq);
 
 #ifdef CONFIG_VITHAR_DVFS
-int kbase_platform_dvfs_init(struct device *dev);
+int kbase_platform_dvfs_init(struct kbase_device *dev);
 void kbase_platform_dvfs_term(void);
-int kbase_platform_dvfs_event(kbase_device *kbdev, u32 utilisation);
+int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation);
 int kbase_platform_dvfs_get_control_status(void);
 int kbase_platform_dvfs_set_control_status(int onoff);
 int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);

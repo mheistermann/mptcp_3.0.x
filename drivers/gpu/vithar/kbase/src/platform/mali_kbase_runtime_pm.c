@@ -65,7 +65,7 @@ static void kbase_device_runtime_workqueue_callback(struct work_struct *work)
 		return;
 
 	result = pm_runtime_suspend(kbdev->osdev.dev);
-	kbase_platform_clock_off(kbdev->osdev.dev);
+	kbase_platform_clock_off(kbdev);
 
 #if MALI_GATOR_SUPPORT
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM));
@@ -90,9 +90,9 @@ void kbase_device_runtime_init_workqueue(struct device *dev)
  *
  * @return A standard Linux error code
  */
-void kbase_device_runtime_disable(struct device *dev)
+void kbase_device_runtime_disable(struct kbase_device *kbdev)
 {
-	pm_runtime_disable(dev);
+	pm_runtime_disable(kbdev->osdev.dev);
 }
 
 /** Initialize runtiem pm fields in given device 
@@ -102,18 +102,24 @@ void kbase_device_runtime_disable(struct device *dev)
  * @return A standard Linux error code
  */
 
-void kbase_device_runtime_init(struct device *dev)
+mali_error kbase_device_runtime_init(struct kbase_device *kbdev)
 {
-	pm_suspend_ignore_children(dev, true);
-	pm_runtime_enable(dev);
-	kbase_device_runtime_init_workqueue(dev);
+	pm_suspend_ignore_children(kbdev->osdev.dev, true);
+	pm_runtime_enable(kbdev->osdev.dev);
+	kbase_device_runtime_init_workqueue(kbdev->osdev.dev);
+	return MALI_ERROR_NONE;
 }
 
 void kbase_device_runtime_get_sync(struct device *dev)
 {
 	int result;
 	struct kbase_device *kbdev;
+	struct exynos_context *platform;
 	kbdev = dev_get_drvdata(dev);
+
+	platform = (struct exynos_context *) kbdev->platform_context;
+	if(!platform)
+		return;
 
 	/********************************************
 	 *
@@ -126,8 +132,8 @@ void kbase_device_runtime_get_sync(struct device *dev)
 	 *
 	********************************************/
 	if(dev->power.disable_depth > 0) {
-		if(kbdev->pm.cmu_pmu_status == 0)
-			kbase_platform_cmu_pmu_control(dev, 1);
+		if(platform->cmu_pmu_status == 0)
+			kbase_platform_cmu_pmu_control(kbdev, 1);
 		return;
 	}
 
@@ -135,7 +141,7 @@ void kbase_device_runtime_get_sync(struct device *dev)
 		cancel_delayed_work_sync(&kbdev->runtime_pm_workqueue);
 	}
 
-	kbase_platform_clock_on(dev);
+	kbase_platform_clock_on(kbdev);
 	pm_runtime_get_noresume(dev);
 	result = pm_runtime_resume(dev);
 
@@ -161,7 +167,7 @@ void kbase_device_runtime_get_sync(struct device *dev)
 	 *                                                                      => do not success implement runtimePM API
 	********************************************/
 	if(result < 0 && result == -EAGAIN)
-		kbase_platform_cmu_pmu_control(dev, 1);
+		kbase_platform_cmu_pmu_control(kbdev, 1);
 	else if(result < 0)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "pm_runtime_get_sync failed (%d)\n", result);
 }
