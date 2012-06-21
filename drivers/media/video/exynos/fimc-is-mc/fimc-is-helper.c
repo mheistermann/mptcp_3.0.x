@@ -2264,13 +2264,13 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 	}
 
 	/*set back size*/
-	if (front_height > DEFAULT_DIS_MAX_HEIGHT) {
+	if (crop_height > DEFAULT_DIS_MAX_HEIGHT) {
 		back_height = DEFAULT_DIS_MAX_HEIGHT;
 		back_width = (DEFAULT_DIS_MAX_HEIGHT
 				* (back_crop_ratio * 100 / 1000)) / 100;
 		back_width = ALIGN(back_width, 8);
 		back_height = ALIGN(back_height, 8);
-	} else if (front_height < DEFAULT_DIS_MAX_HEIGHT) {
+	} else if (crop_height < DEFAULT_DIS_MAX_HEIGHT) {
 		back_height = front_height;
 		back_width = (front_height
 				* (back_crop_ratio * 100 / 1000)) / 100;
