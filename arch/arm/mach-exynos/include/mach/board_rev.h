@@ -15,12 +15,16 @@
 
 enum {
 	SAMSUNG_BOARD_REV_0_0 = 0x0000,
-	SAMSUNG_BOARD_REV_0_1 = 0x0001
+	SAMSUNG_BOARD_REV_0_1 = 0x0001,
+	SAMSUNG_BOARD_REV_0_2 = 0x0002,
+	SAMSUNG_BOARD_REV_0_3 = 0x0003,
 };
 
 extern int samsung_board_rev;
 
 #define samsung_board_rev_is_0_0() (samsung_board_rev == SAMSUNG_BOARD_REV_0_0)
 #define samsung_board_rev_is_0_1() (samsung_board_rev == SAMSUNG_BOARD_REV_0_1)
+
+#define SMDK_BOARD_REV CONFIG_SMDK_BOARD_REV
 
 #endif /* __ASM_ARCH_BOARD_REV_H */
