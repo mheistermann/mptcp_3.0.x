@@ -30,6 +30,7 @@
 
 #include <mach/map.h>
 #include <mach/dev.h>
+#include <mach/board_rev.h>
 
 #ifdef CONFIG_FB_MIPI_DSIM
 #include <plat/dsim.h>
@@ -278,33 +279,62 @@ static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 };
 #elif defined(CONFIG_S5P_DP)
 static void dp_lcd_set_power(struct plat_lcd_data *pd,
-				unsigned int power)
+			     unsigned int power)
 {
+	if (SMDK_BOARD_REV <= 1) {
 #ifndef CONFIG_BACKLIGHT_PWM
-	/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
-	gpio_request(EXYNOS5_GPB2(0), "GPB2");
+		/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
+		gpio_request(EXYNOS5_GPB2(0), "GPB2");
 #endif
-	/* LCD_APS_EN_2.8V: GPD0_6 */
-	gpio_request(EXYNOS5_GPD0(6), "GPD0");
+		/* LCD_APS_EN_2.8V: GPD0_6 */
+		gpio_request(EXYNOS5_GPD0(6), "GPD0");
 
-	/* LCD_EN: GPD0_5 */
-	gpio_request(EXYNOS5_GPD0(5), "GPD0");
+		/* LCD_EN: GPD0_5 */
+		gpio_request(EXYNOS5_GPD0(5), "GPD0");
 
-	/* LCD_EN: GPD0_5 */
-	gpio_direction_output(EXYNOS5_GPD0(5), power);
-	msleep(20);
+		/* LCD_EN: GPD0_5 */
+		gpio_direction_output(EXYNOS5_GPD0(5), power);
+		msleep(20);
 
-	/* LCD_APS_EN_2.8V: GPD0_6 */
-	gpio_direction_output(EXYNOS5_GPD0(6), power);
-	msleep(20);
+		/* LCD_APS_EN_2.8V: GPD0_6 */
+		gpio_direction_output(EXYNOS5_GPD0(6), power);
+		msleep(20);
 #ifndef CONFIG_BACKLIGHT_PWM
-	/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
-	gpio_direction_output(EXYNOS5_GPB2(0), power);
+		/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
+		gpio_direction_output(EXYNOS5_GPB2(0), power);
 
-	gpio_free(EXYNOS5_GPB2(0));
+		gpio_free(EXYNOS5_GPB2(0));
 #endif
-	gpio_free(EXYNOS5_GPD0(6));
-	gpio_free(EXYNOS5_GPD0(5));
+		gpio_free(EXYNOS5_GPD0(6));
+		gpio_free(EXYNOS5_GPD0(5));
+	} else {
+#ifndef CONFIG_BACKLIGHT_PWM
+		/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
+		gpio_request(EXYNOS5_GPB2(0), "GPB2");
+#endif
+		/* LCD_APS_EN_2.8V: GPH1_2 */
+		gpio_request(EXYNOS5_GPH1(2), "GPD0");
+
+		/* LCD_EN: GPH1_1 */
+		gpio_request(EXYNOS5_GPH1(1), "GPD0");
+
+		/* LCD_EN: GPH1_1 */
+		gpio_direction_output(EXYNOS5_GPH1(1), power);
+		msleep(20);
+
+		/* LCD_APS_EN_2.8V: GPH1_2 */
+		gpio_direction_output(EXYNOS5_GPH1(2), power);
+		msleep(20);
+#ifndef CONFIG_BACKLIGHT_PWM
+		/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
+		gpio_direction_output(EXYNOS5_GPB2(0), power);
+
+		gpio_free(EXYNOS5_GPB2(0));
+#endif
+		gpio_free(EXYNOS5_GPH1(2));
+		gpio_free(EXYNOS5_GPH1(1));
+
+	}
 }
 
 static struct plat_lcd_data smdk5250_dp_lcd_data = {
