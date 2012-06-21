@@ -1029,12 +1029,16 @@ static int fimc_is_scalerp_video_set_format_mplane(struct file *file, void *fh,
 
 		fimc_is_mem_cache_clean((void *)isp->is_p_region,
 			IS_PARAM_SIZE);
-		isp->scenario_id = ISS_PREVIEW_STILL;
-		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
-		clear_bit(IS_ST_INIT_CAPTURE_STILL, &isp->state);
-		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
 
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &isp->state);
 		fimc_is_hw_set_param(isp);
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &isp->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("Size change wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 
 		if (test_bit(FIMC_IS_STATE_HW_STREAM_ON, &isp->pipe_state)) {
 			clear_bit(IS_ST_RUN, &isp->state);
