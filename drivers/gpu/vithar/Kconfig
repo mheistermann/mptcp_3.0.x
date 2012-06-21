@@ -32,6 +32,14 @@ config VITHAR_DVFS
 	help
 	  Choose this option to enable DVFS on vithar DDK.
 
+config VITHAR_DVFS_LIMIT_450
+   bool "MAX DVFS clock limit to 450Mhz"
+   depends on VITHAR
+   default y
+   help
+     Choose this option to limit DVFS clock to 450Mhz.
+
+
 config VITHAR_ENABLE_DS5
 	bool "Enable DS5"
 	depends on VITHAR

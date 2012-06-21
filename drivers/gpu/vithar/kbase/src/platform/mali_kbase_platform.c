@@ -52,7 +52,11 @@
 
 #include <kbase/src/common/mali_kbase_gator.h>
 
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+#define VITHAR_DEFAULT_CLOCK 450000000
+#else
 #define VITHAR_DEFAULT_CLOCK 533000000
+#endif
 
 static struct clk *clk_g3d = NULL;
 static int clk_g3d_status = 0;
@@ -61,9 +65,6 @@ static int kbase_platform_power_clock_init(kbase_device *kbdev)
 {
 	struct device *dev =  kbdev->osdev.dev;
 	int timeout;
-#ifndef CONFIG_VITHAR_HWVER_R0P0
-	struct clk *mpll = NULL;
-#endif
 	struct exynos_context *platform;
 
 	platform = (struct exynos_context *) kbdev->platform_context;
@@ -96,7 +97,6 @@ static int kbase_platform_power_clock_init(kbase_device *kbdev)
 		clk_g3d_status = 1;
 	}
 
-#ifdef CONFIG_VITHAR_HWVER_R0P0
 	platform->sclk_g3d = clk_get(dev, "aclk_400");
 	if(IS_ERR(platform->sclk_g3d)) {
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
@@ -108,32 +108,11 @@ static int kbase_platform_power_clock_init(kbase_device *kbdev)
 		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_rate [sclk_g3d] = %d\n", VITHAR_DEFAULT_CLOCK);
 		goto out;
 	}
-#else
-	mpll = clk_get(dev, "mout_mpll_user");
-	if(IS_ERR(mpll)) {
-		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [mout_mpll_user]\n");
-		goto out;
-	}
 
-	platform->sclk_g3d = clk_get(dev, "sclk_g3d");
-	if(IS_ERR(platform->sclk_g3d)) {
-		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_get [sclk_g3d]\n");
-		goto out;
-	}
-
-	clk_set_parent(platform->sclk_g3d, mpll);
-	if(IS_ERR(kbdev->sclk_g3d)) {
-		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_parent\n");
-		goto out;
-	}
-
-	clk_set_rate(platform->sclk_g3d, VITHAR_DEFAULT_CLOCK);
-	if(IS_ERR(platform->sclk_g3d)) {
-		OSK_PRINT_ERROR(OSK_BASE_PM, "failed to clk_set_rate [sclk_g3d] = %d\n", VITHAR_DEFAULT_CLOCK);
-		goto out;
-	}
-
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	kbase_platform_dvfs_set_clock(kbdev, 450);
 #endif
+
 	(void) clk_enable(platform->sclk_g3d);
 
 	return 0;
@@ -330,7 +309,11 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 350, 266, 160, 100Mhz");
+#else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 350, 266, 160, 100Mhz");
+#endif
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -360,11 +343,15 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 
 	if(!platform->sclk_g3d)
 		return -ENODEV;
-
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	if (sysfs_streq("450", buf)) {
+		freq=450;
+#else
 	if (sysfs_streq("533", buf)) {
 		freq=533;
 	} else if (sysfs_streq("450", buf)) {
 		freq=450;
+#endif
 	} else if (sysfs_streq("400", buf)) {
 		freq=400;
 	} else if (sysfs_streq("350", buf)) {
@@ -830,7 +817,11 @@ static ssize_t show_upper_lock_dvfs(struct device *dev, struct device_attribute 
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Upper Lock Level = %dMhz", locked_level );
 	else
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Upper Lock Level");
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 160, 100, If you want to unlock : 450 or off");
+#else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, 100, If you want to unlock : 533 or off");
+#endif
 
 #else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not set");
@@ -859,11 +850,19 @@ static ssize_t set_upper_lock_dvfs(struct device *dev, struct device_attribute *
 #ifdef CONFIG_VITHAR_DVFS
 	if (sysfs_streq("off", buf)) {
 		mali_dvfs_freq_unlock();
-	} else if (sysfs_streq("533", buf)) {
+	}
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	else if (sysfs_streq("450", buf)) {
+		mali_dvfs_freq_unlock();
+	}
+#else
+	else if (sysfs_streq("533", buf)) {
 		mali_dvfs_freq_unlock();
 	} else if (sysfs_streq("450", buf)) {
 		mali_dvfs_freq_lock(5);
-	} else if (sysfs_streq("400", buf)) {
+	}
+#endif
+	else if (sysfs_streq("400", buf)) {
 		mali_dvfs_freq_lock(4);
 	} else if (sysfs_streq("350", buf)) {
 		mali_dvfs_freq_lock(3);
@@ -875,7 +874,11 @@ static ssize_t set_upper_lock_dvfs(struct device *dev, struct device_attribute *
 		mali_dvfs_freq_lock(0);
 	} else {
 		dev_err(dev, "set_clock: invalid value\n");
-		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533\n");
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+		dev_err(dev, "Possible settings : 400, 266, 160, 100, If you want to unlock : 450 or off\n");
+#else
+		dev_err(dev, "Possible settings : 450, 400, 266, 160, 100, If you want to unlock : 533 or off\n");
+#endif
 		return -ENOENT;
 	}
 #else // CONFIG_VITHAR_DVFS
@@ -904,7 +907,11 @@ static ssize_t show_under_lock_dvfs(struct device *dev, struct device_attribute 
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Under Lock Level = %dMhz", locked_level );
 	else
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Under Lock Level");
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, If you want to unlock : 100 or off");
+#else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 266, 160, If you want to unlock : 100 or off");
+#endif
 
 #else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not set");
@@ -933,9 +940,13 @@ static ssize_t set_under_lock_dvfs(struct device *dev, struct device_attribute *
 #ifdef CONFIG_VITHAR_DVFS
 	if (sysfs_streq("off", buf)) {
 		mali_dvfs_freq_under_unlock();
-	} else if (sysfs_streq("533", buf)) {
+	}
+#ifndef CONFIG_VITHAR_DVFS_LIMIT_450
+	else if (sysfs_streq("533", buf)) {
 		mali_dvfs_freq_under_lock(6);
-	} else if (sysfs_streq("450", buf)) {
+	}
+#endif
+	else if (sysfs_streq("450", buf)) {
 		mali_dvfs_freq_under_lock(5);
 	} else if (sysfs_streq("400", buf)) {
 		mali_dvfs_freq_under_lock(4);
@@ -949,7 +960,11 @@ static ssize_t set_under_lock_dvfs(struct device *dev, struct device_attribute *
 		mali_dvfs_freq_under_unlock();
 	} else {
 		dev_err(dev, "set_clock: invalid value\n");
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+		dev_err(dev, "Possible settings : 450, 400, 266, 160, If you want to unlock : 100 or off\n");
+#else
 		dev_err(dev, "Possible settings : 533, 450, 400, 266, 160, If you want to unlock : 100 or off\n");
+#endif
 		return -ENOENT;
 	}
 #else // CONFIG_VITHAR_DVFS

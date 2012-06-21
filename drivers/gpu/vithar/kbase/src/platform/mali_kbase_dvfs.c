@@ -60,10 +60,10 @@
 
 #ifdef CONFIG_REGULATOR
 static struct regulator *g3d_regulator=NULL;
-#ifdef CONFIG_VITHAR_HWVER_R0P0
-static int mali_gpu_vol = 1250000; /* 1.25V @ 533 MHz */
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+static int mali_gpu_vol = 1150000; // 1.15V @ 450 MHz
 #else
-static int mali_gpu_vol = 1050000; /* 1.05V @ 266 MHz */
+static int mali_gpu_vol = 1250000; // 1.25V @ 533 MHz
 #endif
 #endif
 
@@ -88,6 +88,13 @@ mali_time_in_state time_in_state[MALI_DVFS_STEP]=
 	{400, 0},
 	{450, 0},
 	{533, 0}
+#elif (MALI_DVFS_STEP == 6)
+	{100, 0},
+	{160, 0},
+	{266, 0},
+	{350, 0},
+	{400, 0},
+	{450, 0}
 #else
 #error no table
 #endif
@@ -110,6 +117,13 @@ static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 	{1125000, 400, 94, 99},
 	{1150000, 450, 94, 99},
 	{1250000, 533, 99, 100}
+#elif (MALI_DVFS_STEP == 6)
+	{912500, 100, 0, 89},
+	{925000, 160, 48, 89},
+	{1025000, 266, 51, 89},
+	{1075000, 350, 70, 94},
+	{1125000, 400, 94, 99},
+	{1150000, 450, 94, 100}
 #else
 #error no table
 #endif
@@ -139,8 +153,8 @@ int mali_dvfs_control=0;
 osk_spinlock mali_dvfs_spinlock;
 
 #ifdef MALI_DVFS_ASV_ENABLE
-#if (MALI_DVFS_STEP != 7)
-#error DVFS_ASV support only 6steps
+#if ((MALI_DVFS_STEP != 7) && (MALI_DVFS_STEP != 6))
+#error DVFS_ASV support only 6 or 5 steps
 #endif
 
 #if (MALI_DVFS_STEP == 7)
@@ -218,8 +232,84 @@ static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DV
 		875000, 900000, 900000, 962500, 1000000, 1050000, 1112500,
 	},
 };
+
+#elif (MALI_DVFS_STEP == 6)
+static const unsigned int mali_dvfs_asv_vol_tbl_special[MALI_DVFS_ASV_GROUP_SPECIAL_NUM][MALI_DVFS_STEP]=
+{
+	/*  100Mh   160Mh     266Mh   350Mh		400Mh   450Mh   */
+	{/*Group 1*/
+		912500, 925000, 1025000, 1075000, 1100000, 1150000,
+	},
+	{/*Group 2*/
+		900000, 900000, 1000000, 1037500, 1087500, 1125000,
+	},
+	{/*Group 3*/
+		912500, 925000, 1025000, 1037500, 1100000, 1150000,
+	},
+	{/*Group 4*/
+		900000, 900000, 1000000, 1025000, 1087500, 1125000,
+	},
+	{/*Group 5*/
+		912500, 925000, 1000000, 1000000, 1125000, 1150000,
+	},
+	{/*Group 6*/
+		900000, 912500, 987500, 987500, 1112500, 1150000,
+	},
+	{/*Group 7*/
+		900000, 900000, 975000, 987500, 1100000, 1137500,
+	},
+	{/*Group 8*/
+		900000, 900000, 975000, 987500, 1100000, 1137500,
+	},
+	{/*Group 9*/
+		887500, 900000, 962500, 975000, 1087500, 1125000,
+	},
+	{/*Group 10*/
+		887500, 900000, 962500, 962500, 1087500, 1125000,
+	},
+};
+static const unsigned int mali_dvfs_asv_vol_tbl[MALI_DVFS_ASV_GROUP_NUM][MALI_DVFS_STEP]=
+{
+	/*  100Mh	160Mh	   266Mh	350Mh, 	400Mh	450Mh	*/
+	{/*Group 0*/
+		925000, 925000, 1025000, 1075000, 1125000, 1150000,
+	},
+	{/*Group 1*/
+		900000, 900000, 1000000, 1037500, 1087500, 1137500,
+	},
+	{/*Group 2*/
+		900000, 900000, 950000, 1037500, 1075000, 1125000,
+	},
+	{/*Group 3*/
+		900000, 900000, 950000, 1037500, 1075000, 1125000,
+	},
+	{/*Group 4*/
+		900000, 900000, 937500, 1025000, 1075000, 1112500,
+	},
+	{/*Group 5*/
+		900000, 900000, 937500, 1000000, 1050000, 1100000,
+	},
+	{/*Group 6*/
+		900000, 900000, 925000, 987500, 1037500, 1087500,
+	},
+	{/*Group 7*/
+		900000, 900000, 912500, 987500, 1025000, 1075000,
+	},
+	{/*Group 8*/
+		900000, 900000, 912500, 987500, 1012500, 1075000,
+	},
+	{/*Group 9*/
+		900000, 900000, 900000, 975000, 1012500, 1050000,
+	},
+	{/*Group 10*/
+		875000, 900000, 900000, 962500, 1000000, 1050000,
+	},
+	{/*Group 11*/
+		875000, 900000, 900000, 962500, 1000000, 1050000,
+	},
+};
 #endif
-#endif
+#endif // MALI_DVFS_ASV_ENABLE
 
 /*dvfs status*/
 static mali_dvfs_status mali_dvfs_status_current;
@@ -227,8 +317,11 @@ static mali_dvfs_status mali_dvfs_status_current;
 #if (MALI_DVFS_STEP == 7)
 static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
 	{ 925000, 925000, 1025000, 1075000, 1125000, 1150000, 1200000};
+#elif (MALI_DVFS_STEP == 6)
+static const unsigned int mali_dvfs_vol_default[MALI_DVFS_STEP]=
+	{ 925000, 925000, 1025000, 1075000, 1125000, 1150000};
 #else
-#error
+#error DO NOT have the default voltage for DVFS
 #endif
 
 static int mali_dvfs_update_asv(int group)

@@ -24,7 +24,11 @@
 #define MALI_DVFS_DEBUG 0
 #define MALI_DVFS_START_MAX_STEP 1
 
+#ifdef CONFIG_VITHAR_DVFS_LIMIT_450
+#define	MALI_DVFS_STEP 6
+#else
 #define	MALI_DVFS_STEP 7
+#endif
 
 #define MALI_DVFS_KEEP_STAY_CNT 10
 
