@@ -764,7 +764,7 @@ bad_type:
 			break;
 		}
 #endif /* MALI_NO_MALI */
-#ifdef CONFIG_VITHAR_DVFS
+//#ifdef CONFIG_VITHAR_DVFS
 		case KBASE_FUNC_REPORT_VSYNC:
 		{
 			kbase_uk_vsync_report *vr = (kbase_uk_vsync_report *)args;
@@ -776,7 +776,7 @@ bad_type:
 			kbase_pm_report_vsync(kbdev, vr->val);
 			break;
 		}
-#endif
+//#endif
 		default:
 			dev_err(kbdev->osdev.dev, "unknown syscall %08x", ukh->id);
 			goto out_bad;
