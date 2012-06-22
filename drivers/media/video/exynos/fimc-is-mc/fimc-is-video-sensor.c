@@ -568,7 +568,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		isp_param->otf_input.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT;
 		isp_param->otf_input.order = OTF_INPUT_ORDER_BAYER_GR_BG;
 		isp_param->otf_input.frametime_min = 0;
-		isp_param->otf_input.frametime_max = 66666;
+		isp_param->otf_input.frametime_max = 33333;
 
 		isp_param->dma1_input.cmd = DMA_INPUT_COMMAND_ENABLE;
 		isp_param->dma1_input.width = width;
@@ -582,7 +582,7 @@ static int fimc_is_bayer_start_streaming(struct vb2_queue *q)
 		isp_param->dma1_input.frame_gap = 0x1000;
 		isp_param->dma1_input.line_gap = 45;
 		isp_param->dma1_input.user_min_frame_time = 0;
-		isp_param->dma1_input.user_max_frame_time = 66666;
+		isp_param->dma1_input.user_max_frame_time = 33333;
 		isp_param->dma1_input.bitwidth = DMA_INPUT_BIT_WIDTH_10BIT;
 		isp_param->dma1_input.order = DMA_INPUT_ORDER_GR_BG;
 		isp_param->dma1_input.plane = 1;
