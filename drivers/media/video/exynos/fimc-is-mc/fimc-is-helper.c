@@ -2296,7 +2296,7 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 			back_height = (dis_height * 100 * 100 / 125) / 100;
 		}
 
-		back_width = ALIGN(back_width, 2);
+		back_width = ALIGN(back_width, 4);
 		back_height = ALIGN(back_height, 2);
 
 	} else {
