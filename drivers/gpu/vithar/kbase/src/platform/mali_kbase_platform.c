@@ -51,7 +51,7 @@
 
 #include <kbase/src/common/mali_kbase_gator.h>
 
-#define VITHAR_DEFAULT_CLOCK 450000000
+#define VITHAR_DEFAULT_CLOCK 533000000
 
 static struct clk *clk_g3d = NULL;
 static int clk_g3d_status = 0;
@@ -290,7 +290,7 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 350, 266, 160, 100Mhz");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 533, 450, 400, 350, 266, 160, 100Mhz");
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -313,7 +313,9 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	if ((!kbdev) || (!kbdev->sclk_g3d) || (!buf))
 		return -ENODEV;
 
-	if (sysfs_streq("450", buf)) {
+	if (sysfs_streq("533", buf)) {
+		freq=533;
+	} else if (sysfs_streq("450", buf)) {
 		freq=450;
 	} else if (sysfs_streq("400", buf)) {
 		freq=400;
@@ -782,7 +784,7 @@ static ssize_t show_lock_dvfs(struct device *dev, struct device_attribute *attr,
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current Upper Lock Level = %dMhz", locked_level );
 	else
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Unset the Upper Lock Level");
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 160, 100, If you want to unlock : 450");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 450, 400, 266, 160, 100, If you want to unlock : 533");
 
 #else
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled. You can not setting the Upper Lock level.");
@@ -809,8 +811,10 @@ static ssize_t set_lock_dvfs(struct device *dev, struct device_attribute *attr, 
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR_DVFS
-	if (sysfs_streq("450", buf)) {
+	if (sysfs_streq("533", buf)) {
 		mali_dvfs_freq_unlock();
+	} else if (sysfs_streq("450", buf)) {
+		mali_dvfs_freq_lock(5);
 	} else if (sysfs_streq("400", buf)) {
 		mali_dvfs_freq_lock(4);
 	} else if (sysfs_streq("350", buf)) {
