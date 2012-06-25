@@ -110,7 +110,8 @@ static void exynos_dwmci0_cfg_gpio(int width)
 static struct dw_mci_board smdk5250_dwmci0_pdata __initdata = {
 	.num_slots		= 1,
 	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION |
-				  DW_MCI_QUIRK_HIGHSPEED,
+				  DW_MCI_QUIRK_HIGHSPEED |
+				  DW_MCI_QUIRK_NO_DETECT_EBIT,
 	.bus_hz			= 200 * 1000 * 1000,
 	.caps			= MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR |
 				  MMC_CAP_8_BIT_DATA | MMC_CAP_CMD23,
