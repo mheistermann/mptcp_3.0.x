@@ -475,49 +475,6 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 	return 0;
 }
 
-int mmc_blk_part_switch_boot(struct mmc_card *card, u8 * part_config, u8 boot)
-{
-	int ret;
-	u8 __part_config;
-
-	if (part_config)
-		*part_config = card->ext_csd.part_config;
-
-	if (mmc_card_mmc(card)) {
-		__part_config = card->ext_csd.part_config;
-		__part_config &= ~EXT_CSD_PART_CONFIG_ACC_MASK;
-		__part_config |= (EXT_CSD_PART_CONFIG_ACC_BOOT0 + boot);
-		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				EXT_CSD_PART_CONFIG, __part_config,
-				card->ext_csd.part_time);
-		if (ret)
-			return ret;
-
-		card->ext_csd.part_config = __part_config;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(mmc_blk_part_switch_boot);
-
-int mmc_blk_part_restore(struct mmc_card *card, u8 part_config)
-{
-	int ret;
-
-	if (mmc_card_mmc(card)) {
-		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				EXT_CSD_PART_CONFIG, part_config,
-				card->ext_csd.part_time);
-		if (ret)
-			return ret;
-
-		card->ext_csd.part_config = part_config;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(mmc_blk_part_restore);
-
 static u32 mmc_sd_num_wr_blocks(struct mmc_card *card)
 {
 	int err;

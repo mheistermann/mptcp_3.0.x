@@ -436,7 +436,4 @@ extern void mmc_unregister_driver(struct mmc_driver *);
 extern void mmc_fixup_device(struct mmc_card *card,
 			     const struct mmc_fixup *table);
 
-int mmc_blk_part_switch_boot(struct mmc_card *card, u8 * part_config, u8 boot);
-int mmc_blk_part_restore(struct mmc_card *card, u8 part_config);
-
 #endif
