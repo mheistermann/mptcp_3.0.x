@@ -103,7 +103,7 @@ static inline void s3c_adc_select(struct adc_device *adc,
 	con |=  S3C2410_ADCCON_PRSCEN;
 
 	if (!client->is_ts) {
-		if (cpu == TYPE_ADCV3)
+		if (cpu == TYPE_ADCV3 || cpu == TYPE_ADCV4)
 			writel(S5PV210_ADCCON_SELMUX(client->channel),
 				adc->regs + S5P_ADCMUX);
 		else
