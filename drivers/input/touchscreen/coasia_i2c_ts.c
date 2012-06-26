@@ -55,6 +55,7 @@
 
 #include <mach/gpio.h>
 #include <mach/irqs.h>
+#include <mach/board_rev.h>
 
 #define R8C_3GA_2TG
 
@@ -69,9 +70,14 @@
 #define TOUCHSCREEN_MINY 0
 #define TOUCHSCREEN_MAXY 1600
 
-#define ATTB		EXYNOS5_GPX2(5)
+#if CONFIG_SMDK_BOARD_REV <= 1
+	#define ATTB	EXYNOS5_GPX2(5)
+	#define TS_RST	EXYNOS5_GPX2(4)
+#else
+	#define ATTB	EXYNOS5_GPX2(2)
+	#define TS_RST	EXYNOS5_GPX2(1)
+#endif
 #define get_attb_value	gpio_get_value
-#define TS_RST		EXYNOS5_GPX2(4)
 #define RESETPIN_CFG	s3c_gpio_cfgpin(TS_RST, S3C_GPIO_OUTPUT)
 #define RESETPIN_SET0	gpio_direction_output(TS_RST, 0)
 #define RESETPIN_SET1	gpio_direction_output(TS_RST, 1)
