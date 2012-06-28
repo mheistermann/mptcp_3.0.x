@@ -911,7 +911,13 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 		writel((readl(EXYNOS_USB3_LINKPORT) & ~(0x3<<4)) |
 			(0x3<<2), EXYNOS_USB3_LINKPORT);
 	} else {
-		writel(0x08000000, EXYNOS_USB3_LINKSYSTEM);
+		/*
+		 * Setting Frame Length Adjustment(FLADJ) Register.
+		 * See xHCI 1.0 spec 5.2.4
+		 */
+		reg = EXYNOS_USB3_LINKSYSTEM_XHCI_VERSION_CONTROL |
+			EXYNOS_USB3_LINKSYSTEM_FLADJ(0x20);
+		writel(reg, EXYNOS_USB3_LINKSYSTEM);
 		writel(0x03fff81C, EXYNOS_USB3_PHYPARAM1);
 		writel(0x00000004, EXYNOS_USB3_PHYBATCHG);
 #ifdef CONFIG_USB_EXYNOS_SWITCH
