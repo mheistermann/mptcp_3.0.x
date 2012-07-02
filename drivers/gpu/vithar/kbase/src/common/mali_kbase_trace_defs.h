@@ -62,6 +62,7 @@
  */
 KBASE_TRACE_CODE_MAKE_CODE( CORE_CTX_DESTROY ),      /* no info_val, no gpu_addr, no atom */
 KBASE_TRACE_CODE_MAKE_CODE( CORE_CTX_HWINSTR_TERM ), /* no info_val, no gpu_addr, no atom */
+KBASE_TRACE_CODE_MAKE_CODE( CORE_GPU_IRQ ), /* info_val == GPU_IRQ_STATUS register */
 
 /*
  * Job Slot management events
@@ -178,6 +179,9 @@ KBASE_TRACE_CODE_MAKE_CODE( PM_UNREQUEST_CHANGE_SHADER_NEEDED ),
 KBASE_TRACE_CODE_MAKE_CODE( PM_REQUEST_CHANGE_SHADER_NEEDED ),
 KBASE_TRACE_CODE_MAKE_CODE( PM_CONTEXT_ACTIVE ),
 KBASE_TRACE_CODE_MAKE_CODE( PM_CONTEXT_IDLE ),
+KBASE_TRACE_CODE_MAKE_CODE( PM_SEND_EVENT ), /* info_val == event code */
+KBASE_TRACE_CODE_MAKE_CODE( PM_HANDLE_EVENT ), /* info_val == event code */
+KBASE_TRACE_CODE_MAKE_CODE( PM_ACTIVATE_WORKER ),
 
 
 /* Unused code just to make it easier to not have a comma at the end.

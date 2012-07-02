@@ -397,6 +397,7 @@ void kbase_report_gpu_fault(kbase_device *kbdev, int multiple)
 
 void kbase_gpu_interrupt(kbase_device * kbdev, u32 val)
 {
+	KBASE_TRACE_ADD( kbdev, CORE_GPU_IRQ, NULL, NULL, 0u, val );
 	if (val & GPU_FAULT)
 	{
 		kbase_report_gpu_fault(kbdev, val & MULTIPLE_GPU_FAULTS);

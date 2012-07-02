@@ -31,6 +31,7 @@ SRC=\
 	common/mali_kbase_pm_driver.c		\
 	common/mali_kbase_pm_metrics.c		\
 	common/mali_kbase_pm_always_on.c	\
+	common/mali_kbase_pm_coarse_demand.c	\
 	common/mali_kbase_pm_demand.c		\
 	common/mali_kbase_config.c		\
 	common/mali_kbase_security.c		\

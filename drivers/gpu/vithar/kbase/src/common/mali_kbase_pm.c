@@ -26,19 +26,23 @@
 /* Policy operation structures */
 extern const kbase_pm_policy kbase_pm_always_on_policy_ops;
 extern const kbase_pm_policy kbase_pm_demand_policy_ops;
+extern const kbase_pm_policy kbase_pm_coarse_demand_policy_ops;
 
 /** A list of the power policies available in the system */
 static const kbase_pm_policy * const policy_list[] =
 {
 #if MALI_NO_MALI
 	&kbase_pm_always_on_policy_ops,
+	&kbase_pm_coarse_demand_policy_ops,
 	&kbase_pm_demand_policy_ops
 #else
 #ifdef CONFIG_VITHAR_RT_PM
+	&kbase_pm_coarse_demand_policy_ops,
 	&kbase_pm_demand_policy_ops,
 	&kbase_pm_always_on_policy_ops
 #else
 	&kbase_pm_always_on_policy_ops,
+	&kbase_pm_coarse_demand_policy_ops,
 	&kbase_pm_demand_policy_ops
 #endif
 #endif
@@ -455,6 +459,7 @@ STATIC void kbase_pm_worker(osk_workq_work *data)
 		{
 			if (pending_events & (1 << i))
 			{
+				KBASE_TRACE_ADD( kbdev, PM_HANDLE_EVENT, NULL, NULL, 0u, i );
 				kbdev->pm.current_policy->event(kbdev, (kbase_pm_event)i);
 
 				pending_events &= ~(1 << i);
@@ -533,6 +538,8 @@ void kbase_pm_send_event(kbase_device *kbdev, kbase_pm_event event)
 
 	OSK_ASSERT(kbdev != NULL);
 
+	KBASE_TRACE_ADD( kbdev, PM_SEND_EVENT, NULL, NULL, 0u, event );
+
 	pending_events = osk_atomic_get(&kbdev->pm.pending_events);
 
 	/* Atomically OR the new event into the pending_events bit mask */
@@ -576,6 +583,7 @@ void kbase_pm_send_event(kbase_device *kbdev, kbase_pm_event event)
 
 	if (old_value == KBASE_PM_WORK_ACTIVE_STATE_INACTIVE)
 	{
+		KBASE_TRACE_ADD( kbdev, PM_ACTIVATE_WORKER, NULL, NULL, 0u, 0u );
 		osk_waitq_clear(&kbdev->pm.policy_outstanding_event);
 		osk_workq_work_init(&kbdev->pm.work, kbase_pm_worker);
 		osk_workq_submit(&kbdev->pm.workqueue, &kbdev->pm.work);

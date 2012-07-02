@@ -24,6 +24,7 @@
 
 #include "mali_kbase_pm_always_on.h"
 #include "mali_kbase_pm_demand.h"
+#include "mali_kbase_pm_coarse_demand.h"
 
 /* Forward definition - see mali_kbase.h */
 struct kbase_device;
@@ -164,6 +165,7 @@ typedef union kbase_pm_policy_data
 {
 	kbasep_pm_policy_always_on  always_on;
 	kbasep_pm_policy_demand     demand;
+	kbasep_pm_policy_coarse_demand coarse_demand;
 } kbase_pm_policy_data;
 
 /** Power policy structure.
@@ -293,9 +295,18 @@ typedef struct kbase_pm_device_data
 	 * eventually achieve this state (assuming that the policy doesn't change its mind in the mean time.
 	 */
 	u64                     desired_shader_state;
+	/** bit mask indicating which shader cores are currently in a power-on transition */
+	u64                     powering_on_shader_state;
 	/** A bit mask identifying the tiler cores that the power policy would like to be on.
 	 * @see kbase_pm_device_data:desired_shader_state */
 	u64                     desired_tiler_state;
+	/** bit mask indicating which tiler core are currently in a power-on transition */
+	u64                     powering_on_tiler_state;
+
+	/** bit mask indicating which l2-caches are currently in a power-on transition */
+	u64                     powering_on_l2_state;
+	/** bit mask indicating which l3-caches are currently in a power-on transition */
+	u64                     powering_on_l3_state;
 
 	/** Lock protecting the power state of the device.
 	 *

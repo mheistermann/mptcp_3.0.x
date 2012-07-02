@@ -283,24 +283,29 @@ KBASE_EXPORT_TEST_API(kbase_pm_get_pwr_active)
  *                          running (or about to run) on them.
  * @param[out] available    Receives a bit mask of the cores that the job scheduler can use to submit jobs to.
  *                          May be NULL if this is not needed.
+ * @param[in,out] powering_on Bit mask to update with cores that are transitioning to a power-on state.
  *
  * @return MALI_TRUE if the desired state has been reached, MALI_FALSE otherwise
  */
 
 STATIC mali_bool kbase_pm_transition_core_type(kbase_device *kbdev, kbase_pm_core_type type, u64 desired_state,
-                                         u64 in_use, u64 *available)
+                                         u64 in_use, u64 *available, u64 *powering_on)
 {
 	u64 present;
 	u64 ready;
 	u64 trans;
 	u64 powerup;
 	u64 powerdown;
+	u64 powering_on_trans;
 
 	/* Get current state */
 	present = kbase_pm_get_present_cores(kbdev, type);
 	trans = kbase_pm_get_trans_cores(kbdev, type);
 	ready = kbase_pm_get_ready_cores(kbdev, type);
 
+	powering_on_trans = trans & *powering_on;
+	*powering_on = powering_on_trans;
+	ready |= powering_on_trans;
 	if (available != NULL)
 	{
 		*available = ready & desired_state;
@@ -311,13 +316,14 @@ STATIC mali_bool kbase_pm_transition_core_type(kbase_device *kbdev, kbase_pm_cor
 	 */
 	desired_state |= in_use;
 
-	if (desired_state == ready && trans == 0)
+	if (desired_state == ready)
 	{
 		/* If l2 cache user registered and l2 cache powered, notify the users waiting */
-		if ( ( type == KBASE_PM_CORE_L2 ) && ( kbdev->l2_users_count > 0 ) && (ready == present) )
+		if ( ( type == KBASE_PM_CORE_L2 ) && ( kbdev->l2_users_count > 0 ) && (ready == present) && (trans == 0) )
 		{
 			osk_waitq_set(&kbdev->pm.l2_powered_waitqueue);
 		}
+
 		return MALI_TRUE;
 	}
 
@@ -336,6 +342,19 @@ STATIC mali_bool kbase_pm_transition_core_type(kbase_device *kbdev, kbase_pm_cor
 	/* Perform transitions if any */
 	kbase_pm_invoke(kbdev, type, powerup, ACTION_PWRON);
 	kbase_pm_invoke(kbdev, type, powerdown, ACTION_PWROFF);
+
+	/* Recalculate cores transitioning on, and re-evaluate our state */
+	powering_on_trans |= powerup;
+	*powering_on = powering_on_trans;
+	ready |= powering_on_trans;
+	if (available != NULL)
+	{
+		*available = ready & desired_state;
+	}
+	if (desired_state == ready)
+	{
+		return MALI_TRUE;
+	}
 
 	return MALI_FALSE;
 }
@@ -740,17 +759,19 @@ void MOCKABLE(kbase_pm_check_transitions)(kbase_device *kbdev)
 	desired_l2_state = get_desired_cache_status(kbdev->l2_present_bitmap, cores_powered);
 	desired_l3_state = get_desired_cache_status(kbdev->l3_present_bitmap, desired_l2_state);
 
-	in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_L3, desired_l3_state, 0, NULL);
-	in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_L2, desired_l2_state, 0, NULL);
+	in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_L3, desired_l3_state, 0, NULL, &kbdev->pm.powering_on_l3_state);
+	in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_L2, desired_l2_state, 0, NULL, &kbdev->pm.powering_on_l2_state);
 
 	if (in_desired_state)
 	{
 		in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_TILER,
 		                                                  kbdev->pm.desired_tiler_state, kbdev->tiler_inuse_bitmap,
-		                                                  &tiler_available_bitmap);
+		                                                  &tiler_available_bitmap,
+		                                                  &kbdev->pm.powering_on_tiler_state);
 		in_desired_state &= kbase_pm_transition_core_type(kbdev, KBASE_PM_CORE_SHADER,
 		                                                  kbdev->pm.desired_shader_state, kbdev->shader_inuse_bitmap,
-		                                                  &shader_available_bitmap);
+		                                                  &shader_available_bitmap,
+		                                                  &kbdev->pm.powering_on_shader_state);
 
 		/* If we reached the desired state, or we powered off a core, then update the available
 		 * This is because:
