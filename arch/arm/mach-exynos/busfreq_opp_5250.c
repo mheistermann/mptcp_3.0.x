@@ -856,7 +856,7 @@ static void busfreq_late_resume(struct early_suspend *h)
 }
 #endif
 
-int exynos5250_init(struct device *dev, struct busfreq_data *data)
+int exynos5250_init(struct device *dev, struct busfreq_data *data, bool pop)
 {
 	unsigned int i, tmp;
 	unsigned long maxfreq = ULONG_MAX;
@@ -1060,6 +1060,17 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	if (IS_ERR(data->vdd_reg[PPMU_MIF])) {
 		pr_err("failed to get resource %s\n", "vdd_mif");
 		regulator_put(data->vdd_reg[PPMU_INT]);
+		return -ENODEV;
+	}
+
+	if (!pop) {
+		regulator_set_voltage(data->vdd_reg[PPMU_MIF], 1000000, 1000000);
+		regulator_set_voltage(data->vdd_reg[PPMU_INT], exynos5_busfreq_table_int[LV_0].volt,
+				exynos5_busfreq_table_int[LV_0].volt);
+		regulator_put(data->vdd_reg[PPMU_MIF]);
+		regulator_put(data->vdd_reg[PPMU_INT]);
+		data->vdd_reg[PPMU_MIF] = ERR_PTR(-ENODEV);
+		data->vdd_reg[PPMU_INT] = ERR_PTR(-ENODEV);
 		return -ENODEV;
 	}
 

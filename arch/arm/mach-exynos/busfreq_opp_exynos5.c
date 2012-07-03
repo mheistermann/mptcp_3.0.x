@@ -382,6 +382,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
 	unsigned int val = 0;
+	bool pop = true;
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc_readsfr(EXYNOS5_PA_DREXII + 0x4, &val);
@@ -393,7 +394,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2, 0x7: LPDDR3 */
 	if (val != 0x5 && val != 0x7) {
 		pr_err("[ %x ] Memory is not LPDDR type.\n", val);
-		return -ENODEV;
+		pop = false;
 	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
@@ -419,7 +420,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		goto err_busfreq;
 	}
 
-	if (data->init(&pdev->dev, data)) {
+	if (data->init(&pdev->dev, data, pop)) {
 		pr_err("Failed to init busfreq.\n");
 		goto err_busfreq;
 	}
