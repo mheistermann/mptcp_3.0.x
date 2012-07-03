@@ -109,21 +109,16 @@ typedef struct _mali_dvfs_info{
 
 static mali_dvfs_info mali_dvfs_infotbl[MALI_DVFS_STEP]=
 {
-#if (MALI_DVFS_STEP == 7)
-	{912500, 100, 0, 89},
-	{925000, 160, 79, 89},
-	{1025000, 266, 75, 89},
-	{1075000, 350, 80, 89},
-	{1125000, 400, 85, 95},
-	{1150000, 450, 90, 99},
+	{912500, 100, 0, 70},
+	{925000, 160, 50, 65},
+	{1025000, 266, 60, 78},
+	{1075000, 350, 70, 80},
+	{1125000, 400, 70, 80},
+#if (MALI_DVFS_STEP == 6)
+	{1150000, 450, 76, 100}
+#elif (MALI_DVFS_STEP == 7)
+	{1150000, 450, 76, 99},
 	{1250000, 533, 99, 100}
-#elif (MALI_DVFS_STEP == 6)
-	{912500, 100, 0, 89},
-	{925000, 160, 75, 89},
-	{1025000, 266, 75, 89},
-	{1075000, 350, 80, 89},
-	{1125000, 400, 85, 95},
-	{1150000, 450, 90, 100}
 #else
 #error no table
 #endif
@@ -423,10 +418,6 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		dvfs_status.step=kbase_platform_dvfs_get_level(350);
 	}
 #endif
-	if ((dvfs_status.kbdev->pm.metrics.vsync_hit < 5) &&
-			(dvfs_status.utilisation > 60)) {
-		dvfs_status.utilisation = 100;
-	}
 
 	if (dvfs_status.utilisation == 100) {
 		allow_up_cnt = 1;
@@ -434,7 +425,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		allow_up_cnt = 2;
 		allow_down_cnt = 5;
 	} else if (mali_dvfs_infotbl[dvfs_status.step].clock == 266){
-		allow_up_cnt = 10;
+		allow_up_cnt = 3;
 		//mali_dvfs_set_cpulock(0);
 	} else {
 		//mali_dvfs_set_cpulock(800);
