@@ -130,8 +130,6 @@ typedef struct _mali_dvfs_status_type{
 	kbase_device *kbdev;
 	int step;
 	int utilisation;
-	int up_keepcnt;
-	int down_keepcnt;
 	uint noutilcnt;
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	int upper_lock;
@@ -393,13 +391,13 @@ void mali_dvfs_set_cpulock(int freq)
 static void mali_dvfs_event_proc(struct work_struct *w)
 {
 	mali_dvfs_status dvfs_status;
-	int allow_up_cnt = 2;
-	int allow_down_cnt = 10;
+	struct exynos_context *platform;
 
 	osk_spinlock_lock(&mali_dvfs_spinlock);
 	dvfs_status = mali_dvfs_status_current;
 	osk_spinlock_unlock(&mali_dvfs_spinlock);
 
+	platform = (struct exynos_context *)dvfs_status.kbdev->platform_context;
 #ifdef MALI_DVFS_ASV_ENABLE
 	if (dvfs_status.asv_need_update==2) {
 		mali_dvfs_update_asv(-1);
@@ -414,52 +412,23 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 
 #if MALI_DVFS_START_MAX_STEP
 	/*If no input is keeping for longtime, first step will be max step. */
-	if (dvfs_status.noutilcnt > 20 && dvfs_status.utilisation > 0) {
-		dvfs_status.step=kbase_platform_dvfs_get_level(350);
+	if (dvfs_status.noutilcnt > 2 && dvfs_status.utilisation > 0) {
+		dvfs_status.step=kbase_platform_dvfs_get_level(450);
 	}
 #endif
-
-	if (dvfs_status.utilisation == 100) {
-		allow_up_cnt = 1;
-	} else if (mali_dvfs_infotbl[dvfs_status.step].clock < 266) {
-		allow_up_cnt = 2;
-		allow_down_cnt = 5;
-	} else if (mali_dvfs_infotbl[dvfs_status.step].clock == 266){
-		allow_up_cnt = 3;
-		//mali_dvfs_set_cpulock(0);
-	} else {
-		//mali_dvfs_set_cpulock(800);
-		allow_up_cnt = 3;
-		allow_down_cnt = 2;
-	}
 
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
 		if (dvfs_status.kbdev->pm.metrics.vsync_hit < 6) {
-			dvfs_status.up_keepcnt++;
-			dvfs_status.down_keepcnt=0;
-			if (dvfs_status.up_keepcnt > allow_up_cnt)
-			{
-				dvfs_status.step++;
-				dvfs_status.up_keepcnt=0;
-				OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
-			}
+			dvfs_status.step++;
+			OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
 		}
 	}else if ((dvfs_status.step>0) &&
-			(dvfs_status.utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
-		dvfs_status.down_keepcnt++;
-		dvfs_status.up_keepcnt=0;
-		if (dvfs_status.down_keepcnt > allow_down_cnt)
-		{
-			OSK_ASSERT(dvfs_status.step > 0);
-			dvfs_status.step--;
-			dvfs_status.down_keepcnt=0;
-		}
-	}else{
-		dvfs_status.up_keepcnt=0;
-		dvfs_status.down_keepcnt=0;
+			(platform->time_tick == MALI_DVFS_TIME_INTERVAL) &&
+			(platform->utilisation < mali_dvfs_infotbl[dvfs_status.step].min_threshold)) {
+		OSK_ASSERT(dvfs_status.step > 0);
+		dvfs_status.step--;
 	}
-
 #ifdef CONFIG_VITHAR_FREQ_LOCK
 	if ((dvfs_status.upper_lock >= 0)&&(dvfs_status.step > dvfs_status.upper_lock)) {
 		dvfs_status.step = dvfs_status.upper_lock;
@@ -487,11 +456,11 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 
 #if MALI_DVFS_DEBUG
-	printk("[mali_dvfs] utilisation: %d step: %d[%d,%d] cnt: %d/%d vsync %d\n",
-			dvfs_status.utilisation, dvfs_status.step,
+	printk("[mali_dvfs] utilisation: %d[%d] step: %d[%d,%d] vsync %d\n",
+			dvfs_status.utilisation, platform->utilisation, dvfs_status.step,
 			mali_dvfs_infotbl[dvfs_status.step].min_threshold,
 			mali_dvfs_infotbl[dvfs_status.step].max_threshold,
-			dvfs_status.up_keepcnt,dvfs_status.down_keepcnt, dvfs_status.kbdev->pm.metrics.vsync_hit);
+			dvfs_status.kbdev->pm.metrics.vsync_hit);
 #endif
 
 	kbase_pm_report_vsync(dvfs_status.kbdev, 0);

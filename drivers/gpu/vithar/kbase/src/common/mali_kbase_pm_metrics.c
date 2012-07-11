@@ -22,6 +22,7 @@
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
 #ifdef CONFIG_VITHAR_DVFS
+#include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 #endif
 
@@ -348,6 +349,9 @@ int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev)
 	struct timespec ts;
 	osk_ticks now;
 	int utilisation=0;
+	struct exynos_context *platform;
+
+	platform = (struct exynos_context *) kbdev->platform_context;
 
 	getnstimeofday(&ts);
 	now = ts.tv_sec*1000+ts.tv_nsec/1000000;
@@ -376,7 +380,19 @@ int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev)
 	utilisation = (100*kbdev->pm.metrics.time_busy) / (kbdev->pm.metrics.time_idle + kbdev->pm.metrics.time_busy);
 
 out:
+	if (platform->time_tick < MALI_DVFS_TIME_INTERVAL) {
+		platform->time_tick++;
+		platform->time_busy += kbdev->pm.metrics.time_busy;
+		platform->time_idle += kbdev->pm.metrics.time_idle;
+	} else {
+		platform->time_busy = kbdev->pm.metrics.time_busy;
+		platform->time_idle = kbdev->pm.metrics.time_idle;
 
+		platform->time_tick = 0;
+	}
+	if ((platform->time_tick == MALI_DVFS_TIME_INTERVAL) &&
+		(platform->time_idle + platform->time_busy > 0))
+			platform->utilisation = (100*platform->time_busy) / (platform->time_idle + platform->time_busy);
 	kbdev->pm.metrics.time_idle = 0;
 	kbdev->pm.metrics.time_busy = 0;
 
