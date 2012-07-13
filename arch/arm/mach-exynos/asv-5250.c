@@ -111,6 +111,7 @@ static int exynos5250_check_lot_id(struct samsung_asv *asv_info)
 	unsigned int rev_lid = 0;
 	unsigned int i;
 	unsigned int tmp;
+	unsigned int wno;
 	char lot_id[5];
 
 	lid_reg = __raw_readl(LOT_ID_REG);
@@ -119,6 +120,8 @@ static int exynos5250_check_lot_id(struct samsung_asv *asv_info)
 		tmp = (lid_reg >> i) & 0x1;
 		rev_lid += tmp << (31 - i);
 	}
+
+	wno = (rev_lid >> 6) & 0x1f;
 
 	lot_id[0] = 'N';
 	lid_reg = (rev_lid >> 11) & 0x1FFFFF;
@@ -133,7 +136,10 @@ static int exynos5250_check_lot_id(struct samsung_asv *asv_info)
 	if ((!strncmp(lot_id, "NZVPU", ARRAY_SIZE(lot_id)))) {
 		pr_info("Exynos5250 : Lot ID is %s\n", lot_id);
 		exynos_lot_is_nzvpu = true;
-		asv_info->ids_result -= 16;
+
+		if (wno >= 2 && wno <= 6)
+			asv_info->ids_result -= 16;
+
 		return 0;
 	}
 
