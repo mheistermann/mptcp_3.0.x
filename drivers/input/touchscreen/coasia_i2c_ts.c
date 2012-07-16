@@ -372,9 +372,9 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 
 	unsigned char touch_count;
 	static unsigned char old_touch_count = 0;
-	struct finger_info finger[4];
-	static struct finger_info old_finger[4];
-	unsigned char Rdbuf[33], Wrbuf[1];
+	struct finger_info finger[2];
+	static struct finger_info old_finger[2];
+	unsigned char Rdbuf[17], Wrbuf[1];
 	int ret;
 	int i;
 	int z = 50;
@@ -400,7 +400,7 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 		goto out;
 	}
 
-	/* Read data from 0 to 32 */
+	/* Read data from 0 to 16 */
 	ret = i2c_master_recv(tsdata->client, Rdbuf, sizeof(Rdbuf));
 
 	if (ret != sizeof(Rdbuf)) {
@@ -420,23 +420,13 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	finger[1].status = (Rdbuf[10] & 0x0F);
 	finger[1].pos_x = ((Rdbuf[12] << 8) | Rdbuf[11]);
 	finger[1].pos_y = ((Rdbuf[14] << 8) | Rdbuf[13]);
-	finger[2].id = ((Rdbuf[19] & 0xF0) >> 4);
-	finger[2].status = (Rdbuf[19] & 0x0F);
-	finger[2].pos_x = ((Rdbuf[21] << 8) | Rdbuf[20]);
-	finger[2].pos_y = ((Rdbuf[23] << 8) | Rdbuf[22]);
-	finger[3].id = ((Rdbuf[28] & 0xF0) >> 4);
-	finger[3].status = (Rdbuf[28] & 0x0F);
-	finger[3].pos_x = ((Rdbuf[30] << 8) | Rdbuf[29]);
-	finger[3].pos_y = ((Rdbuf[32] << 8) | Rdbuf[31]);
 
 #if PIXCIR_DEBUG
 	printk(KERN_ERR "New_count:%d, fineger_info(status, posx, posy):\
-		(%d,%4d,%4d), (%d,%4d,%4d), (%d,%4d,%4d), (%d,%4d,%4d)\n",
+		(%d,%4d,%4d), (%d,%4d,%4d)\n",
 		touch_count,
 		finger[0].status, finger[0].pos_x, finger[0].pos_y,
-		finger[1].status, finger[1].pos_x, finger[1].pos_y,
-		finger[2].status, finger[2].pos_x, finger[2].pos_y,
-		finger[3].status, finger[3].pos_x, finger[3].pos_y);
+		finger[1].status, finger[1].pos_x, finger[1].pos_y);
 #endif
 	if (touch_count) {
 		if (old_touch_count == touch_count) {
@@ -472,73 +462,37 @@ report:
 		input_report_abs(tsdata->input, ABS_PRESSURE, 0);
 	}
 
-	switch (touch_count) {
-	case FOUR_FINGER_TOUCH:
-		if ((finger[0].status == 0x1) &&
-			(finger[1].status == 0x1) &&
-			(finger[2].status == 0x1) &&
-			(finger[3].status == 0x1)) {
-			input_mt_sync(tsdata->input);
-			printk(KERN_DEBUG "NO fingers touch now!\n");
-			goto fun_end;
-		} else {
-			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-			input_report_abs(tsdata->input,	ABS_MT_WIDTH_MAJOR, w);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_X, finger[3].pos_x);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_Y, finger[3].pos_y);
-			input_mt_sync(tsdata->input);
-		}
-	case THREE_FINGER_TOUCH:
-		if ((finger[0].status == 0x1) &&
-			(finger[1].status == 0x1) &&
-			(finger[2].status == 0x1)) {
-			input_mt_sync(tsdata->input);
-			printk(KERN_DEBUG "NO fingers touch now!\n");
-			goto fun_end;
-		} else {
-			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_X, finger[2].pos_x);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_Y, finger[2].pos_y);
-			input_mt_sync(tsdata->input);
-		}
-	case TWO_FINGER_TOUCH:
-		if ((finger[0].status == 0x1) &&
-			(finger[1].status == 0x1)) {
-			input_mt_sync(tsdata->input);
-			printk(KERN_DEBUG "NO fingers touch now!\n");
-			goto fun_end;
-		} else {
-			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_X, finger[1].pos_x);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_Y, finger[1].pos_y);
-			input_mt_sync(tsdata->input);
-		}
-	case ONE_FINGER_TOUCH:
-		if (finger[0].status == 0x1) {
-			input_mt_sync(tsdata->input);
-			printk(KERN_DEBUG "NO fingers touch now!\n");
-			goto fun_end;
-		} else {
-			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_X, finger[0].pos_x);
-			input_report_abs(tsdata->input,
-					ABS_MT_POSITION_Y, finger[0].pos_y);
-			input_mt_sync(tsdata->input);
-		}
-		break;
-	default:
-		printk(KERN_ERR "touch_count > 4, NOT report\n");
-		break;
+	switch(touch_count)
+	{
+		case TWO_FINGER_TOUCH:
+			if ((finger[0].status == 0x1) &&
+				(finger[1].status == 0x1)) {
+				input_mt_sync(tsdata->input);
+				printk(KERN_DEBUG "NO fingers touch now!!!!!\n");
+				goto fun_end;
+			} else {
+				input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
+				input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
+				input_report_abs(tsdata->input, ABS_MT_POSITION_X, finger[1].pos_x);
+				input_report_abs(tsdata->input, ABS_MT_POSITION_Y, finger[1].pos_y);
+				input_mt_sync(tsdata->input);
+			}
+		case ONE_FINGER_TOUCH:
+			if (finger[0].status == 0x1) {
+				input_mt_sync(tsdata->input);
+				printk(KERN_DEBUG "NO fingers touch now!!!!!\n");
+				goto fun_end;
+			} else {
+				input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
+				input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
+				input_report_abs(tsdata->input, ABS_MT_POSITION_X, finger[0].pos_x);
+				input_report_abs(tsdata->input, ABS_MT_POSITION_Y, finger[0].pos_y);
+				input_mt_sync(tsdata->input);
+			}
+			break;
+		default:
+			printk(KERN_ERR "touch_count > 2, NOT report\n");
+			break;
 	}
 	/* sync after groups of events */
 fun_end:
