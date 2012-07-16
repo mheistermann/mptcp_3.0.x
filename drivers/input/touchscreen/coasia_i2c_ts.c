@@ -371,11 +371,15 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 		container_of(work, struct pixcir_i2c_ts_data, work.work);
 
 	unsigned char touch_count;
+	static unsigned char old_touch_count = 0;
 	struct finger_info finger[4];
+	static struct finger_info old_finger[4];
 	unsigned char Rdbuf[33], Wrbuf[1];
 	int ret;
+	int i;
 	int z = 50;
 	int w = 15;
+	static int ignore_count=0;
 
 	printk(KERN_DEBUG "pixcir:pixcir_ts_poscheck start\n");
 
@@ -435,6 +439,30 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 		finger[3].status, finger[3].pos_x, finger[3].pos_y);
 #endif
 	if (touch_count) {
+		if (old_touch_count == touch_count) {
+			for (i=0; i<touch_count; i++) {
+				if (finger[i].id != old_finger[i].id)
+					goto report;
+				if (finger[i].status != old_finger[i].status)
+					goto report;
+				if (finger[i].pos_x != old_finger[i].pos_x)
+					goto report;
+				if (finger[i].pos_y != old_finger[i].pos_y)
+					goto report;
+			}
+			ignore_count++;
+			goto out;
+		}
+report:
+#if PIXCIR_DEBUG
+		if (ignore_count>0)
+			printk ("ignore interrupt count = %d\n", ignore_count);
+#endif
+		ignore_count = 0;
+
+		memcpy(old_finger, finger, sizeof(finger));
+		old_touch_count = touch_count;
+
 		input_report_abs(tsdata->input, ABS_X, finger[0].pos_x);
 		input_report_abs(tsdata->input, ABS_Y, finger[0].pos_y);
 		input_report_key(tsdata->input, BTN_TOUCH, 1);
