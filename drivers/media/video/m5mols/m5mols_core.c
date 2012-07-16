@@ -133,8 +133,8 @@ static const struct m5mols_resolution m5mols_resolutions[] = {
 	{ 0x1a, M5MOLS_RES_MON, 800, 480 },	/* WVGA */
 	{ 0x1f, M5MOLS_RES_MON, 800, 600 },	/* SVGA */
 	{ 0x21, M5MOLS_RES_MON, 1280, 720 },	/* HD */
-	{ 0x25, M5MOLS_RES_MON, 1920, 1080 },	/* 1080p */
-	{ 0x29, M5MOLS_RES_MON, 3264, 2448 },	/* 8M (2.63fps@3264*2448) */
+	{ 0x28, M5MOLS_RES_MON, 1920, 1080 },	/* 1080p */
+	{ 0x27, M5MOLS_RES_MON, 3264, 2448 },	/* 8M (2.63fps@3264*2448) */
 	{ 0x30, M5MOLS_RES_MON, 320, 240 },	/* 60fps for slow motion */
 	{ 0x31, M5MOLS_RES_MON, 320, 240 },	/* 120fps for slow motion */
 	{ 0x39, M5MOLS_RES_MON, 800, 602 },	/* AHS_MON debug */
