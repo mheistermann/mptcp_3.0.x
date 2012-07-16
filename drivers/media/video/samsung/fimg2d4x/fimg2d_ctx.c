@@ -14,6 +14,7 @@
 #include <linux/sched.h>
 #include <linux/uaccess.h>
 #include <plat/fimg2d.h>
+#include <mach/cpufreq.h>
 #include "fimg2d.h"
 #include "fimg2d_ctx.h"
 #include "fimg2d_cache.h"
@@ -417,6 +418,8 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 		}
 	}
 
+	exynos_cpufreq_lock(DVFS_LOCK_ID_G2D, L14);	/* 800 Mhz */
+
 #ifdef PERF_PROFILE
 	perf_start(cmd->ctx, PERF_INNERCACHE);
 #endif
@@ -440,6 +443,8 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 	perf_end(cmd->ctx, PERF_OUTERCACHE);
 #endif
 #endif
+
+	exynos_cpufreq_lock_free(DVFS_LOCK_ID_G2D);
 	return 0;
 
 err_pgtable:
