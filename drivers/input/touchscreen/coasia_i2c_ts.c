@@ -380,9 +380,6 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	printk(KERN_DEBUG "pixcir:pixcir_ts_poscheck start\n");
 
 	interrupt_flag = 1;
-	memset(finger, 0, sizeof(finger));
-	memset(Wrbuf, 0, sizeof(Wrbuf));
-	memset(Rdbuf, 0, sizeof(Rdbuf));
 
 	Wrbuf[0] = 0;
 	ret = i2c_master_send(tsdata->client, Wrbuf, 1);
