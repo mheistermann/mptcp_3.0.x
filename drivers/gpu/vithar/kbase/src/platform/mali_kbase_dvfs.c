@@ -414,9 +414,8 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 	/*If no input is keeping for longtime, first step will be max step. */
 	if (dvfs_status.noutilcnt > 2 && dvfs_status.utilisation > 0) {
 		dvfs_status.step=kbase_platform_dvfs_get_level(450);
-	}
+	} else
 #endif
-
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
 		if (dvfs_status.kbdev->pm.metrics.vsync_hit < 6) {

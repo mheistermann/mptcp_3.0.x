@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -90,7 +90,6 @@ OSK_STATIC_INLINE osk_error osk_spinlock_irq_init(osk_spinlock_irq * const lock,
 /*
  * End of 'dummy' definitions
  */
-
 
 /* Note: This uses a GNU C Extension to allow Linux's CONFIG_PROVE_LOCKING to work correctly
  *

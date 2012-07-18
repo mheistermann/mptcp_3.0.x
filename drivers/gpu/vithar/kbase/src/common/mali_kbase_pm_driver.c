@@ -66,8 +66,8 @@ static u32 core_type_to_reg(kbase_pm_core_type core_type, kbasep_pm_action actio
 
 /** Invokes an action on a core set
  *
- * This function performs the action given by \c action on a set of cores of a type given by \c core_type. It is a 
- * static function used by @ref kbase_pm_invoke_power_up and @ref kbase_pm_invoke_power_down.
+ * This function performs the action given by \c action on a set of cores of a type given by \c core_type. It is a
+ * static function used by @ref kbase_pm_transition_core_type
  *
  * @param kbdev     The kbase device structure of the device
  * @param core_type The type of core that the action should be performed on
@@ -264,7 +264,8 @@ KBASE_EXPORT_TEST_API(kbase_pm_get_ready_cores)
  */
 mali_bool MOCKABLE(kbase_pm_get_pwr_active)(kbase_device *kbdev)
 {
-	return ((kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_STATUS), NULL) & (1<<1)) != 0);
+	mali_bool state = osk_atomic_get(&kbdev->pm.gpu_in_desired_state);
+	return !state;
 }
 KBASE_EXPORT_TEST_API(kbase_pm_get_pwr_active)
 
@@ -801,6 +802,8 @@ void MOCKABLE(kbase_pm_check_transitions)(kbase_device *kbdev)
 			kbdev->tiler_available_bitmap = remaining_tiler_available;
 		}
 	}
+
+	osk_atomic_set(&kbdev->pm.gpu_in_desired_state, in_desired_state);
 
 	if (in_desired_state)
 	{

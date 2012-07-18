@@ -14,7 +14,6 @@
 
 # default to building for the host
 ARCH ?= $(shell uname -m)
-KDIR ?= /lib/modules/$(shell uname -r)/build
 CONFIG_KDS_TEST ?= n
 ifneq ($(VITHAR_ROOT),)
 EXTRA_CFLAGS="-I$(KDS_PATH)/../../include"

@@ -20,7 +20,6 @@
 #include <linux/vmalloc.h>
 
 extern struct ion_device *ion_exynos;
-
 struct ion_wrapping_info
 {
 	struct ion_client *   ion_client;
@@ -31,7 +30,7 @@ struct ion_wrapping_info
 
 static struct ion_device * ion_device_get(void)
 {
-	/* Samsung TODO:
+	/* Customer TODO:
 	 * Return a pointer to the global ion_device on the system
 	 */
 	return ion_exynos;
@@ -39,8 +38,8 @@ static struct ion_device * ion_device_get(void)
 
 static unsigned int ion_heap_mask_get(void)
 {
-	/* Samsung TODO:
-	 * Retrun the heap mask to use with UMP clients.
+	/* Customer TODO:
+	 * Return the heap mask to use with UMP clients.
 	 * Suspect this can be kept as 0 as we won't allocate memory, just import.
 	 */
 	return -1;
@@ -49,7 +48,7 @@ static unsigned int ion_heap_mask_get(void)
 static int import_ion_client_create(void** custom_session_data)
 {
 	struct ion_client ** ion_client;
-	
+
 	ion_client = (struct ion_client**)custom_session_data;
 	*ion_client = ion_client_create(ion_device_get(), ion_heap_mask_get(), "ump");
 

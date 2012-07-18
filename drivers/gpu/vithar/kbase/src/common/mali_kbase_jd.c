@@ -309,7 +309,8 @@ STATIC INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 	if (core_req & BASE_JD_REQ_EXTERNAL_RESOURCES)
 	{
 		/* extres integrity will be verified when we parse them */
-		if ((char*)base_jd_get_external_resource(atom, nr_extres) > ((char*)jctx->pool + jctx->pool_size))
+		if (nr_extres == 0 ||
+		    (char*)base_jd_get_external_resource(atom, nr_extres) > ((char*)jctx->pool + jctx->pool_size))
 		{
 			osk_free(katom);
 			return NULL;

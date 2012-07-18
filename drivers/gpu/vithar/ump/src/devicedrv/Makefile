@@ -25,21 +25,25 @@ endif
 ARCH ?= $(shell uname -m)
 
 # linux build system integration
-
-ifeq ($(MALI_UNIT_TEST),1)
 OS=linux
 RELATIVE_ROOT=../../..
-ROOT = $(PWD)/../../..
-OSK_PATH = $(ROOT)/osk
-include $(OSK_PATH)/src/$(OS)/Makefile.osk
-EXTRA_CFLAGS += -DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK)
+ifneq ($(KERNELRELEASE),)
+ROOT = $(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
+else
+ROOT = $(CURDIR)/$(RELATIVE_ROOT)
+endif
+ifeq ($(MALI_UNIT_TEST),1)
+	OSK_PATH = $(ROOT)/osk
+	include $(OSK_PATH)/src/$(OS)/Makefile.osk
+	EXTRA_CFLAGS += -DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK)
 endif
 
 #ifneq ($(KERNELRELEASE),)
 ifneq ($(VITHAR_ROOT),)
 # Inside the kernel build system
 
-EXTRA_CFLAGS += -I$(KBUILD_EXTMOD) -I$(KBUILD_EXTMOD)/common -I$(KBUILD_EXTMOD)/linux  -I$(KBUILD_EXTMOD)/../.. -I$(KBUILD_EXTMOD)/../../.. -DUMP_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL)
+EXTRA_CFLAGS += -I$(KBUILD_EXTMOD) -I$(KBUILD_EXTMOD)/common -I$(KBUILD_EXTMOD)/linux  -I$(KBUILD_EXTMOD)/../.. -I$(KBUILD_EXTMOD)/../../.. -DUMP_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL) 
+
 ifeq ($(MALI_LICENSE_IS_GPL),1) 
 	# GPL driver supports KDS
 	EXTRA_CFLAGS += -DCONFIG_KDS
@@ -66,7 +70,7 @@ ifeq ($(MALI_UNIT_TEST),1)
 $(MODULE:.ko=-objs) := $(SRC:.c=.o) $(RELATIVE_ROOT)/osk/src/linux/lib.a
 else
 #$(MODULE:.ko=-objs) := $(SRC:.c=.o) 
-endif
+endif 
 
 else
 # Outside the kernel build system
@@ -118,7 +122,7 @@ ifeq ($(MALI_LICENSE_IS_GPL),1)
 endif
 
 all:
-	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(PWD) KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)"
+	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(CURDIR) KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)"
 
 kernelrelease:
 	$(MAKE) -C $(KDIR) KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)" kernelrelease

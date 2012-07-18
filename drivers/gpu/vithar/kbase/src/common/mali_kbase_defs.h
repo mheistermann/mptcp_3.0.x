@@ -638,6 +638,9 @@ struct kbase_context
 	osk_mutex               event_mutex;
 	mali_bool               event_closed;
 
+	osk_atomic              setup_complete;
+	osk_atomic              setup_in_progress;
+
 	u64                     *mmu_teardown_pages;
 
 	osk_mutex               reg_lock; /* To be converted to a rwlock? */

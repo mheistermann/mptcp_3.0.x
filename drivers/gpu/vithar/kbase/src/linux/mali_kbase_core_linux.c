@@ -389,7 +389,6 @@ mali_error kbase_external_buffer_lock(kbase_context * kctx, ukk_call_context *uk
 }
 #endif
 
-
 static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const args, u32 args_size)
 {
 	struct kbase_context *kctx;
@@ -404,6 +403,49 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 	id = ukh->id;
 	ukh->ret = MALI_ERROR_NONE; /* Be optimistic */
 
+	if (!osk_atomic_get(&kctx->setup_complete))
+	{
+		/* setup pending, try to signal that we'll do the setup */
+		if (osk_atomic_compare_and_swap(&kctx->setup_in_progress, 0, 1))
+		{
+			/* setup was already in progress, err this call */
+			return MALI_ERROR_FUNCTION_FAILED;
+		}
+
+		/* we're the one doing setup */
+
+		/* is it the only call we accept? */
+		if (id == KBASE_FUNC_SET_FLAGS)
+		{
+			kbase_uk_set_flags *kbase_set_flags = (kbase_uk_set_flags *)args;
+
+			if (sizeof(*kbase_set_flags) != args_size)
+			{
+				/* not matching the expected call, stay stuck in setup mode */
+				goto bad_size;
+			}
+
+			if (MALI_ERROR_NONE != kbase_context_set_create_flags(kctx, kbase_set_flags->create_flags))
+			{
+				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+				/* bad flags, will stay stuck in setup mode */
+				return MALI_ERROR_NONE;
+			}
+			else
+			{
+				/* we've done the setup, all OK */
+				osk_atomic_set(&kctx->setup_complete, 1);
+				return MALI_ERROR_NONE;
+			}
+		}
+		else
+		{
+			/* unexpected call, will stay stuck in setup mode */
+			return MALI_ERROR_FUNCTION_FAILED;
+		}
+	}
+
+	/* setup complete, perform normal operation */
 	switch(id)
 	{
 		case KBASE_FUNC_TMEM_ALLOC:
@@ -425,7 +467,7 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			else
 			{
 				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
-			}
+			}	
 			break;
 		}
 
@@ -711,22 +753,6 @@ bad_type:
 			break;
 		}
 #endif
-		case KBASE_FUNC_SET_FLAGS:
-		{
-			kbase_uk_set_flags *kbase_set_flags = (kbase_uk_set_flags *)args;
-
-			if (sizeof(*kbase_set_flags) != args_size)
-			{
-				goto bad_size;
-			}
-
-			if (MALI_ERROR_NONE != kbase_context_set_create_flags(kctx, kbase_set_flags->create_flags))
-			{
-				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
-			}
-			break;
-		}
-
 #if MALI_DEBUG
 		case KBASE_FUNC_SET_TEST_DATA:
 		{
@@ -826,6 +852,10 @@ struct kbase_device *kbase_find_device(int minor)
 }
 
 EXPORT_SYMBOL(kbase_find_device);
+
+
+
+
 
 void kbase_release_device(struct kbase_device *kbdev)
 {
@@ -1026,13 +1056,13 @@ static void *kbase_untag(void *ptr)
 
 static irqreturn_t kbase_job_irq_handler(int irq, void *data)
 {
-	struct kbase_device *kbdev	= kbase_untag(data);
+	struct kbase_device *kbdev = kbase_untag(data);
 	u32 val;
 
 	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
 
 	if (!kbdev->pm.gpu_powered)
-		{
+	{
 		/* GPU is turned off - IRQ is not for us */
 		osk_spinlock_irq_unlock(&kbdev->pm.gpu_powered_lock);
 		return IRQ_NONE;
@@ -1056,7 +1086,7 @@ static irqreturn_t kbase_job_irq_handler(int irq, void *data)
 
 static irqreturn_t kbase_mmu_irq_handler(int irq, void *data)
 {
-	struct kbase_device *kbdev	= kbase_untag(data);
+	struct kbase_device *kbdev = kbase_untag(data);
 	u32 val;
 
 	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
@@ -1086,7 +1116,7 @@ static irqreturn_t kbase_mmu_irq_handler(int irq, void *data)
 
 static irqreturn_t kbase_gpu_irq_handler(int irq, void *data)
 {
-	struct kbase_device *kbdev	= kbase_untag(data);
+	struct kbase_device *kbdev = kbase_untag(data);
 	u32 val;
 
 	osk_spinlock_irq_lock(&kbdev->pm.gpu_powered_lock);
@@ -1350,7 +1380,7 @@ static ssize_t set_js_timeouts(struct device *dev, struct device_attribute *attr
 		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
 		kbdev->js_soft_stop_ticks = ticks;
 
-		ticks = js_hard_stop_ms_ss * 1000000ULL;
+		ticks = js_hard_stop_ms_ss * 1000000ULL;		
 		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
 		kbdev->js_hard_stop_ticks_ss = ticks;
 
@@ -1472,7 +1502,7 @@ typedef struct kbasep_debug_command
 } kbasep_debug_command;
 
 /** Debug commands supported by the driver */
-static const kbasep_debug_command debug_commands[] =
+static const kbasep_debug_command debug_commands[] = 
 {
 	{
 		.str = "dumptrace",
@@ -1619,6 +1649,7 @@ static int kbase_common_device_init(kbase_device *kbdev)
 	}
 #if MALI_LICENSE_IS_GPL
 	dev_set_drvdata(osdev->dev, kbdev);
+
 	osdev->mdev.minor	= MISC_DYNAMIC_MINOR;
 	osdev->mdev.name	= osdev->devname;
 	osdev->mdev.fops	= &kbase_fops;

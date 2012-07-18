@@ -96,18 +96,9 @@ static void demand_state_changed(kbase_device *kbdev)
 {
 	kbasep_pm_policy_demand *data = &kbdev->pm.policy_data.demand;
 
-	switch(data->state) {
-		case KBASEP_PM_DEMAND_STATE_CHANGING_POLICY:
-		case KBASEP_PM_DEMAND_STATE_POWERING_UP:
-		case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
-			if (kbase_pm_get_pwr_active(kbdev)) {
-				/* Cores are still transitioning - ignore the event */
-				return;
-			}
-			break;
-		default:
-			/* Must not call kbase_pm_get_pwr_active here as the clock may be turned off */
-			break;
+	if (kbase_pm_get_pwr_active(kbdev)) {
+		/* Cores are still transitioning - ignore the event */
+		return;
 	}
 
 	switch(data->state)

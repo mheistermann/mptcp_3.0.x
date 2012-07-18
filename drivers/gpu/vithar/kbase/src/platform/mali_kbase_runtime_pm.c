@@ -44,6 +44,8 @@
 #include <linux/workqueue.h>
 #include <kbase/src/common/mali_kbase_gator.h>
 
+struct mutex runtime_pm_lock;
+
 #define RUNTIME_PM_DELAY_TIME 100
 static void kbase_device_runtime_workqueue_callback(struct work_struct *work)
 {
@@ -64,8 +66,10 @@ static void kbase_device_runtime_workqueue_callback(struct work_struct *work)
 	if(kbdev->osdev.dev->power.disable_depth > 0)
 		return;
 
+	mutex_lock(&runtime_pm_lock);
 	result = pm_runtime_suspend(kbdev->osdev.dev);
 	kbase_platform_clock_off(kbdev);
+	mutex_unlock(&runtime_pm_lock);
 
 #if MALI_GATOR_SUPPORT
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM));
@@ -107,6 +111,7 @@ mali_error kbase_device_runtime_init(struct kbase_device *kbdev)
 	pm_suspend_ignore_children(kbdev->osdev.dev, true);
 	pm_runtime_enable(kbdev->osdev.dev);
 	kbase_device_runtime_init_workqueue(kbdev->osdev.dev);
+	mutex_init(&runtime_pm_lock);
 	return MALI_ERROR_NONE;
 }
 
@@ -141,9 +146,11 @@ void kbase_device_runtime_get_sync(struct device *dev)
 		cancel_delayed_work_sync(&kbdev->runtime_pm_workqueue);
 	}
 
+	mutex_lock(&runtime_pm_lock);
 	kbase_platform_clock_on(kbdev);
 	pm_runtime_get_noresume(dev);
 	result = pm_runtime_resume(dev);
+	mutex_unlock(&runtime_pm_lock);
 
 #if MALI_GATOR_SUPPORT
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_RTPM_CHANGED, ACTIVITY_RTPM) | 1);
@@ -182,7 +189,7 @@ void kbase_device_runtime_put_sync(struct device *dev)
 	}
 
 	pm_runtime_put_noidle(kbdev->osdev.dev);
-	schedule_delayed_work(&kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME/(1000/HZ));
+	schedule_delayed_work_on(0, &kbdev->runtime_pm_workqueue, RUNTIME_PM_DELAY_TIME/(1000/HZ));
 #if MALI_RTPM_DEBUG
 	printk( "---kbase_device_runtime_put_sync, usage_count=%d\n", atomic_read(&kbdev->osdev.dev->power.usage_count));
 #endif

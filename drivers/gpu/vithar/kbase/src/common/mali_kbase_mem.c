@@ -706,7 +706,6 @@ static mali_error kbase_insert_va_region(
 	/* at least nr_pages from start_pfn should be contained within at_reg */
 	OSK_ASSERT(start_pfn + nr_pages <= at_reg->start_pfn + at_reg->nr_pages );
 
-	/* TODO - API wise this can probably be done early. */
 	new_reg->start_pfn = start_pfn;
 	new_reg->nr_pages  = nr_pages;
 
@@ -797,7 +796,6 @@ mali_error kbase_add_va_region(
 		    (!kbase_region_tracker_match_zone(tmp, reg)) ||
 		    (!(tmp->flags & KBASE_REG_FREE)) )
 		{
-			/* TODO - this error log needs rewording. */			
 			OSK_PRINT_WARN(OSK_BASE_MEM, "Zone mismatch: %d != %d", tmp->flags & KBASE_REG_ZONE_MASK, reg->flags & KBASE_REG_ZONE_MASK);
 			OSK_PRINT_WARN(OSK_BASE_MEM, "!(tmp->flags & KBASE_REG_FREE): tmp->start_pfn=0x%llx tmp->flags=0x%x tmp->nr_pages=0x%x gpu_pfn=0x%llx nr_pages=0x%x\n",
 			                tmp->start_pfn, tmp->flags, tmp->nr_pages, gpu_pfn, nr_pages);

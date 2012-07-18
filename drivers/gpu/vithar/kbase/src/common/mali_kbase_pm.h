@@ -317,6 +317,9 @@ typedef struct kbase_pm_device_data
 	 */
 	osk_spinlock_irq        power_change_lock;
 
+	/** This flag is set iff the GPU is powered as requested by the desired_xxx_state variables */
+	osk_atomic              gpu_in_desired_state;
+
 	/** Set to true when the GPU is powered and register accesses are possible, false otherwise */
 	mali_bool               gpu_powered;
 	/** Spinlock that must be held when writing gpu_powered */

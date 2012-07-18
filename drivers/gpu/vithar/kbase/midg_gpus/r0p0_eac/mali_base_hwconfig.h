@@ -148,6 +148,9 @@
 /* Problem with number of work registers in the RSD if set to 0 */
 #define BASE_HW_ISSUE_9275  1
 
+/* Incorrect coverage mask for 8xMSAA */
+#define BASE_HW_ISSUE_9423  1
+
 /* Compute endpoint has a 4-deep queue of tasks, meaning a soft stop won't complete until all 4 tasks have completed */
 #define BASE_HW_ISSUE_9435 1
 

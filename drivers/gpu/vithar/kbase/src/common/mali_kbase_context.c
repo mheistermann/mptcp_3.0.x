@@ -41,6 +41,8 @@ struct kbase_context *kbase_create_context(kbase_device *kbdev)
 
 	kctx->kbdev = kbdev;
 	kctx->as_nr = KBASEP_AS_NR_INVALID;
+	osk_atomic_set(&kctx->setup_complete, 0);
+	osk_atomic_set(&kctx->setup_in_progress, 0);
 
 	if (kbase_mem_usage_init(&kctx->usage, kctx->kbdev->memdev.per_process_memory_limit >> OSK_PAGE_SHIFT))
 	{
@@ -201,20 +203,9 @@ mali_error kbase_context_set_create_flags(kbase_context *kctx, u32 flags)
 
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 
-	/* Ensure this is the first call */
-	if ( (js_kctx_info->ctx.flags & KBASE_CTX_FLAG_CREATE_FLAGS_SET) != 0 )
-	{
-		OSK_PRINT_ERROR(OSK_BASE_CTX, "User attempted to set context creation flags more than once - not allowed");
-		err = MALI_ERROR_FUNCTION_FAILED;
-		goto out_unlock;
-	}
-
-	js_kctx_info->ctx.flags |= KBASE_CTX_FLAG_CREATE_FLAGS_SET;
-
 	/* Translate the flags */
 	if ( (flags & BASE_CONTEXT_SYSTEM_MONITOR_SUBMIT_DISABLED) == 0 )
 	{
-		/* This flag remains set until it is explicitly cleared */
 		js_kctx_info->ctx.flags &= ~((u32)KBASE_CTX_FLAG_SUBMIT_DISABLED);
 	}
 
@@ -225,9 +216,7 @@ mali_error kbase_context_set_create_flags(kbase_context *kctx, u32 flags)
 
 	/* Latch the initial attributes into the Job Scheduler */
 	kbasep_js_ctx_attr_set_initial_attrs( kctx->kbdev, kctx );
-
-
-out_unlock:
+	
 	osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 out:
 	return err;

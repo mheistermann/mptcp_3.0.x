@@ -46,16 +46,16 @@ MROOT=$(PWD)
 endif
 
 all:
-	$(MAKE) -C $(KDIR) M=$(MROOT)/osk/src/linux
-	$(MAKE) -C $(KDIR) M=$(MROOT)/uk/src/ukk/linux
-	$(MAKE) -C $(KDIR) M=$(MROOT)/kds/lib/kds
-	$(MAKE) -C $(KDIR) M=$(MROOT)/ump/src/devicedrv
-	$(MAKE) -C $(KDIR) M=$(MROOT)/kbase/src KBUILD_EXTRA_SYMBOLS="$(MROOT)/uk/src/ukk/linux/Module.symvers $(MROOT)/ump/src/devicedrv/Module.symvers"
+	$(MAKE) -C $(MROOT)/osk/src/linux
+	$(MAKE) -C $(MROOT)/uk/src/ukk/linux
+	$(MAKE) -C $(MROOT)/kds/lib/kds
+	$(MAKE) -C $(MROOT)/ump/src/devicedrv
+	$(MAKE) -C $(MROOT)/kbase/src
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(MROOT)/osk/src/linux clean
-	$(MAKE) -C $(KDIR) M=$(MROOT)/uk/src/ukk/linux clean
-	$(MAKE) -C $(KDIR) M=$(MROOT)/kds/lib/kds clean
-	$(MAKE) -C $(KDIR) M=$(MROOT)/ump/src/devicedrv clean
-	$(MAKE) -C $(KDIR) M=$(MROOT)/kbase/src clean
+	$(MAKE) -C $(MROOT)/osk/src/linux clean
+	$(MAKE) -C $(MROOT)/uk/src/ukk/linux clean
+	$(MAKE) -C $(MROOT)/kds/lib/kds clean
+	$(MAKE) -C $(MROOT)/ump/src/devicedrv clean
+	$(MAKE) -C $(MROOT)/kbase/src clean
 

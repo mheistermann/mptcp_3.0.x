@@ -10,36 +10,38 @@
 #
 
 
+MALI_RELEASE_NAME ?= "r1p0-04rel0"
+
 #ifneq ($(KERNELRELEASE),)
 ifneq ($(VITHAR_ROOT),)
 SRC=\
-	common/mali_kbase_device.c		\
+	common/mali_kbase_device.c \
 	common/mali_kbase_cache_policy.c \
-	common/mali_kbase_mem.c			\
-	common/mali_kbase_mmu.c			\
-	common/mali_kbase_jd.c			\
-	common/mali_kbase_jm.c			\
+	common/mali_kbase_mem.c \
+	common/mali_kbase_mmu.c \
+	common/mali_kbase_jd.c \
+	common/mali_kbase_jm.c \
 	common/mali_kbase_cpuprops.c \
-	common/mali_kbase_gpuprops.c		\
-	common/mali_kbase_js.c			\
-	common/mali_kbase_js_affinity.c         \
+	common/mali_kbase_gpuprops.c \
+	common/mali_kbase_js.c \
+	common/mali_kbase_js_affinity.c \
 	common/mali_kbase_js_ctx_attr.c \
-	common/mali_kbase_pm.c			\
-	common/mali_kbase_event.c		\
-	common/mali_kbase_context.c		\
-	common/mali_kbase_pm.c			\
-	common/mali_kbase_pm_driver.c		\
-	common/mali_kbase_pm_metrics.c		\
-	common/mali_kbase_pm_always_on.c	\
-	common/mali_kbase_pm_coarse_demand.c	\
-	common/mali_kbase_pm_demand.c		\
-	common/mali_kbase_config.c		\
-	common/mali_kbase_security.c		\
-	common/mali_kbase_instr.c		\
+	common/mali_kbase_pm.c \
+	common/mali_kbase_event.c \
+	common/mali_kbase_context.c \
+	common/mali_kbase_pm.c \
+	common/mali_kbase_pm_driver.c \
+	common/mali_kbase_pm_metrics.c \
+	common/mali_kbase_pm_always_on.c \
+	common/mali_kbase_pm_coarse_demand.c \
+	common/mali_kbase_pm_demand.c \
+	common/mali_kbase_config.c \
+	common/mali_kbase_security.c \
+	common/mali_kbase_instr.c \
 	common/mali_kbase_softjobs.c \
 	common/mali_kbase_8401_workaround.c \
-	linux/mali_kbase_mem_linux.c		\
-	linux/mali_kbase_core_linux.c			\
+	linux/mali_kbase_mem_linux.c \
+	linux/mali_kbase_core_linux.c \
 	linux/mali_kbase_config_linux.c
 
 obj-$(CONFIG_VITHAR) += $(KBASE_PATH)/platform/mali_kbase_platform.o
@@ -48,7 +50,7 @@ obj-$(CONFIG_VITHAR) += $(KBASE_PATH)/platform/mali_kbase_dvfs.o
 
 RELATIVE_ROOT=../..
 ROOT=$(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
-MALI_KBASE_SRC_LINUX_PATH ?= $(KBASE_PATH)/linux
+MALI_KBASE_SRC_LINUX_PATH ?= $(KBUILD_EXTMOD)/linux
 
 # Dummy model
 ifeq ($(MALI_NO_MALI), 1)
@@ -132,19 +134,19 @@ else
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 
-EXTRA_SYMBOLS=$(PWD)/../../uk/src/ukk/linux/Module.symvers $(PWD)/../../ump/src/devicedrv/Module.symvers 
+EXTRA_SYMBOLS=$(CURDIR)/../../uk/src/ukk/linux/Module.symvers $(CURDIR)/../../ump/src/devicedrv/Module.symvers 
 
 ifeq ($(findstring 0,$(MALI_LICENSE_IS_GPL)),)
 # GPL driver supports KDS
-EXTRA_SYMBOLS += $(PWD)/../../kds/lib/kds/Module.symvers
+EXTRA_SYMBOLS += $(CURDIR)/../../kds/lib/kds/Module.symvers
 endif
 
 # the mali_kbase module depends on the ukk module
 # we get the symbols from the ukk module using KBUILD_EXTRA_SYMBOLS to prevent warnings about unknown functions
 all:
-	$(MAKE) -C $(KDIR) M=$(PWD) KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)" modules
+	$(MAKE) -C $(KDIR) M=$(CURDIR) KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)" modules
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
 
 endif

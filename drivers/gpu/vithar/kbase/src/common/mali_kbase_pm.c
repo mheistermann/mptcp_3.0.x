@@ -62,6 +62,7 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 	OSK_ASSERT(kbdev != NULL);
 
 	kbdev->pm.gpu_powered = MALI_FALSE;
+	osk_atomic_set(&kbdev->pm.gpu_in_desired_state, MALI_TRUE);
 
 	callbacks = (kbase_pm_callback_conf*) kbasep_get_config_value(kbdev->config_attributes,
 	                                                              KBASE_CONFIG_ATTR_POWER_MANAGEMENT_CALLBACKS);

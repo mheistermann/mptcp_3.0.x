@@ -39,17 +39,14 @@
 /* Types used by the policies must go here */
 enum
 {
-	/** Context has had its creation flags set */
-	KBASE_CTX_FLAG_CREATE_FLAGS_SET = (1u << 0),
-
 	/** Context will not submit any jobs */
-	KBASE_CTX_FLAG_SUBMIT_DISABLED  = (1u << 1),
+	KBASE_CTX_FLAG_SUBMIT_DISABLED  = (1u << 0),
 
 	/** Set if the context uses an address space and should be kept scheduled in */
-	KBASE_CTX_FLAG_PRIVILEGED       = (1u << 2),
+	KBASE_CTX_FLAG_PRIVILEGED       = (1u << 1),
 
 	/** Kernel-side equivalent of BASE_CONTEXT_HINT_ONLY_COMPUTE. Non-mutable after creation flags set */
-	KBASE_CTX_FLAG_HINT_ONLY_COMPUTE= (1u << 3)
+	KBASE_CTX_FLAG_HINT_ONLY_COMPUTE= (1u << 2)
 
 	/* NOTE: Add flags for other things, such as 'is scheduled', and 'is dying' */
 };

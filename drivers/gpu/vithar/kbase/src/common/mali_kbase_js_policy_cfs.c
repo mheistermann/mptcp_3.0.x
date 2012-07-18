@@ -45,7 +45,7 @@
 /* In this HW workaround, restrict Compute-only contexts and Compute jobs onto job slot[2],
  * which will ensure their affinity does not intersect GLES jobs */
 #define JS_CTX_REQ_ALL_OTHERS \
-	( KBASE_CTX_FLAG_CREATE_FLAGS_SET | KBASE_CTX_FLAG_PRIVILEGED )
+	( KBASE_CTX_FLAG_PRIVILEGED )
 #define JS_CORE_REQ_COMPUTE_SLOT \
 	( BASE_JD_REQ_CS )
 #define JS_CORE_REQ_ONLY_COMPUTE_SLOT \
@@ -54,7 +54,7 @@
 #else /* BASE_HW_ISSUE_8987 != 0 */
 /* Otherwise, compute-only contexts/compute jobs can use any job slot */
 #define JS_CTX_REQ_ALL_OTHERS \
-	( KBASE_CTX_FLAG_CREATE_FLAGS_SET | KBASE_CTX_FLAG_PRIVILEGED | KBASE_CTX_FLAG_HINT_ONLY_COMPUTE)
+	( KBASE_CTX_FLAG_PRIVILEGED | KBASE_CTX_FLAG_HINT_ONLY_COMPUTE)
 #define JS_CORE_REQ_COMPUTE_SLOT \
 	( BASE_JD_REQ_CS | BASE_JD_REQ_ONLY_COMPUTE )
 #define JS_CORE_REQ_ONLY_COMPUTE_SLOT \
