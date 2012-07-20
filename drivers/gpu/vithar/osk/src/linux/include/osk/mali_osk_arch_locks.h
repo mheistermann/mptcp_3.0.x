@@ -217,8 +217,10 @@ OSK_STATIC_INLINE void osk_spinlock_irq_term(osk_spinlock_irq * lock)
 
 OSK_STATIC_INLINE void osk_spinlock_irq_lock(osk_spinlock_irq * lock)
 {
+	unsigned long flags;
 	OSK_ASSERT(NULL != lock);
-	spin_lock_irqsave(&lock->lock, lock->flags);
+	spin_lock_irqsave(&lock->lock, flags);
+	lock->flags = flags;
 }
 
 OSK_STATIC_INLINE void osk_spinlock_irq_unlock(osk_spinlock_irq * lock)
