@@ -44,6 +44,7 @@ struct temperature_params {
 	unsigned int stop_warning;
 	unsigned int start_warning;
 	unsigned int start_tripping; /* temp to do tripping */
+	unsigned int start_hw_tripping;
 #if defined(CONFIG_TC_VOLTAGE)
 	int stop_tc;	/* temperature compensation for sram */
 	int start_tc;

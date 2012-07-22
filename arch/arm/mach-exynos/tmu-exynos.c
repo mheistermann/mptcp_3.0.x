@@ -40,6 +40,10 @@ static struct workqueue_struct  *tmu_monitor_wq;
 
 static void  tmu_tripped_cb(struct tmu_info *info)
 {
+	/* To do */
+	pr_info("It is high temperature.\n");
+	pr_info("If temperature is higher 3 degree than now ");
+	pr_info("Power will be off automatically!!\n");
 }
 
 static int get_cur_temp(struct tmu_info *info)
@@ -371,12 +375,14 @@ static void print_temperature_params(struct tmu_info *info)
 		"Throttling stop_temp  = %d  start_temp     = %d\n"
 		"Waring stop_temp      = %d start_tmep     = %d\n"
 		"Tripping temp         = %d\n"
+		"Hw_tripping temp      = %d\n"
 		"Trhottling freq = %d   Warning freq = %d\n",
 		data->ts.stop_throttle,
 		data->ts.start_throttle,
 		data->ts.stop_warning,
 		data->ts.start_warning,
 		data->ts.start_tripping,
+		data->ts.start_hw_tripping,
 		data->cpulimit.throttle_freq,
 		data->cpulimit.warning_freq);
 #if defined(CONFIG_TC_VOLTAGE)
@@ -725,6 +731,7 @@ static int exynos_tmu_init(struct tmu_info *info)
 	struct tmu_data *data = info->dev->platform_data;
 	unsigned int te_temp, con;
 	unsigned int temp_throttle, temp_warning, temp_trip;
+	unsigned int hw_temp_trip;
 	unsigned int tc_thr = 0;
 	unsigned int rising_thr = 0, cooling_thr = 0;
 #if defined(CONFIG_MIF_VC)
@@ -749,9 +756,11 @@ static int exynos_tmu_init(struct tmu_info *info)
 			+ info->te1 - TMU_DC_VALUE;
 	temp_trip =  data->ts.start_tripping
 			+ info->te1 - TMU_DC_VALUE;
+	hw_temp_trip = data->ts.start_hw_tripping
+			+ info->te1 - TMU_DC_VALUE;
 
 	rising_thr = (temp_throttle | (temp_warning<<8) | \
-		(temp_trip<<16) | (UNUSED_THRESHOLD<<24));
+		(temp_trip<<16) | (hw_temp_trip<<24));
 
 	__raw_writel(rising_thr, info->tmu_base + THD_TEMP_RISE);
 
@@ -820,16 +829,20 @@ static int exynos_tmu_init(struct tmu_info *info)
 	__raw_writel((CLEAR_RISE_INT | CLEAR_FALL_INT),	\
 				info->tmu_base + INTCLEAR);
 
-	/* TMU core enable */
+	/* TMU core enable and HW tripping enable */
 	con = __raw_readl(info->tmu_base + TMU_CON);
-	con |= (MUX_ADDR_VALUE<<20 | CORE_EN);
-
+	con &= ~(HW_TRIP_MODE);
+	con |= (HW_TRIPPING_EN | MUX_ADDR_VALUE<<20 | CORE_EN);
 	__raw_writel(con, info->tmu_base + TMU_CON);
 
 	/* Because temperature sensing time is appro 940us,
 	* tmu is enabled and 1st valid sample can get 1ms after.
 	*/
 	mdelay(1);
+
+	te_temp = __raw_readl(S5P_PMU_PS_HOLD_CONTROL);
+	te_temp |= S5P_PS_HOLD_EN;
+	__raw_writel(te_temp, S5P_PMU_PS_HOLD_CONTROL);
 
 	/*LEV0 LEV1 LEV2 interrupt enable */
 	__raw_writel(INTEN_RISE0 | INTEN_RISE1 | INTEN_RISE2,	\

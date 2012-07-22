@@ -724,7 +724,8 @@ struct tmu_data exynos_tmu_data __initdata = {
 		.start_throttle = 85,
 		.stop_warning  = 95,
 		.start_warning = 103,
-		.start_tripping = 110, /* temp to do tripping */
+		.start_tripping = 110,		/* temp to do tripping */
+		.start_hw_tripping = 113,       /* temp to do hw_trpping*/
 #ifdef CONFIG_TC_VOLTAGE
 		.stop_tc = 13,
 		.start_tc = 10,
