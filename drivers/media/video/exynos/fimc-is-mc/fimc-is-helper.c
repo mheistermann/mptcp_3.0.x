@@ -43,7 +43,7 @@
 #include "fimc-is-helper.h"
 #include "fimc-is-misc.h"
 
-
+#define RATIO_16_9		(1777)
 
 /*
 Default setting values
@@ -2286,14 +2286,34 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		/*TODO: ScalerC sclaeri-up limitation for DZOOM*/
 		if ((dis_width > DEFAULT_DIS_MAX_WIDTH) ||
 				(dis_height > DEFAULT_DIS_MAX_HEIGHT)) {
-			dis_height = DEFAULT_DIS_MAX_HEIGHT;
-			dis_width = (DEFAULT_DIS_MAX_HEIGHT
+			switch (back_crop_ratio) {
+			case RATIO_16_9 :
+				dis_height = DEFAULT_DIS_MAX_HEIGHT;
+				dis_width = (DEFAULT_DIS_MAX_HEIGHT
 				* (back_crop_ratio * 100 / 1000)) / 100;
-			dis_width = ALIGN(dis_width, 8);
-			dis_height = ALIGN(dis_height, 2);
 
-			back_width = (dis_width * 100 * 100 / 125) / 100;
-			back_height = (dis_height * 100 * 100 / 125) / 100;
+				dis_width = ALIGN(dis_width, 16);
+				dis_height = ALIGN(dis_height, 2);
+
+				back_width = (dis_width * 100 * 100 / 125)
+						/ 100;
+				back_height = (dis_height * 100 * 100 / 125)
+						/ 100;
+				break;
+			default:
+				dis_height = DEFAULT_DIS_MAX_HEIGHT;
+				dis_width = (DEFAULT_DIS_MAX_HEIGHT
+					* (back_crop_ratio * 100 / 1000))
+						/ 100;
+				dis_width = ALIGN(dis_width, 8);
+				dis_height = ALIGN(dis_height, 2);
+
+				back_width = (dis_width * 100 * 100 / 125)
+						/ 100;
+				back_height = (dis_height * 100 * 100 / 125)
+						/ 100;
+				break;
+			}
 		}
 
 		back_width = ALIGN(back_width, 4);
