@@ -2269,13 +2269,13 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 		back_width = (DEFAULT_DIS_MAX_HEIGHT
 				* (back_crop_ratio * 100 / 1000)) / 100;
 		back_width = ALIGN(back_width, 8);
-		back_height = ALIGN(back_height, 8);
+		back_height = ALIGN(back_height, 2);
 	} else if (crop_height < DEFAULT_DIS_MAX_HEIGHT) {
 		back_height = front_height;
 		back_width = (front_height
 				* (back_crop_ratio * 100 / 1000)) / 100;
 		back_width = ALIGN(back_width, 8);
-		back_height = ALIGN(back_height, 8);
+		back_height = ALIGN(back_height, 2);
 	}
 
 	/*set dis size*/
@@ -2289,8 +2289,8 @@ int fimc_is_hw_change_size(struct fimc_is_dev *dev)
 			dis_height = DEFAULT_DIS_MAX_HEIGHT;
 			dis_width = (DEFAULT_DIS_MAX_HEIGHT
 				* (back_crop_ratio * 100 / 1000)) / 100;
-			dis_width = ALIGN(dis_width, 16);
-			dis_height = ALIGN(dis_height, 8);
+			dis_width = ALIGN(dis_width, 8);
+			dis_height = ALIGN(dis_height, 2);
 
 			back_width = (dis_width * 100 * 100 / 125) / 100;
 			back_height = (dis_height * 100 * 100 / 125) / 100;
