@@ -26,6 +26,7 @@ snd-soc-max9850-objs := max9850.o
 snd-soc-pcm3008-objs := pcm3008.o
 snd-soc-sgtl5000-objs := sgtl5000.o
 snd-soc-alc5623-objs := alc5623.o
+snd-soc-alc5631-objs := alc5631.o
 snd-soc-sn95031-objs := sn95031.o
 snd-soc-spdif-objs := spdif_transciever.o
 snd-soc-ssm2602-objs := ssm2602.o
@@ -105,6 +106,7 @@ obj-$(CONFIG_SND_SOC_AK4671)	+= snd-soc-ak4671.o
 obj-$(CONFIG_SND_SOC_AK4678)	+= snd-soc-ak4678.o
 
 obj-$(CONFIG_SND_SOC_ALC5623)    += snd-soc-alc5623.o
+obj-$(CONFIG_SND_SOC_ALC5631)    += snd-soc-alc5631.o
 obj-$(CONFIG_SND_SOC_CQ0093VC) += snd-soc-cq93vc.o
 obj-$(CONFIG_SND_SOC_CS42L51)	+= snd-soc-cs42l51.o
 obj-$(CONFIG_SND_SOC_CS4270)	+= snd-soc-cs4270.o
