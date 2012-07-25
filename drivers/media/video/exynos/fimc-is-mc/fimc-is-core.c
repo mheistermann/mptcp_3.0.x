@@ -171,7 +171,8 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 				SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
 				SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
 				SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
-				SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF);
+				SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF +
+				FIMC_IS_EXTRA_MEM_SIZE);
 	if (IS_ERR(fimc_is_bitproc_buf)) {
 		fimc_is_bitproc_buf = 0;
 		err("Allocating bitprocessor buffer failed\n");
@@ -253,12 +254,12 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 		SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
 		SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
 		SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
-		SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF);
+		SIZE_ISP_INTERNAL_BUF * NUM_ISP_INTERNAL_BUF +
+		FIMC_IS_EXTRA_MEM_SIZE);
 
 	dev->is_p_region =
 		(struct is_region *)(dev->mem.kvaddr +
 			FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE);
-
 
 	dev->is_shared_region =
 		(struct is_share_region *)(dev->mem.kvaddr +
@@ -297,6 +298,20 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 				SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
 				SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
 				SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF;
+
+	dev->fw.dvaddr_backup = (unsigned char *)
+				(dev->mem.dvaddr +
+				FIMC_IS_A5_MEM_SIZE +
+				SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+				SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+				SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
+				FIMC_IS_EXTRA_MEM_SIZE);
+	dev->fw.kvaddr_backup = dev->mem.kvaddr +
+				FIMC_IS_A5_MEM_SIZE +
+				SIZE_ODC_INTERNAL_BUF * NUM_ODC_INTERNAL_BUF +
+				SIZE_DIS_INTERNAL_BUF * NUM_DIS_INTERNAL_BUF +
+				SIZE_3DNR_INTERNAL_BUF * NUM_3DNR_INTERNAL_BUF +
+				FIMC_IS_EXTRA_MEM_SIZE;
 
 	dev->mem.dvaddr_shared = (unsigned char *)dev->mem.dvaddr +
 			((unsigned char *)&dev->is_p_region->shared[0] -
@@ -367,6 +382,14 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
 		/*memcpy((void *)dev->fw.fw_info, (buf + fsize - 0x1F), 0x17);
 		memcpy((void *)dev->fw.fw_version, (buf + fsize - 0x7), 0x6);*/
+		if (dev->fw.kvaddr_backup > 0) {
+			memcpy(dev->fw.kvaddr_backup,
+				(void *)buf, fsize);
+			fimc_is_mem_cache_clean(
+				dev->fw.kvaddr_backup,
+				fsize + 1);
+			dev->fw.size = fsize;
+		}
 	}
 #endif
 	dev->fw.state = 1;
@@ -391,13 +414,23 @@ request_fw:
 			err("failed to load FIMC-IS F/W\n");
 			return -EINVAL;
 		} else {
-		    memcpy(dev->mem.kvaddr, fw_blob->data, fw_blob->size);
-		    fimc_is_mem_cache_clean(
+			memcpy(dev->mem.kvaddr, fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean(
 				(void *)dev->mem.kvaddr, fw_blob->size + 1);
-		    dbg("FIMC_IS F/W loaded successfully - size:%d\n",
+
+			if (dev->fw.kvaddr_backup > 0) {
+				memcpy(dev->fw.kvaddr_backup,
+					fw_blob->data, fw_blob->size);
+				fimc_is_mem_cache_clean(
+					(void *)dev->fw.kvaddr_backup,
+					fw_blob->size + 1);
+				dev->fw.size = fw_blob->size;
+			}
+			dbg("FIMC_IS F/W loaded successfully - size:%d\n",
 				fw_blob->size);
 		}
 #endif
+		dev->fw.state = 1;
 
 #ifndef SDCARD_FW
 		/*TODO: delete or not*/
@@ -406,6 +439,7 @@ request_fw:
 		dev->fw.fw_info[24] = '\0';
 		memcpy((void *)dev->fw.fw_version,
 			(fw_blob->data + fw_blob->size - 0x7), 0x6);
+
 		dev->fw.state = 1;
 #endif
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
@@ -434,10 +468,19 @@ int fimc_is_load_fw(struct  fimc_is_dev *dev)
 	dbg("%s\n", __func__);
 	if (test_bit(IS_ST_IDLE, &dev->state)) {
 		/* 1. Load IS firmware */
-		ret = fimc_is_request_firmware(dev);
-		if (ret) {
-			err("failed to fimc_is_request_firmware (%d)\n", ret);
-			return -EINVAL;
+		if (dev->fw.state && (dev->fw.kvaddr_backup > 0)) {
+			memcpy(dev->mem.kvaddr,
+				dev->fw.kvaddr_backup,
+				dev->fw.size);
+			fimc_is_mem_cache_clean(dev->mem.kvaddr,
+						dev->fw.size + 1);
+		} else {
+			ret = fimc_is_request_firmware(dev);
+			if (ret) {
+				err("failed to fimc_is_request_firmware (%d)\n"
+					, ret);
+				return -EINVAL;
+			}
 		}
 
 		set_bit(IS_ST_PWR_ON, &dev->state);
@@ -466,6 +509,7 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 
 	ret = request_firmware((const struct firmware **)&fw_blob,
 				FIMC_IS_SETFILE, &dev->pdev->dev);
+
 	if (ret) {
 		dev_err(&dev->pdev->dev,
 			"could not load firmware (err=%d)\n", ret);
@@ -487,6 +531,14 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 		fimc_is_mem_cache_clean(
 				(void *)(dev->mem.kvaddr + dev->setfile.base),
 				fw_blob->size + 1);
+		if (dev->fw.kvaddr_backup > 0) {
+			memcpy(dev->fw.kvaddr_backup + dev->setfile.base,
+				fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean(
+				(void *)dev->fw.kvaddr_backup +
+				dev->setfile.base, fw_blob->size + 1);
+			dev->setfile.size = fw_blob->size;
+		}
 	}
 #endif
 	dev->setfile.state = 1;
@@ -568,7 +620,16 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 			return -EINVAL;
 		}
 
-		fimc_is_load_setfile(dev);
+		if (dev->setfile.state && (dev->fw.kvaddr_backup > 0)) {
+			memcpy(dev->mem.kvaddr + dev->setfile.base,
+				dev->fw.kvaddr_backup + dev->setfile.base,
+				dev->setfile.size);
+			fimc_is_mem_cache_clean(dev->mem.kvaddr	+
+						dev->setfile.base,
+						dev->setfile.size + 1);
+		} else {
+			fimc_is_load_setfile(dev);
+		}
 		dbg(" fimc_is_load_setfile end\n");
 		clear_bit(IS_ST_SETFILE_LOADED, &dev->state);
 

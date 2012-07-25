@@ -77,6 +77,12 @@
 #define FIMC_IS_DEBUG_REGION_ADDR		(0x00840000)
 #define FIMC_IS_SHARED_REGION_ADDR		(0x008C0000)
 
+#define FIMC_IS_EXTRA_FW_SIZE		0x180000
+#define FIMC_IS_EXTRA_SETFILE_SIZE	0x4B000
+#define FIMC_IS_EXTRA_MEM_SIZE		(FIMC_IS_EXTRA_FW_SIZE +\
+					FIMC_IS_EXTRA_SETFILE_SIZE +\
+					0x1000)
+
 #define FIMC_IS_MAX_BUF_NUM			(16)
 #define FIMC_IS_MAX_BUf_PLANE_NUM		(3)
 
@@ -409,13 +415,15 @@ struct is_meminfo {
 	unsigned char	*dvaddr_isp;
 	unsigned char	*kvaddr_isp;
 	void		*fw_cookie;
-
 };
 
 struct is_fw {
 	const struct firmware	*info;
 	int			state;
 	int			ver;
+	unsigned char		*kvaddr_backup;
+	unsigned char		*dvaddr_backup;
+	size_t			size;
 };
 
 struct is_setfile {
