@@ -77,6 +77,8 @@ int prev_level = MALI_DVFS_STEP-1;
 int prev_level = 0;
 #endif
 unsigned long long prev_time = 0;
+int mali_dvfs_low_res = 0;
+int mali_dvfs_time_interval = 10; /* 1000ms */
 
 mali_time_in_state time_in_state[MALI_DVFS_STEP]=
 {
@@ -413,7 +415,10 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #if MALI_DVFS_START_MAX_STEP
 	/*If no input is keeping for longtime, first step will be max step. */
 	if (dvfs_status.noutilcnt > 2 && dvfs_status.utilisation > 0) {
-		dvfs_status.step=kbase_platform_dvfs_get_level(450);
+		if (mali_dvfs_low_res)
+			dvfs_status.step=kbase_platform_dvfs_get_level(350);
+		else
+			dvfs_status.step=kbase_platform_dvfs_get_level(450);
 	} else
 #endif
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
@@ -935,3 +940,10 @@ int kbase_platform_dvfs_set(int enable)
 #endif
 	return 0;
 }
+
+void kbase_platform_dvfs_set_low_resolution(void)
+{
+	mali_dvfs_low_res = 1;
+	mali_dvfs_time_interval = 5;
+}
+

@@ -213,6 +213,11 @@ void kbase_pm_report_vsync(kbase_device *kbdev, int buffer_updated)
 
 	OSK_ASSERT(kbdev != NULL);
 
+	if (buffer_updated == 0x10) {
+		kbase_platform_dvfs_set_low_resolution();
+		printk("LOW resolution is reported\n");
+	}
+
 	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
 	if (buffer_updated == 0)
 		kbdev->pm.metrics.vsync_hit = 0;

@@ -31,7 +31,8 @@
 #endif
 
 #define MALI_DVFS_KEEP_STAY_CNT 10
-#define MALI_DVFS_TIME_INTERVAL 10
+#define MALI_DVFS_TIME_INTERVAL mali_dvfs_time_interval
+extern int mali_dvfs_time_interval;
 
 #ifdef CONFIG_VITHAR_DVFS
 #define CONFIG_VITHAR_FREQ_LOCK
@@ -58,6 +59,7 @@ int kbase_platform_dvfs_sprint_avs_table(char *buf);
 int kbase_platform_dvfs_set(int enable);
 void kbase_platform_dvfs_set_level(struct kbase_device *kbdev, int level);
 int kbase_platform_dvfs_get_level(int freq);
+void kbase_platform_dvfs_set_low_resolution(void);
 
 #ifdef CONFIG_VITHAR_DVFS
 int kbase_platform_dvfs_init(struct kbase_device *dev);
