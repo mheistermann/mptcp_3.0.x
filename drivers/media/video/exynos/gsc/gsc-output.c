@@ -466,6 +466,10 @@ static int gsc_output_streamon(struct file *file, void *priv,
 	struct media_pad *sink_pad;
 	int ret;
 
+	if (gsc_ctx_state_is_set(GSC_CTX_SUSPEND, gsc->out.ctx)) {
+		gsc_err("GSCALER has been suspended");
+		return -EINVAL;
+	}
 	sink_pad = media_entity_remote_source(&out->sd_pads[GSC_PAD_SOURCE]);
 	if (IS_ERR(sink_pad)) {
 		gsc_err("No sink pad conncted with a gscaler source pad");
@@ -487,8 +491,17 @@ static int gsc_output_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
 	struct gsc_dev *gsc = video_drvdata(file);
+	int ret;
 
-	return vb2_streamoff(&gsc->out.vbq, type);
+	if (!gsc_ctx_state_is_set(GSC_CTX_STREAMOFF, gsc->out.ctx)) {
+		gsc_ctx_state_lock_set(GSC_CTX_STREAMOFF, gsc->out.ctx);
+		ret = vb2_streamoff(&gsc->out.vbq, gsc->out.vbq.type);
+	} else {
+		gsc_err("GSCALER context already stream off");
+		ret = -EINVAL;
+	}
+
+	return ret;
 }
 
 static int gsc_output_qbuf(struct file *file, void *priv,
@@ -737,6 +750,7 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 			return;
 		}
 		gsc_pipeline_s_stream(gsc, true);
+		gsc_ctx_state_lock_clear(GSC_CTX_STREAMOFF, gsc->out.ctx);
 	}
 }
 
