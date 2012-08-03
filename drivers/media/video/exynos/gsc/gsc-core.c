@@ -1305,6 +1305,38 @@ void gsc_clock_gating(struct gsc_dev *gsc, enum gsc_clk_status status)
 	}
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void gsc_early_suspend(struct early_suspend *handler)
+{
+	struct gsc_dev *gsc;
+
+	gsc = container_of(handler, struct gsc_dev, early_suspend);
+
+	if (gsc_out_opened(gsc)) {
+		gsc_ctx_state_lock_set(GSC_CTX_SUSPEND, gsc->out.ctx);
+		if (!gsc_ctx_state_is_set(GSC_CTX_STREAMOFF, gsc->out.ctx)) {
+			if (gsc->out.vbq.streaming) {
+				gsc_ctx_state_lock_set(GSC_CTX_STREAMOFF,
+							gsc->out.ctx);
+				vb2_streamoff(&gsc->out.vbq, gsc->out.vbq.type);
+			}
+		}
+	}
+
+	return;
+}
+
+static void gsc_late_resume(struct early_suspend *handler)
+{
+	struct gsc_dev *gsc;
+
+	gsc = container_of(handler, struct gsc_dev, early_suspend);
+
+	if (gsc_out_opened(gsc))
+		gsc_ctx_state_lock_clear(GSC_CTX_SUSPEND, gsc->out.ctx);
+}
+#endif
+
 static int gsc_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1468,6 +1500,12 @@ static int gsc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gsc->alloc_ctx);
 		goto err_irq;
 	}
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	gsc->early_suspend.suspend = gsc_early_suspend;
+	gsc->early_suspend.resume= gsc_late_resume;
+	gsc->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 2;
+	register_early_suspend(&gsc->early_suspend);
+#endif
 	gsc_pm_runtime_enable(&pdev->dev);
 
 #ifdef CONFIG_BUSFREQ_OPP

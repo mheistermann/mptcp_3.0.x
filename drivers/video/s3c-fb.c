@@ -221,6 +221,8 @@ struct s3c_fb_win {
 	struct v4l2_subdev sd;		/* Take a window as a v4l2_subdevice */
 	int end_stream;
 	int last_frame;
+	bool	 stream_status;
+	wait_queue_head_t	local_wait;
 #endif
 };
 
@@ -1929,6 +1931,16 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
 
+	if (sfb->windows[0]->stream_status) {
+		int ret;
+		ret = wait_event_timeout(sfb->windows[0]->local_wait,
+				!sfb->windows[0]->stream_status,
+				msecs_to_jiffies(1000));
+		if (ret == 0)
+			printk("wait timeout : %s, status = %d\n", __func__,
+				sfb->windows[0]->stream_status);
+	}
+
 	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
 		win = sfb->windows[win_no];
 		if (!win)
@@ -2156,6 +2168,8 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 		shadow_protect_win(win, 0);
 
 		s3c_fb_blank(FB_BLANK_UNBLANK, win->fbinfo);
+		init_waitqueue_head(&sfb->windows[0]->local_wait);
+		sfb->windows[0]->stream_status = true;
 
 	} else {
 		sfb->windows[0]->end_stream = 1;
@@ -2172,6 +2186,8 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 				__func__);
 			return ret;
 		}
+		sfb->windows[0]->stream_status = false;
+		wake_up(&sfb->windows[0]->local_wait);
 	}
 
 	dev_dbg(sfb->dev, "Get the window via local path started/stopped : %d\n",
