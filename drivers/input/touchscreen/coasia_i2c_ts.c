@@ -41,18 +41,6 @@
 #define TOUCHSCREEN_MINY 0
 #define TOUCHSCREEN_MAXY 1600
 
-#if CONFIG_SMDK_BOARD_REV <= 1
-	#define ATTB	EXYNOS5_GPX2(5)
-	#define TS_RST	EXYNOS5_GPX2(4)
-#else
-	#define ATTB	EXYNOS5_GPX2(2)
-	#define TS_RST	EXYNOS5_GPX2(1)
-#endif
-#define get_attb_value	gpio_get_value
-#define RESETPIN_CFG	s3c_gpio_cfgpin(TS_RST, S3C_GPIO_OUTPUT)
-#define RESETPIN_SET0	gpio_direction_output(TS_RST, 0)
-#define RESETPIN_SET1	gpio_direction_output(TS_RST, 1)
-
 /* Touch Finger Numbers */
 #define ONE_FINGER_TOUCH	0x1
 #define TWO_FINGER_TOUCH	0x2
@@ -79,22 +67,6 @@ struct pixcir_i2c_ts_data {
 	int irq;
 };
 
-static void reset_touch_hw_init(void)
-{
-	/* config for reset pin */
-	if (gpio_request(TS_RST, "TS_RST")) {
-		pr_err("%s : TS_RST request port error!\n", __func__);
-	} else {
-		s3c_gpio_cfgrange_nopull(TS_RST, 1, S3C_GPIO_SFN(1));
-		gpio_direction_output(TS_RST, 1);
-
-		usleep_range(2000, 2100);
-
-		gpio_direction_output(TS_RST, 0);
-		gpio_free(TS_RST);
-	}
-}
-
 static void pixcir_ts_poscheck(struct work_struct *work)
 {
 	struct pixcir_i2c_ts_data *tsdata =
@@ -116,8 +88,6 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	if (ret != 1) {
 		dev_err(&tsdata->client->dev,
 			"Unable to write to i2c, ret =%d\n", ret);
-		/* config for reset pin */
-		reset_touch_hw_init();
 		goto out;
 	}
 
@@ -126,8 +96,6 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	if (ret != sizeof(Rdbuf)) {
 		dev_err(&tsdata->client->dev,
 			"Unable to read i2c page, ret = %d\n", ret);
-		/* config for reset pin */
-		reset_touch_hw_init();
 		goto out;
 	}
 
@@ -286,18 +254,6 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 		input_free_device(input);
 		kfree(tsdata);
 	}
-
-	if (gpio_request(TS_RST, "GPX2")) {
-		error = -EIO;
-		return error;
-	}
-
-	RESETPIN_CFG;
-	RESETPIN_SET0;
-	mdelay(20);
-	RESETPIN_SET1;
-
-	mdelay(30);
 
 	if (request_irq(tsdata->irq, pixcir_ts_isr,
 		IRQF_TRIGGER_FALLING, client->name, tsdata)) {

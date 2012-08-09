@@ -12,12 +12,14 @@
 #include <linux/gpio_keys.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/delay.h>
 
 #include <plat/gpio-cfg.h>
 #include <plat/devs.h>
 #include <plat/iic.h>
 
 #include <mach/irqs.h>
+#include <mach/board_rev.h>
 
 #include "board-smdk5250.h"
 
@@ -65,8 +67,26 @@ static struct platform_device *smdk5250_input_devices[] __initdata = {
 	&smdk5250_gpio_keys,
 };
 
+#define TS_RST  samsung_board_rev_is_0_0() ? EXYNOS5_GPX2(4) : EXYNOS5_GPX2(1)
+
+static void exynos5_smdk5250_touch_init(void)
+{
+#ifdef CONFIG_TOUCHSCREEN_COASIA
+	if (gpio_request(TS_RST, "GPX2")) {
+		pr_err("%s : TS_RST request port error\n", __func__);
+	} else {
+		s3c_gpio_cfgpin(TS_RST, S3C_GPIO_OUTPUT);
+		gpio_direction_output(TS_RST, 0);
+		usleep_range(20000, 21000);
+		gpio_direction_output(TS_RST, 1);
+		gpio_free(TS_RST);
+	}
+#endif
+}
+
 void __init exynos5_smdk5250_input_init(void)
 {
+	exynos5_smdk5250_touch_init();
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
