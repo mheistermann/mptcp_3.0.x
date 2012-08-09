@@ -982,7 +982,7 @@ static void __init smdk5250_machine_init(void)
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 
 	s3c_i2c3_set_platdata(&i2c_data3);
-	if (SMDK_BOARD_REV <= 1)
+	if (samsung_board_rev_is_0_0())
 		i2c_devs3[0].irq = IRQ_EINT(21);
 	else
 		i2c_devs3[0].irq = IRQ_EINT(18);
