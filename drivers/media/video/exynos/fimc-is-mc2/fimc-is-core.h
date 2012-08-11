@@ -114,7 +114,7 @@
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
-/*#define AUTO_MODE*/
+#define AUTO_MODE
 
 #define DEBUG
 /*#define DBG_STREAMING*/
