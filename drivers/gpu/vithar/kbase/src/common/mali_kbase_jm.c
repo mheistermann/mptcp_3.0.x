@@ -988,7 +988,6 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	kbasep_js_device_data *js_devdata;
 	kbase_uk_hwcnt_setup hwcnt_setup = {{0}};
 	kbase_instr_state bckp_state;
-	int c;
 
 	OSK_ASSERT(data);
 
