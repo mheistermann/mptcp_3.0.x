@@ -1375,7 +1375,7 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 {
 	struct fimc_is_dev *dev = dev_id;
 	int buf_index;
-	unsigned int intr_status, intr_pos;
+	unsigned int intr_status;
 
 	intr_status = readl(dev->regs + INTSR1);
 
