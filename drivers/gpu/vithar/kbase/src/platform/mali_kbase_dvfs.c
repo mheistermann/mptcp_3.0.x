@@ -423,7 +423,11 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 #endif
 	if (dvfs_status.utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
 	{
-		if (dvfs_status.kbdev->pm.metrics.vsync_hit < 6) {
+		if (dvfs_status.step==kbase_platform_dvfs_get_level(450)) {
+			if (platform->utilisation > mali_dvfs_infotbl[dvfs_status.step].max_threshold)
+				dvfs_status.step++;
+			OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
+		} else if (dvfs_status.kbdev->pm.metrics.vsync_hit < 6) {
 			dvfs_status.step++;
 			OSK_ASSERT(dvfs_status.step < MALI_DVFS_STEP);
 		}
