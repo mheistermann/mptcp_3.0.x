@@ -20,7 +20,7 @@ if ARCH_EXYNOS4
 endif
 if ARCH_EXYNOS5
 	source "drivers/media/video/exynos/gsc/Kconfig"
-	source "drivers/media/video/exynos/fimc-is-mc/Kconfig"
+	source "drivers/media/video/exynos/fimc-is-mc2/Kconfig"
 endif
 config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
 	int "Memory size in Kbytes for FIMC-IS"
