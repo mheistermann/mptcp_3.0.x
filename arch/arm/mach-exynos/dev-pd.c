@@ -89,6 +89,8 @@ int exynos_pd_disable(struct device *dev)
 	struct exynos_pd_data *data = (struct exynos_pd_data *) pdata->data;
 	u32 timeout;
 	u32 tmp = 0;
+	u32 tmp_pd = 0;
+	u32 tmp_clk = 0;
 	u32 cfg;
 
 	/*  save clock source register */
@@ -144,10 +146,16 @@ int exynos_pd_disable(struct device *dev)
 	} else if (soc_is_exynos5250() && pdata->base == EXYNOS5_ISP_CONFIGURATION)
 		__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
 
-	__raw_writel(0, pdata->base);
-
 	if (soc_is_exynos5250_rev1 &&
-		(pdata->base == EXYNOS5_DISP1_CONFIGURATION)) {
+			(pdata->base == EXYNOS5_DISP1_CONFIGURATION)) {
+		/* GSCL clocks must be enabled
+		   before GSCBLK pixelAsync FIFO s/w reset */
+		tmp_pd =  __raw_readl(EXYNOS5_GSCL_CONFIGURATION);
+		__raw_writel(7, EXYNOS5_GSCL_CONFIGURATION);
+		tmp_clk = __raw_readl(EXYNOS5_CLKGATE_IP_GSCL);
+		cfg = tmp_clk | 0xF;
+		__raw_writel(cfg, EXYNOS5_CLKGATE_IP_GSCL);
+
 		/* GSCBLK Pixel asyncy FIFO S/W reset sequence
 		   set PXLASYNC_SW_RESET to 0 then,
 		   set PXLASYNC_SW_RESET to 1 again */
@@ -156,16 +164,34 @@ int exynos_pd_disable(struct device *dev)
 		__raw_writel(cfg, S3C_VA_SYS + 0x0220);
 		cfg |= (0xf);
 		__raw_writel(cfg, S3C_VA_SYS + 0x0220);
+
+		/* restore to the original state */
+		__raw_writel(tmp_clk, EXYNOS5_CLKGATE_IP_GSCL);
+		__raw_writel(tmp_pd, EXYNOS5_GSCL_CONFIGURATION);
 	} else if (soc_is_exynos5250_rev1 &&
-		(pdata->base == EXYNOS5_GSCL_CONFIGURATION)) {
-		cfg = __raw_readl(S3C_VA_SYS + 0x0214);
+			(pdata->base == EXYNOS5_GSCL_CONFIGURATION)) {
+		/* FIMD or Mixer clocks must be enabled
+		   before DISPBL1 FIFO s/w reset */
+		tmp_pd =  __raw_readl(EXYNOS5_DISP1_CONFIGURATION);
+		__raw_writel(7, EXYNOS5_DISP1_CONFIGURATION);
+		tmp_clk = __raw_readl(EXYNOS5_CLKGATE_IP_DISP1);
+		cfg = tmp_clk | 0x21;
+		__raw_writel(cfg, EXYNOS5_CLKGATE_IP_DISP1);
+
 		/* DISPBLK1 FIFO S/W reset sequence
 		   set FIFORST_DISP1 as 0 then, set FIFORST_DISP1 as 1 again */
+		cfg = __raw_readl(S3C_VA_SYS + 0x0214);
 		cfg &= ~(1 << 23);
 		__raw_writel(cfg, S3C_VA_SYS + 0x0214);
 		cfg |= (1 << 23);
 		__raw_writel(cfg, S3C_VA_SYS + 0x0214);
+
+		/* restore to the original state */
+		__raw_writel(tmp_clk, EXYNOS5_CLKGATE_IP_DISP1);
+		__raw_writel(tmp_pd, EXYNOS5_DISP1_CONFIGURATION);
 	}
+
+	__raw_writel(0, pdata->base);
 
 	/* Wait max 1ms */
 	timeout = 1000;
