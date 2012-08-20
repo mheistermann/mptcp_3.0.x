@@ -721,12 +721,6 @@ config MACH_SMDK5250
 	  Machine support for Samsung SMDK5250
 endmenu
 
-config SMDK_BOARD_REV
-	int "Board Revision Number(0-3)"
-	range 0 3
-        default "2"
-	help
-
 config EXYNOS5_DEV_BTS
 	bool "Support BTS driver"
 	select S5P_BTS
