@@ -114,6 +114,11 @@ module_param_named(debug_mask, s5k4ecgx_debug_mask, uint, S_IWUSR | S_IRUGO);
 
 #define S5K4ECGX_VERSION_1_1	0x11
 
+enum s5k4ecgx_hw_power {
+	S5K4ECGX_HW_POWER_OFF,
+	S5K4ECGX_HW_POWER_ON,
+};
+
 /* result values returned to HAL */
 enum {
 	AUTO_FOCUS_FAILED,
@@ -594,6 +599,7 @@ struct s5k4ecgx_state {
 	struct s5k4ecgx_date_info	dateinfo;
 	struct s5k4ecgx_position	position;
 	struct v4l2_streamparm		strm;
+	struct v4l2_streamparm		stored_parm;
 	struct s5k4ecgx_gps_info	gps_info;
 	struct mutex			ctrl_lock;
 	struct completion		af_complete;
@@ -611,6 +617,7 @@ struct s5k4ecgx_state {
 	int				check_previewdata;
 	bool 				flash_on;
 	bool 				torch_on;
+	bool 				power_on;
 	bool 				sensor_af_in_low_light_mode;
 	bool 				flash_state_on_previous_capture;
 	bool 				initialized;
@@ -1895,6 +1902,63 @@ static int s5k4ecgx_g_parm(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int s5k4ecgx_set_stored_parms(struct v4l2_subdev *sd)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+	struct sec_cam_parm *parms =
+		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	struct sec_cam_parm *stored_parms =
+		(struct sec_cam_parm *)&state->stored_parm.parm.raw_data;
+	int err = 0;
+
+	if (parms->effects != stored_parms->effects)
+	err |= s5k4ecgx_set_parameter(sd, &parms->effects, stored_parms->effects,
+				"effect", state->regs->effect,
+				ARRAY_SIZE(state->regs->effect));
+///	err |= s5k4ecgx_set_flash_mode(sd, stored_parms->flash_mode);
+///	err |= s5k4ecgx_set_focus_mode(sd, stored_parms->focus_mode);
+	if (parms->iso != stored_parms->iso)
+	err |= s5k4ecgx_set_parameter(sd, &parms->iso, stored_parms->iso,
+				"iso", state->regs->iso,
+				ARRAY_SIZE(state->regs->iso));
+	if (parms->metering != stored_parms->metering)
+	err |= s5k4ecgx_set_parameter(sd, &parms->metering, stored_parms->metering,
+				"metering", state->regs->metering,
+				ARRAY_SIZE(state->regs->metering));
+	if (parms->scene_mode != stored_parms->scene_mode)
+	err |= s5k4ecgx_set_parameter(sd, &parms->scene_mode,
+				stored_parms->scene_mode, "scene_mode",
+				state->regs->scene_mode,
+				ARRAY_SIZE(state->regs->scene_mode));
+	if (parms->aeawb_lockunlock != stored_parms->aeawb_lockunlock)
+	err |= s5k4ecgx_set_parameter(sd, &parms->aeawb_lockunlock,
+				stored_parms->aeawb_lockunlock, "aeawb_lockunlock",
+				state->regs->aeawb_lockunlock,
+				ARRAY_SIZE(state->regs->aeawb_lockunlock));
+	if (parms->white_balance != stored_parms->white_balance)
+	err |= s5k4ecgx_set_parameter(sd, &parms->white_balance,
+				stored_parms->white_balance, "white balance",
+				state->regs->white_balance,
+				ARRAY_SIZE(state->regs->white_balance));
+	/*
+	if (parms->fps != stored_parms->fps)
+	err |= s5k4ecgx_set_parameter(sd, &parms->fps,
+				stored_parms->fps, "fps",
+				state->regs->fps,
+				ARRAY_SIZE(state->regs->fps));
+
+	if (parms->scene_mode == SCENE_MODE_NIGHTSHOT)
+		state->one_frame_delay_ms = NIGHT_MODE_MAX_ONE_FRAME_DELAY_MS;
+	else
+		state->one_frame_delay_ms = NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
+	*/
+
+	dev_dbg(&client->dev, "%s: return %d\n", __func__, err);
+	return err;
+}
+
 static int s5k4ecgx_s_parm(struct v4l2_subdev *sd,
 			struct v4l2_streamparm *param)
 {
@@ -2339,6 +2403,8 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		container_of(sd, struct s5k4ecgx_state, sd);
 	struct sec_cam_parm *parms =
 		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	struct sec_cam_parm *stored_parms =
+		(struct sec_cam_parm *)&state->stored_parm.parm.raw_data;
 	int err = 0;
 	int value = ctrl->value;
 
@@ -2367,7 +2433,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		err = s5k4ecgx_set_flash_mode(sd, value);
 		dev_err(&client->dev, "V4L2_CID_CAMERA_FLASH_MODE\n");
 		break;
-	//case V4L2_CID_CAM_BRIGHTNESS:
+	case V4L2_CID_CAM_BRIGHTNESS:
 		dev_err(&client->dev, "V4L2_CID_CAM_BRIGHTNESS\n");
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
 			value+=2;
@@ -2380,14 +2446,8 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set brightness when not "
 				"in preview mode\n",
 				__func__);
-			//err = -EINVAL;
-			value+=2;
+			stored_parms->brightness = value;
 			err = 0;
-			parms->brightness = value;
-			err = s5k4ecgx_set_parameter(sd, &parms->brightness,
-						value, "brightness",
-						state->regs->ev,
-						ARRAY_SIZE(state->regs->ev));
 		}
 		break;
 	case V4L2_CID_WHITE_BALANCE_PRESET:
@@ -2402,8 +2462,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set white balance when not "
 				"in preview mode\n",
 				__func__);
-			//err = -EINVAL;
-			parms->white_balance = value;
+			stored_parms->white_balance = value;
 			err = 0;
 		}
 		break;
@@ -2418,7 +2477,8 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set effect when not "
 				"in preview mode\n",
 				__func__);
-			err = -EINVAL;
+			stored_parms->effects = value;
+			err = 0;
 		}
 		break;
 	case V4L2_CID_CAM_ISO:
@@ -2433,12 +2493,11 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set iso when not "
 				"in preview mode\n",
 				__func__);
-			err = -EINVAL;
+			stored_parms->iso = value;
+			err = 0;
 		}
 		break;
-	case V4L2_CID_CAM_BRIGHTNESS:
 	case V4L2_CID_CAM_METERING:
-		value += 2;
 		dev_err(&client->dev, "V4L2_CID_CAM_METERING\n");
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
 			err = s5k4ecgx_set_parameter(sd, &parms->metering,
@@ -2450,7 +2509,8 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set metering when not "
 				"in preview mode\n",
 				__func__);
-			err = -EINVAL;
+			stored_parms->metering = value;
+			err = 0;
 		}
 		break;
 	case V4L2_CID_CAM_CONTRAST:
@@ -2494,7 +2554,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"%s: trying to set jpeg quality when not "
 				"in preview mode\n",
 				__func__);
-			err = -EINVAL;
+			err = 0;
 		}
 		break;
 	case V4L2_CID_SCENEMODE:
@@ -2718,8 +2778,11 @@ static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		/* stream on */
 		s5k4ecgx_init(sd, enable);
+		state->runmode = S5K4ECGX_RUNMODE_RUNNING;
 	} else {
 		/* TODO: implementation stream off */
+		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING)
+			state->runmode = S5K4ECGX_RUNMODE_IDLE;
 	}
 
 	return 0;
@@ -2979,7 +3042,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 	dev_err(&client->dev, "%s: start\n", __func__);
 
 	/* s5k4ecgx_power(1);*/
-
+#if 0
 	if (s5k4ecgx_init_regs(&state->sd) < 0)
 		return -ENODEV;
 
@@ -2987,6 +3050,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 		__func__, state->check_dataline);
 
 	msleep(10); //many add
+#endif
 
 	if (s5k4ecgx_set_from_table(sd, "init reg 1",
 					&state->regs->init_reg_1, 1, 0) < 0)
@@ -3000,7 +3064,8 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
 
-	s5k4ecgx_s_parm(sd, &state->strm);
+	//s5k4ecgx_s_parm(sd, &state->strm);
+	s5k4ecgx_set_stored_parms(sd);
 
 	msleep(100);
 
@@ -3064,11 +3129,28 @@ static int s5k4ecgx_s_config(struct v4l2_subdev *sd,
 
 static int s5k4ecgx_s_power(struct v4l2_subdev *sd, int on)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
 	int ret = 0;
+        if (on) {
+		ret = s5k4ecgx_power(S5K4ECGX_HW_POWER_ON);
 
-	ret = s5k4ecgx_power(on);
+		s5k4ecgx_init_parameters(sd);
 
-	return ret;
+		if (s5k4ecgx_init_regs(&state->sd) < 0)
+			return -ENODEV;
+
+		dev_dbg(&client->dev, "%s: state->check_dataline : %d\n",
+			__func__, state->check_dataline);
+
+		msleep(10); //many add
+		state->power_on = S5K4ECGX_HW_POWER_ON;
+	} else {
+		ret = s5k4ecgx_power(S5K4ECGX_HW_POWER_OFF);
+		state->power_on = S5K4ECGX_HW_POWER_OFF;
+	}
+		return ret;
 }
 
 /*
@@ -3139,17 +3221,14 @@ static int __find_resolution(struct v4l2_subdev *sd,
 
 	while (i--) {
 		int err;
-		//if (stype == fsize->type) {
-			err = abs(fsize->width - mf->width)
-				+ abs(fsize->height - mf->height);
+		err = abs(fsize->width - mf->width)
+			+ abs(fsize->height - mf->height);
 
-			if (err < min_err) {
-				min_err = err;
-				match = fsize;
-				stype = fsize->type;
-			}
-		//}
-		//stype = fsize->type;
+		if (err < min_err) {
+			min_err = err;
+			match = fsize;
+			stype = fsize->type;
+		}
 
 		fsize++;
 	}
