@@ -549,7 +549,7 @@ config VIDEO_S5K4EA
 #source "drivers/media/video/m5mols/Kconfig"
 
 choice
-depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_S5K4ECGX || VIDEO_M5MO || VIDEO_M5MOLS
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO
 prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A

@@ -223,7 +223,7 @@ struct s5k4ecgx_framesize {
 static const struct s5k4ecgx_framesize s5k4ecgx_preview_framesize_list[] = {
 ///	{ S5K4ECGX_PREVIEW_QCIF,	176,  144 },
 ///	{ S5K4ECGX_PREVIEW_CIF,		352,  288 },
-//	{ S5K4ECGX_PREVIEW_VGA,		640,  480 },
+	{ S5K4ECGX_PREVIEW_VGA,		640,  480 },
       { S5K4ECGX_PREVIEW_2560,		2560,  1920 },
 ///	{ S5K4ECGX_PREVIEW_D1,		720,  480 },
 };
@@ -1675,7 +1675,7 @@ static int s5k4ecgx_s_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt
 
 	state->pix.width = fmt->width;
 	state->pix.height = fmt->height;
-	///state->pix.pixelformat = fmt->fmt.pix.pixelformat;
+	//state->pix.pixelformat = fmt->fmt.pix.pixelformat;
 #if 1
 	if (fmt->colorspace == V4L2_COLORSPACE_JPEG) {
 #else
@@ -2260,6 +2260,9 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		(struct sec_cam_parm *)&state->strm.parm.raw_data;
 	int err = 0;
 	int value = ctrl->value;
+
+	printk("%s: V4l2 control ID =%d, val = %d\n",
+		__func__, ctrl->id - V4L2_CID_PRIVATE_BASE, value);
 
 	dev_err(&client->dev, "%s: V4l2 control ID =%d, val = %d\n",
 		__func__, ctrl->id - V4L2_CID_PRIVATE_BASE, value);
