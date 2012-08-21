@@ -259,6 +259,7 @@ static void flite_hw_set_cam_channel(unsigned long flite_reg_base)
 	}
 }
 
+#ifndef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 void flite_hw_set_capture_start(unsigned long flite_reg_base)
 {
 	u32 cfg = 0;
@@ -268,6 +269,7 @@ void flite_hw_set_capture_start(unsigned long flite_reg_base)
 
 	writel(cfg, flite_reg_base + FLITE_REG_CIIMGCPT);
 }
+#endif
 
 static void flite_hw_set_capture_stop(unsigned long flite_reg_base)
 {
@@ -290,6 +292,7 @@ static int flite_hw_set_source_format(unsigned long flite_reg_base)
 	return 0;
 }
 
+#ifndef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
 {
 	u32 cfg = 0;
@@ -302,6 +305,7 @@ void flite_hw_set_output_dma(unsigned long flite_reg_base, bool enable)
 
 	writel(cfg, flite_reg_base + FLITE_REG_CIGCTRL);
 }
+#endif
 
 void flite_hw_set_output_local(unsigned long flite_reg_base, bool enable)
 {
