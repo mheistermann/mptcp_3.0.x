@@ -187,6 +187,7 @@ enum s5k4ecgx_capture_frame_size {
 	S5K4ECGX_CAPTURE_MAX,
 };
 
+/* make look-up table */
 static const struct s5k4ecgx_resolution s5k4ecgx_resolutions[] = {
 	/* monitor size */
 	{S5K4ECGX_PREVIEW_QCIF 	, S5K4ECGX_OPRMODE_VIDEO, 176,  144  },
@@ -367,7 +368,6 @@ struct s5k4ecgx_regs {
 	struct s5k4ecgx_regset_table get_iso;
 	struct s5k4ecgx_regset_table get_shutterspeed;
 };
-
 
 #ifdef CONFIG_VIDEO_S5K4ECGX_V_1_1
 static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
@@ -571,14 +571,13 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 
 };
 #endif
-
 struct s5k4ecgx_state {
 	struct s5k4ecgx_platform_data 	*pdata;
-	struct media_pad	 	pad;
+	struct media_pad	 	pad; /* for media deivce pad */
 	struct v4l2_subdev 		sd;
-	struct exynos_md		*mdev;
+	struct exynos_md		*mdev; /* for media deivce entity */
 	struct v4l2_pix_format		pix;
-	struct v4l2_mbus_framefmt	ffmt[2];
+	struct v4l2_mbus_framefmt	ffmt[2]; /* for media deivce fmt */
 	struct v4l2_fract		timeperframe;
 	struct s5k4ecgx_jpeg_param	jpeg;
 	struct s5k4ecgx_version		fw;
@@ -592,7 +591,7 @@ struct s5k4ecgx_state {
 	enum s5k4ecgx_runmode		runmode;
 	enum s5k4ecgx_oprmode		oprmode;
 	enum af_operation_status	af_status;
-	enum v4l2_mbus_pixelcode	code;
+	enum v4l2_mbus_pixelcode	code; /* for media deivce code */
 	int 				res_type;
 	u8 				resolution;
 	int				preview_framesize_index;
@@ -685,9 +684,7 @@ static int s5k4ecgx_power(int flag)
 		gpio_free(GPIO_CAM_MEGA_nRST);
 		gpio_free(GPIO_CAM_MEGA_EN);
 
-	}
-	else
-	{
+	} else {
 		if (gpio_request(GPIO_CAM_MEGA_nRST, "GPF1_4"/*"GPJ1"*/) < 0)
 			pr_err("failed gpio_request(GPF1_4) for camera control\n");
 
@@ -1806,6 +1803,7 @@ static void s5k4ecgx_disable_torch(struct v4l2_subdev *sd)
 					&state->regs->flash_end, 1, 0);
 	}
 }
+
 static int s5k4ecgx_set_flash_mode(struct v4l2_subdev *sd, int value)
 {
 	struct s5k4ecgx_state *state =
@@ -1830,9 +1828,7 @@ static int s5k4ecgx_set_flash_mode(struct v4l2_subdev *sd, int value)
 		__func__, value);
 	return -EINVAL;
 }
-
 #endif
-
 
 static int s5k4ecgx_g_parm(struct v4l2_subdev *sd,
 			struct v4l2_streamparm *param)
@@ -2597,6 +2593,8 @@ static int s5k4ecgx_s_ext_ctrls(struct v4l2_subdev *sd,
 	return ret;
 }
 
+static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val);
+
 static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -2604,24 +2602,14 @@ static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 		container_of(sd, struct s5k4ecgx_state, sd);
 
 	dev_err(&client->dev, "%s:\n", __func__);
-#if 0
+
 	if (enable) {
-		if (state->code == to_code(M5MOLS_RES_MON)) {
-			v4l2_info(sd, "%s : monitor mode\n", __func__);
-			return m5mols_start_monitor(sd);
-		}
-		if (state->code == to_code(M5MOLS_RES_CAPTURE)) {
-			v4l2_info(sd, "%s : capture mode\n", __func__);
-			return  m5mols_start_capture(sd);
-		}
-		return -EINVAL;
+		/* stream on */
+		s5k4ecgx_init(sd, enable);
 	} else {
-		if (is_streaming(sd))
-			return m5mols_set_mode(sd, MODE_PARMSET);
-		return -EINVAL;
+		/* TODO: implementation stream off */
 	}
 
-#endif
 	return 0;
 }
 
@@ -2875,7 +2863,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 	dev_err(&client->dev, "%s: start\n", __func__);
 
-	s5k4ecgx_power(1);
+	/* s5k4ecgx_power(1);*/
 
 	s5k4ecgx_init_parameters(sd);
 
@@ -2956,25 +2944,19 @@ static int s5k4ecgx_s_config(struct v4l2_subdev *sd,
 
 	return 0;
 }
-/*
+
 static int s5k4ecgx_s_power(struct v4l2_subdev *sd, int on)
 {
-	struct s5k4ecgx_info *info = to_s5k4ecgx(sd);
-	int ret;
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+	int ret = 0;
 
-	if (on) {
-		ret = s5k4ecgx_sensor_power(info, true);
-		if (!ret)
-			ret = s5k4ecgx_sensor_armboot(sd);
-		if (!ret)
-			ret = s5k4ecgx_setup_default(sd);
-	} else {
-		ret = s5k4ecgx_sensor_power(info, false);
-	}
+	ret = s5k4ecgx_power(on);
 
 	return ret;
 }
 
+/*
 static int s5k4ecgx_log_status(struct v4l2_subdev *sd)
 {
 	struct s5k4ecgx_info *info = to_s5k4ecgx(sd);
@@ -2985,17 +2967,17 @@ static int s5k4ecgx_log_status(struct v4l2_subdev *sd)
 }
 */
 static const struct v4l2_subdev_core_ops s5k4ecgx_core_ops = {
-	//.s_power		= s5k4ecgx_s_power,		//hwang: to fix
+	.s_power		= s5k4ecgx_s_power,
 	.init 			= s5k4ecgx_init,/* initializing API */
 	///.s_config 		= s5k4ecgx_s_config,	/* Fetch platform data *///many del
 	.g_ctrl 		= s5k4ecgx_g_ctrl,
 	.s_ctrl 		= s5k4ecgx_s_ctrl,
-	//.queryctrl		= v4l2_subdev_queryctrl,	//hwang: to fix
-	//.querymenu		= v4l2_subdev_querymenu,	//hwang: to fix
-	//.g_ext_ctrls		= v4l2_subdev_g_ext_ctrls,	//hwang: to fix
-	//.try_ext_ctrls	= v4l2_subdev_try_ext_ctrls,	//hwang: to fix
+	//.queryctrl		= v4l2_subdev_queryctrl,	//hwang: to do
+	//.querymenu		= v4l2_subdev_querymenu,	//hwang: to do
+	//.g_ext_ctrls		= v4l2_subdev_g_ext_ctrls,	//hwang: to do
+	//.try_ext_ctrls	= v4l2_subdev_try_ext_ctrls,	//hwang: to do
 	.s_ext_ctrls 		= s5k4ecgx_s_ext_ctrls,
-	//.log_status		= s5k4ecgx_log_status,	//hwang: to fix
+	//.log_status		= s5k4ecgx_log_status,		//hwang: to do
 };
 
 static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
@@ -3010,7 +2992,7 @@ static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
 };
 
 /**
- * __find_oprmode - Lookup M-5MOLS resolution type according to pixel code
+ * __find_oprmode - Lookup S5K4ECGX resolution type according to pixel code
  * @code: pixel code
  */
 static enum s5k4ecgx_oprmode __find_oprmode(enum v4l2_mbus_pixelcode code)
@@ -3080,6 +3062,7 @@ static struct v4l2_mbus_framefmt *__find_format(struct s5k4ecgx_state *state,
 	return &state->ffmt[type];
 }
 
+/* get format by flite video device command */
 static int s5k4ecgx_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 			  struct v4l2_subdev_format *fmt)
 {
@@ -3090,7 +3073,6 @@ static int s5k4ecgx_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	if (fmt->pad != 0)
 		return -EINVAL;
 
-//find_format  hwang
 	format = __find_format(state, fh, fmt->which, state->res_type);
 	if (!format)
 		return -EINVAL;
@@ -3099,6 +3081,7 @@ static int s5k4ecgx_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	return 0;
 }
 
+/* set format by flite video device command */
 static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 			  struct v4l2_subdev_format *fmt)
 {
@@ -3116,7 +3099,6 @@ static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	ret = __find_resolution(sd, format, &type, &resolution);
 	if (ret < 0)
 		return ret;
-//find_format  hwang
 	sfmt = __find_format(state, fh, fmt->which, type);
 	if (!sfmt)
 		return 0;
@@ -3126,14 +3108,27 @@ static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	sfmt->height	= format->height;
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
-		state->resolution = resolution;
-		state->code = format->code;
-		state->res_type = type;
+		/* for enum size of entity by flite */
+		state->ffmt[type].width 	= format->width;
+		state->ffmt[type].height 	= format->height;
+		state->ffmt[type].code 		= format->code;
+
+		/* find adaptable resolution */
+		state->resolution 		= resolution;
+		state->code 			= format->code;
+		state->res_type 		= type;
+
+		/* for set foramat */
+		state->pix.width 		= format->width;
+		state->pix.height 		= format->height;
+
+		s5k4ecgx_s_mbus_fmt(sd, sfmt);  /* set format */
 	}
 
 	return 0;
 }
 
+/* enum code by flite video device command */
 static int s5k4ecgx_enum_mbus_code(struct v4l2_subdev *sd,
 				 struct v4l2_subdev_fh *fh,
 				 struct v4l2_subdev_mbus_code_enum *code)
@@ -3170,6 +3165,7 @@ static const struct media_entity_operations s5k4ecgx_media_ops = {
 	.link_setup = s5k4ecgx_link_setup,
 };
 
+/* internal ops for media controller */
 static int s5k4ecgx_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct v4l2_subdev_format format;
@@ -3275,7 +3271,6 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 	sd = &state->sd;
 	strcpy(sd->name, S5K4ECGX_DRIVER_NAME);
 
-	/* Registering subdev */
 	v4l2_i2c_subdev_init(sd, client, &s5k4ecgx_ops);
 	state->pad.flags = MEDIA_PAD_FL_SOURCE;
 	ret = media_entity_init(&sd->entity, 1, &state->pad, 0);
