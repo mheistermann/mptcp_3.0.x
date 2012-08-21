@@ -358,7 +358,7 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 		if (!list_empty(&flite->active_buf_q)) {
 			buf = active_queue_pop(flite);
 			if (!test_bit(FLITE_ST_RUN, &flite->state)) {
-				flite_info("error interrupt");
+				flite_info("error or last interrupt");
 				vb2_buffer_done(&buf->vb,
 						VB2_BUF_STATE_ERROR);
 				goto unlock;
@@ -591,7 +591,7 @@ static int flite_subdev_close(struct v4l2_subdev *sd,
 {
 	struct flite_dev *flite = v4l2_get_subdevdata(sd);
 
-	flite_info("");
+	flite_dbg("");
 	clear_bit(FLITE_ST_SUBDEV_OPEN, &flite->state);
 	return 0;
 }
@@ -624,7 +624,7 @@ static int flite_link_setup(struct media_entity *entity,
 	switch (local->index | media_entity_type(remote->entity)) {
 	case FLITE_PAD_SINK | MEDIA_ENT_T_V4L2_SUBDEV:
 		if (flags & MEDIA_LNK_FL_ENABLED) {
-			flite_info("sink link enabled");
+			flite_dbg("sink link enabled");
 			if (flite->input != FLITE_INPUT_NONE) {
 				flite_err("link is busy");
 				return -EBUSY;
@@ -634,7 +634,7 @@ static int flite_link_setup(struct media_entity *entity,
 			else
 				flite->input = FLITE_INPUT_SENSOR;
 		} else {
-			flite_info("sink link disabled");
+			flite_dbg("sink link disabled");
 			flite->input = FLITE_INPUT_NONE;
 		}
 		break;
@@ -642,19 +642,19 @@ static int flite_link_setup(struct media_entity *entity,
 	case FLITE_PAD_SOURCE_PREV | MEDIA_ENT_T_V4L2_SUBDEV: /* fall through */
 	case FLITE_PAD_SOURCE_CAMCORD | MEDIA_ENT_T_V4L2_SUBDEV:
 		if (flags & MEDIA_LNK_FL_ENABLED) {
-			flite_info("source link enabled");
+			flite_dbg("source link enabled");
 			flite->output |= FLITE_OUTPUT_GSC;
 		} else {
-			flite_info("source link disabled");
+			flite_dbg("source link disabled");
 			flite->output &= ~FLITE_OUTPUT_GSC;
 		}
 		break;
 	case FLITE_PAD_SOURCE_MEM | MEDIA_ENT_T_DEVNODE:
 		if (flags & MEDIA_LNK_FL_ENABLED) {
-			flite_info("source link enabled");
+			flite_dbg("source link enabled");
 			flite->output |= FLITE_OUTPUT_MEM;
 		} else {
-			flite_info("source link disabled");
+			flite_dbg("source link disabled");
 			flite->output &= ~FLITE_OUTPUT_MEM;
 		}
 		break;
@@ -686,7 +686,7 @@ static void flite_pipeline_prepare(struct flite_dev *flite, struct media_entity 
 	media_entity_graph_walk_start(&graph, me);
 
 	while ((me = media_entity_graph_walk_next(&graph))) {
-		flite_info("me->name : %s", me->name);
+		flite_dbg("me->name : %s", me->name);
 		if (media_entity_type(me) != MEDIA_ENT_T_V4L2_SUBDEV)
 			continue;
 		sd = media_entity_to_v4l2_subdev(me);
@@ -706,9 +706,9 @@ static void flite_pipeline_prepare(struct flite_dev *flite, struct media_entity 
 		}
 	}
 
-	flite_info("flite->pipeline.flite : 0x%p", flite->pipeline.flite);
-	flite_info("flite->pipeline.sensor : 0x%p", flite->pipeline.sensor);
-	flite_info("flite->pipeline.csis : 0x%p", flite->pipeline.csis);
+	flite_dbg("flite->pipeline.flite : 0x%p", flite->pipeline.flite);
+	flite_dbg("flite->pipeline.sensor : 0x%p", flite->pipeline.sensor);
+	flite_dbg("flite->pipeline.csis : 0x%p", flite->pipeline.csis);
 }
 
 static void flite_set_cam_clock(struct flite_dev *flite, bool on)
@@ -863,7 +863,6 @@ static int flite_g_ctrl(struct v4l2_ctrl *ctrl)
 		__func__, ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->val);
 	flite_dbg("flite =0x%08x, sensor = 0x%08x\n",
 		(unsigned int)flite, (unsigned int)p->sensor);
-	printk("********************LINE:%d\n", __LINE__);
 
 	switch (ctrl->id) {
 	case V4L2_CID_CACHEABLE:
@@ -1242,7 +1241,7 @@ static int flite_open(struct file *file)
 
 	}
 
-	flite_info("pid: %d, state: 0x%lx", task_pid_nr(current), flite->state);
+	flite_dbg("pid: %d, state: 0x%lx", task_pid_nr(current), flite->state);
 
 	return 0;
 
@@ -1286,11 +1285,11 @@ static int flite_close(struct file *file)
 	struct flite_dev *flite = video_drvdata(file);
 	struct flite_buffer *buf;
 
-	flite_info("pid: %d, state: 0x%lx", task_pid_nr(current), flite->state);
+	flite_dbg("pid: %d, state: 0x%lx", task_pid_nr(current), flite->state);
 
 	if (--flite->refcnt == 0) {
 		clear_bit(FLITE_ST_OPEN, &flite->state);
-		flite_info("FIMC-LITE h/w disable control");
+		flite_dbg("FIMC-LITE h/w disable control");
 		flite_hw_set_capture_stop(flite);
 		clear_bit(FLITE_ST_STREAM, &flite->state);
 		flite_pipeline_shutdown(flite);
@@ -1299,13 +1298,13 @@ static int flite_close(struct file *file)
 
 	if (flite->refcnt == 0) {
 		while (!list_empty(&flite->pending_buf_q)) {
-			flite_info("clean pending q");
+			flite_dbg("clean pending q");
 			buf = pending_queue_pop(flite);
 			vb2_buffer_done(&buf->vb, VB2_BUF_STATE_ERROR);
 		}
 
 		while (!list_empty(&flite->active_buf_q)) {
-			flite_info("clean active q");
+			flite_dbg("clean active q");
 			buf = active_queue_pop(flite);
 			vb2_buffer_done(&buf->vb, VB2_BUF_STATE_ERROR);
 		}
@@ -1370,7 +1369,7 @@ static int flite_start_streaming(struct vb2_queue *q)
 
 	flite_hw_reset(flite);
 	if (soc_is_exynos5250_rev1) {
-		flite_info("");
+		flite_dbg("");
 		flite_hw_set_framecnt_seq_masking(flite, flite->reqbufs_cnt);
 	}
 
@@ -1407,7 +1406,7 @@ static int flite_stop_capture(struct flite_dev *flite)
 		flite_warn("already stopped\n");
 		return 0;
 	}
-	flite_info("FIMC-Lite H/W disable control");
+	flite_dbg("FIMC-Lite H/W disable control");
 	flite_hw_set_capture_stop(flite);
 	clear_bit(FLITE_ST_STREAM, &flite->state);
 
@@ -1525,7 +1524,7 @@ static void flite_buf_queue(struct vb2_buffer *vb)
 		}
 
 		if (!test_bit(FLITE_ST_STREAM, &flite->state)) {
-			flite_info("G-Scaler h/w enable control");
+			flite_dbg("FIMC-LITE h/w enable control");
 			flite_hw_set_capture_start(flite);
 			set_bit(FLITE_ST_STREAM, &flite->state);
 		}
@@ -1667,7 +1666,7 @@ static int flite_s_fmt_mplane(struct file *file, void *fh, struct v4l2_format *f
 	frame->payload = pix->plane_fmt[0].bytesperline * pix->height;
 	flite_set_frame_size(frame, pix->width, pix->height);
 
-	flite_info("f_w: %d, f_h: %d", frame->o_width, frame->o_height);
+	flite_dbg("f_w: %d, f_h: %d", frame->o_width, frame->o_height);
 
 	return 0;
 }
@@ -1778,7 +1777,7 @@ static int flite_link_validate(struct flite_dev *flite)
 				return -EPIPE;
 			}
 		}
-		flite_info("sink sd name : %s", sd->name);
+		flite_dbg("sink sd name : %s", sd->name);
 		/* Get the source pad connected with remote sink pad */
 		pad = media_entity_remote_source(pad);
 		if (pad == NULL ||
@@ -1787,7 +1786,7 @@ static int flite_link_validate(struct flite_dev *flite)
 
 		/* Get the subdev of source pad */
 		sd = media_entity_to_v4l2_subdev(pad->entity);
-		flite_info("source sd name : %s", sd->name);
+		flite_dbg("source sd name : %s", sd->name);
 
 		src_fmt.pad = pad->index;
 		src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
@@ -1797,10 +1796,10 @@ static int flite_link_validate(struct flite_dev *flite)
 			return -EPIPE;
 		}
 
-		flite_info("src_width : %d, src_height : %d, src_code : %d",
+		flite_dbg("src_width : %d, src_height : %d, src_code : %d",
 			src_fmt.format.width, src_fmt.format.height,
 			src_fmt.format.code);
-		flite_info("sink_width : %d, sink_height : %d, sink_code : %d",
+		flite_dbg("sink_width : %d, sink_height : %d, sink_code : %d",
 			sink_fmt.format.width, sink_fmt.format.height,
 			sink_fmt.format.code);
 
@@ -2109,7 +2108,7 @@ static int flite_register_video_device(struct flite_dev *flite)
 
 	vfd = video_device_alloc();
 	if (!vfd) {
-		printk("Failed to allocate video device\n");
+		flite_err("Failed to allocate video device");
 		return ret;
 	}
 
