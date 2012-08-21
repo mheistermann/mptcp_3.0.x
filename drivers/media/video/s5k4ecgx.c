@@ -379,6 +379,7 @@ struct s5k4ecgx_regs {
 	struct s5k4ecgx_regset_table get_esd_status;
 	struct s5k4ecgx_regset_table get_iso;
 	struct s5k4ecgx_regset_table get_shutterspeed;
+	struct s5k4ecgx_regset_table get_frame_count;
 };
 
 #ifdef CONFIG_VIDEO_S5K4ECGX_V_1_1
@@ -387,7 +388,7 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 	.init_reg_1 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg1),
 	.init_reg_2 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg2),
 	.init_reg_3 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg3),
-///	.init_reg_4 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg4), //many add
+	.init_reg_4 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg4), //many add
 
 	.dtp_start = S5K4ECGX_REGSET_TABLE(s5k4ecgx_DTP_init),
 	.dtp_stop = S5K4ECGX_REGSET_TABLE(s5k4ecgx_DTP_stop),
@@ -587,6 +588,8 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 	.get_iso = S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_iso_reg),
 	.get_shutterspeed =
 		S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_shutterspeed_reg),
+	.get_frame_count =
+		S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_frame_count_reg),
 #endif
 
 };
@@ -844,13 +847,12 @@ static int s5k4ecgx_set_from_table(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	printk("table 0x%p", table);
 	/* return if table is not initilized */
 	if ((unsigned int)table < (unsigned int)0xc0000000)
 		return 0;
 
-	dev_err(&client->dev, "%s: set %s index %d\n",
-		__func__, setting_name, index);
+	//dev_err(&client->dev, "%s: set %s index %d\n",
+	//	__func__, setting_name, index);
 	if ((index < 0) || (index >= table_size)) {
 		dev_err(&client->dev,
 			"%s: index(%d) out of range[0:%d] for table for %s\n",
@@ -1458,14 +1460,14 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 	 * we got called.
 	 */
 	/* restore write mode */
-	s5k4ecgx_i2c_write_twobyte(client, 0x0028, 0x7000);
+	//s5k4ecgx_i2c_write_twobyte(client, 0x0028, 0x7000);
 
 	err = s5k4ecgx_set_parameter(sd, &parms->aeawb_lockunlock,
-				V4L2_AE_LOCK_AWB_LOCK, "aeawb_lockunlock",
+				V4L2_AE_UNLOCK_AWB_UNLOCK, "aeawb_lockunlock",
 				state->regs->aeawb_lockunlock,
 				ARRAY_SIZE(state->regs->aeawb_lockunlock));
 	if (err < 0) {
-		dev_err(&client->dev, "%s: ae & awb lock is fail. \n",
+		dev_err(&client->dev, "%s: ae & awb unlock is fail. \n",
 			__func__);
 	}
 	//s5k4ecgx_set_from_table(sd, "ae awb lock off",
@@ -2287,6 +2289,38 @@ static int s5k4ecgx_get_shutterspeed(struct v4l2_subdev *sd,
 	return err;
 }
 
+static int s5k4ecgx_get_frame_count(struct v4l2_subdev *sd,
+	struct v4l2_control *ctrl)
+{
+	int err;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+	u16 read_value_1;
+	u32 read_value;
+
+	printk("LINE:%d", __LINE__);
+
+	err = s5k4ecgx_set_from_table(sd, "get frame count",
+				&state->regs->get_frame_count, 1, 0);
+	err |= s5k4ecgx_i2c_read_twobyte(client, 0x0F12, &read_value_1);
+
+	//err |= s5k4ecgx_i2c_read_twobyte(client, 0x0F12, &read_value_2);
+
+	//read_value = (read_value_2 << 16) | (read_value_1 & 0xffff);
+	read_value = read_value_1 & 0xffff;
+	/* restore write mode */
+	//s5k4ecgx_i2c_write_twobyte(client, 0x0028, 0x7000);
+
+	//ctrl->value = read_value * 1000 / 400;
+	dev_err(&client->dev,
+			"%s: get frame count== %d\n", __func__, ctrl->value);
+	dev_err(&client->dev,
+			"%s: get frame count== %d\n", __func__, (unsigned int)read_value);
+
+	return err;
+}
+
 static int s5k4ecgx_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -2619,11 +2653,16 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAM_SET_AUTO_FOCUS:
 		dev_err(&client->dev, "V4L2_CID_CAM_SET_AUTO_FOCUS\n");
-		if (value == V4L2_AUTO_FOCUS_ON)
+		if (value == V4L2_AUTO_FOCUS_ON) {
 			err = s5k4ecgx_start_auto_focus(sd);
-		else if (value == V4L2_AUTO_FOCUS_OFF)
+		} else if (value == V4L2_AUTO_FOCUS_OFF) {
+			/*TODO: When stop AF is supported it will be deleted.*/
+			dev_err(&client->dev, "stop auto focus is not supported now\n");
+			break;
+
 			err = s5k4ecgx_stop_auto_focus(sd);
-		else {
+
+		} else {
 			err = -EINVAL;
 			dev_err(&client->dev,
 				"%s: bad focus value requestion %d\n",
@@ -2631,17 +2670,23 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_CAM_FRAME_RATE:
+		dev_err(&client->dev, "V4L2_CID_CAM_SET_FRAME_RATE\n");
+
+		/*TODO: When frame rate change is supported it will be deleted.*/
+		dev_err(&client->dev, "Frame rate change is not supported now\n");
+		break;
+
 		parms->capture.timeperframe.numerator = 1;
 		parms->capture.timeperframe.denominator = value;
 
 		dev_err(&client->dev,
 			"%s: camera frame rate request for %d fps\n",
 			__func__, value);
+
 		err = s5k4ecgx_set_parameter(sd, &parms->fps,
 					value, "fps",
 					state->regs->fps,
 					ARRAY_SIZE(state->regs->fps));
-
 		break;
 #endif
 	case V4L2_CID_CAPTURE:
@@ -3048,7 +3093,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 	dev_err(&client->dev, "%s: start\n", __func__);
 
 	/* s5k4ecgx_power(1);*/
-#if 0
+#if 1
 	if (s5k4ecgx_init_regs(&state->sd) < 0)
 		return -ENODEV;
 
@@ -3083,15 +3128,18 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 				&state->regs->flash_init, 1, 0) < 0)
 		return -EIO;
 #endif
+	printk("%s:(%d) \n", __func__, __LINE__);
 
 	if (state->check_dataline) {
 		if (s5k4ecgx_set_from_table(sd, "dtp start",
 					&state->regs->dtp_start, 1, 0) < 0)
 			return -EIO;
 	}
+	printk("%s:(%d) \n", __func__, __LINE__);
 
 	dev_dbg(&client->dev, "%s: end\n", __func__);
 	state->runmode = S5K4ECGX_RUNMODE_RUNNING;
+	printk("%s:(%d) \n", __func__, __LINE__);
 
 	return 0;
 }
@@ -3143,7 +3191,7 @@ static int s5k4ecgx_s_power(struct v4l2_subdev *sd, int on)
 		ret = s5k4ecgx_power(S5K4ECGX_HW_POWER_ON);
 
 		s5k4ecgx_init_parameters(sd);
-
+#if 0
 		if (s5k4ecgx_init_regs(&state->sd) < 0)
 			return -ENODEV;
 
@@ -3151,6 +3199,8 @@ static int s5k4ecgx_s_power(struct v4l2_subdev *sd, int on)
 			__func__, state->check_dataline);
 
 		msleep(10); //many add
+#endif
+
 		state->power_on = S5K4ECGX_HW_POWER_ON;
 	} else {
 		ret = s5k4ecgx_power(S5K4ECGX_HW_POWER_OFF);
@@ -3327,7 +3377,8 @@ static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 		state->pix.width 		= format->width;
 		state->pix.height 		= format->height;
 
-		s5k4ecgx_s_mbus_fmt(sd, sfmt);  /* set format */
+		if (state->power_on == S5K4ECGX_HW_POWER_ON)
+			s5k4ecgx_s_mbus_fmt(sd, sfmt);  /* set format */
 	}
 
 	return 0;
