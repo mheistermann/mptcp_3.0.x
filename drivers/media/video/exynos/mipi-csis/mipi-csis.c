@@ -300,18 +300,7 @@ static int s5pcsis_clk_get(struct csis_state *state)
 static int s5pcsis_resume(struct device *dev);
 static int s5pcsis_s_power(struct v4l2_subdev *sd, int on)
 {
-	struct csis_state *state = sd_to_csis_state(sd);
-	struct device *dev = &state->pdev->dev;
-
-	if (on) {
-#ifndef CONFIG_PM_RUNTIME
-		return s5pcsis_resume(dev);
-#else
-		return pm_runtime_get_sync(dev);
-#endif
-	}
-
-	return pm_runtime_put_sync(dev);
+	return 0;
 }
 
 static void s5pcsis_start_stream(struct csis_state *state)
@@ -356,8 +345,9 @@ static int s5pcsis_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 unlock:
 	mutex_unlock(&state->lock);
-	if (!enable)
-		pm_runtime_put(&state->pdev->dev);
+	if (!enable) {
+		pm_runtime_put_sync(&state->pdev->dev);
+	}
 
 	return ret == 1 ? 0 : ret;
 }
@@ -718,7 +708,6 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 	/* .. and a pointer to the subdev. */
 	platform_set_drvdata(pdev, &state->sd);
 
-	state->flags = ST_SUSPENDED;
 	pm_runtime_enable(&pdev->dev);
 
 	v4l2_info(&state->sd, "%s : csis%d probe success\n", __func__, pdev->id);
@@ -741,7 +730,7 @@ e_free:
 	return ret;
 }
 
-static int s5pcsis_suspend(struct device *dev)
+static int s5pcsis_pm_suspend(struct device *dev, bool runtime)
 {
 	struct s5p_platform_mipi_csis *pdata = dev->platform_data;
 	struct platform_device *pdev = to_platform_device(dev);
@@ -765,6 +754,8 @@ static int s5pcsis_suspend(struct device *dev)
 		}
 		clk_disable(state->clock[CSIS_CLK_GATE]);
 		state->flags &= ~ST_POWERED;
+		if (!runtime)
+			state->flags |= ST_SUSPENDED;
 	}
 	state->flags |= ST_SUSPENDED;
  unlock:
@@ -772,7 +763,7 @@ static int s5pcsis_suspend(struct device *dev)
 	return ret ? -EAGAIN : 0;
 }
 
-static int s5pcsis_resume(struct device *dev)
+static int s5pcsis_pm_resume(struct device *dev, bool runtime)
 {
 	struct s5p_platform_mipi_csis *pdata = dev->platform_data;
 	struct platform_device *pdev = to_platform_device(dev);
@@ -780,10 +771,10 @@ static int s5pcsis_resume(struct device *dev)
 	struct csis_state *state = sd_to_csis_state(sd);
 	int ret = 0;
 
-	v4l2_info(sd, "%s: flags: 0x%x\n", __func__, state->flags);
+	v4l2_dbg(1, debug, sd, "%s: flags: 0x%x\n", __func__, state->flags);
 
 	mutex_lock(&state->lock);
-	if (!(state->flags & ST_SUSPENDED))
+	if (!runtime && !(state->flags & ST_SUSPENDED))
 		goto unlock;
 
 	if (!(state->flags & ST_POWERED)) {
@@ -811,26 +802,29 @@ static int s5pcsis_resume(struct device *dev)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int s5pcsis_pm_suspend(struct device *dev)
+static int s5pcsis_suspend(struct device *dev)
 {
-	return s5pcsis_suspend(dev);
+	return 0;
 }
 
-static int s5pcsis_pm_resume(struct device *dev)
+static int s5pcsis_resume(struct device *dev)
 {
-	int ret;
-
-	ret = s5pcsis_resume(dev);
-
-	if (!ret) {
-		pm_runtime_disable(dev);
-		ret = pm_runtime_set_active(dev);
-		pm_runtime_enable(dev);
-	}
-
-	return ret;
+	return 0;
 }
 #endif
+
+#ifdef CONFIG_PM_RUNTIME
+static int s5pcsis_runtime_suspend(struct device *dev)
+{
+	return s5pcsis_pm_suspend(dev, true);
+}
+
+static int s5pcsis_runtime_resume(struct device *dev)
+{
+	return s5pcsis_pm_resume(dev, true);
+}
+#endif
+
 
 static int __devexit s5pcsis_remove(struct platform_device *pdev)
 {
@@ -839,7 +833,7 @@ static int __devexit s5pcsis_remove(struct platform_device *pdev)
 	struct resource *res = state->regs_res;
 
 	pm_runtime_disable(&pdev->dev);
-	s5pcsis_suspend(&pdev->dev);
+	s5pcsis_pm_suspend(&pdev->dev, false);
 	clk_disable(state->clock[CSIS_CLK_MUX]);
 	pm_runtime_set_suspended(&pdev->dev);
 
@@ -857,8 +851,8 @@ static int __devexit s5pcsis_remove(struct platform_device *pdev)
 }
 
 static const struct dev_pm_ops s5pcsis_pm_ops = {
-	SET_RUNTIME_PM_OPS(s5pcsis_suspend, s5pcsis_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(s5pcsis_pm_suspend, s5pcsis_pm_resume)
+	SET_RUNTIME_PM_OPS(s5pcsis_runtime_suspend, s5pcsis_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(s5pcsis_suspend, s5pcsis_resume)
 };
 
 static struct platform_driver s5pcsis_driver = {
