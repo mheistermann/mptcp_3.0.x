@@ -1200,4 +1200,23 @@ struct v4l2_recognition {
 #define VIDIOC_S_RECOGNITION	_IOWR('V', 85, struct v4l2_recognition)
 #define VIDIOC_G_RECOGNITION	_IOR('V', 86, struct v4l2_recognition)
 
+/* We use this struct as the v4l2_streamparm raw_data for
+ * VIDIOC_G_PARM and VIDIOC_S_PARM
+ */
+struct sec_cam_parm {
+	struct v4l2_captureparm capture;
+	int contrast;
+	int effects;
+	int brightness;
+	int flash_mode;
+	int focus_mode;
+	int iso;
+	int metering;
+	int saturation;
+	int scene_mode;
+	int sharpness;
+	int white_balance;
+	int fps;
+};
+
 #endif /* __LINUX_VIDEODEV2_SAMSUNG_H */
