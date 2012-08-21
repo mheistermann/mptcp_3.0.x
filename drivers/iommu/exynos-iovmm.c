@@ -123,8 +123,11 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 
 	BUG_ON(mapped_size > size);
 
-	if (mapped_size < size)
+	if (mapped_size < size) {
+		if (!ret)
+			ret = -EINVAL;
 		goto err_map_map;
+	}
 
 #ifdef CONFIG_EXYNOS_IOVMM_ALIGN64K
 	if (iova_size != size) {
