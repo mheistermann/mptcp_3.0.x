@@ -54,7 +54,7 @@
 #endif
 
 #define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
-#define FLITE_MAX_CTRL_NUM		1
+#define FLITE_MAX_CTRL_NUM		23
 #define FLITE_MAX_OUT_BUFS (soc_is_exynos5250_rev1 ? flite->reqbufs_cnt	: 1)
 #ifdef CONFIG_ARCH_EXYNOS4
 #define FLITE_MAX_MBUS_NUM		1
@@ -171,6 +171,28 @@ struct flite_sensor_info {
 
 struct flite_ctrls {
 	struct v4l2_ctrl	*cacheable;
+	struct v4l2_ctrl	*scenemode;
+	struct v4l2_ctrl	*focusmode;
+	struct v4l2_ctrl	*whitebalance;
+	struct v4l2_ctrl	*effect;
+	struct v4l2_ctrl	*iso;
+	struct v4l2_ctrl	*contrast;
+	struct v4l2_ctrl	*saturation;
+	struct v4l2_ctrl	*sharpness;
+	struct v4l2_ctrl	*brightness;
+	struct v4l2_ctrl	*metering;
+	struct v4l2_ctrl	*start_capture;
+	struct v4l2_ctrl	*framerate;
+	struct v4l2_ctrl	*autofocus;
+	struct v4l2_ctrl	*obj_position_x;
+	struct v4l2_ctrl	*obj_position_y;
+	struct v4l2_ctrl	*face_detection;
+	struct v4l2_ctrl	*wdr;
+	struct v4l2_ctrl	*autofocus_result;
+	struct v4l2_ctrl	*jpeg_quality;
+	struct v4l2_ctrl	*exif_iso;
+	struct v4l2_ctrl	*exif_shutterspeed;
+	struct v4l2_ctrl	*aeawb_lockunlock;
 };
 /**
   * struct flite_dev - top structure of FIMC-Lite device

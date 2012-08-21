@@ -16,6 +16,11 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-subdev.h>
+#include <media/s5k4ecgx.h>
+#include <linux/videodev2.h>
+#include <linux/videodev2_exynos_camera.h>
 #if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 #include <mach/videonode.h>
 #include <media/exynos_mc.h>
@@ -796,10 +801,102 @@ static int flite_pipeline_initialize(struct flite_dev *flite,
 static int flite_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct flite_dev *flite = ctrl_to_dev(ctrl);
+	struct flite_pipeline *p = &flite->pipeline;
+	struct v4l2_control ctrl_con;
+	int ret;
+
+	/* for debug */
+	flite_dbg("%s: V4l2 control ID =0x%08x, val = %d\n",
+		__func__, ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->val);
+	flite_dbg("flite =0x%08x, sensor = 0x%08x\n",
+		(unsigned int)flite, (unsigned int)p->sensor);
 
 	switch (ctrl->id) {
 	case V4L2_CID_CACHEABLE:
 		user_to_drv(flite->flite_ctrls.cacheable, ctrl->val);
+		break;
+	case V4L2_CID_SCENEMODE:
+	case V4L2_CID_FOCUS_MODE:
+	case V4L2_CID_WHITE_BALANCE_PRESET:
+	case V4L2_CID_IMAGE_EFFECT:
+	case V4L2_CID_CAM_ISO:
+	case V4L2_CID_CAM_CONTRAST:
+	case V4L2_CID_CAM_SATURATION:
+	case V4L2_CID_CAM_SHARPNESS:
+	case V4L2_CID_CAM_BRIGHTNESS:
+	case V4L2_CID_CAPTURE:
+	case V4L2_CID_CAM_METERING:
+	case V4L2_CID_CAM_FRAME_RATE:
+	case V4L2_CID_CAM_SET_AUTO_FOCUS:
+	case V4L2_CID_CAM_OBJECT_POSITION_X:
+	case V4L2_CID_CAM_OBJECT_POSITION_Y:
+	case V4L2_CID_CAM_FACE_DETECTION:
+	case V4L2_CID_CAM_WDR:
+	case V4L2_CID_CAM_AUTO_FOCUS_RESULT:
+	case V4L2_CID_JPEG_QUALITY:
+	case V4L2_CID_CAM_AEAWB_LOCK_UNLOCK:
+		ctrl_con.id = ctrl->id;
+		ctrl_con.value = ctrl->val;
+
+		ret = v4l2_subdev_call(p->sensor, core, s_ctrl, &ctrl_con);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return -EINVAL;
+
+		break;
+	default:
+		flite_err("unsupported ctrl id");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int flite_g_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct flite_dev *flite = ctrl_to_dev(ctrl);
+	struct flite_pipeline *p = &flite->pipeline;
+	struct v4l2_control ctrl_con;
+	int ret;
+
+	/* for debug */
+	flite_dbg("%s: V4l2 control ID =0x%08x, val = %d\n",
+		__func__, ctrl->id - V4L2_CID_PRIVATE_BASE, ctrl->val);
+	flite_dbg("flite =0x%08x, sensor = 0x%08x\n",
+		(unsigned int)flite, (unsigned int)p->sensor);
+	printk("********************LINE:%d\n", __LINE__);
+
+	switch (ctrl->id) {
+	case V4L2_CID_CACHEABLE:
+		user_to_drv(flite->flite_ctrls.cacheable, ctrl->val);
+		break;
+	case V4L2_CID_SCENEMODE:
+	case V4L2_CID_FOCUS_MODE:
+	case V4L2_CID_WHITE_BALANCE_PRESET:
+	case V4L2_CID_IMAGE_EFFECT:
+	case V4L2_CID_CAM_ISO:
+	case V4L2_CID_CAM_CONTRAST:
+	case V4L2_CID_CAM_SATURATION:
+	case V4L2_CID_CAM_SHARPNESS:
+	case V4L2_CID_CAM_BRIGHTNESS:
+	case V4L2_CID_CAPTURE:
+	case V4L2_CID_CAM_METERING:
+	case V4L2_CID_CAM_FRAME_RATE:
+	case V4L2_CID_CAM_SET_AUTO_FOCUS:
+	case V4L2_CID_CAM_OBJECT_POSITION_X:
+	case V4L2_CID_CAM_OBJECT_POSITION_Y:
+	case V4L2_CID_CAM_FACE_DETECTION:
+	case V4L2_CID_CAM_WDR:
+	case V4L2_CID_CAM_AUTO_FOCUS_RESULT:
+	case V4L2_CID_JPEG_QUALITY:
+	case V4L2_CID_CAM_GET_ISO:
+	case V4L2_CID_CAM_GET_SHT_TIME:
+		ctrl_con.id = ctrl->id;
+		ctrl_con.value = ctrl->val;
+
+		ret = v4l2_subdev_call(p->sensor, core, g_ctrl, &ctrl_con);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return -EINVAL;
+
 		break;
 	default:
 		flite_err("unsupported ctrl id");
@@ -811,6 +908,7 @@ static int flite_s_ctrl(struct v4l2_ctrl *ctrl)
 
 const struct v4l2_ctrl_ops flite_ctrl_ops = {
 	.s_ctrl = flite_s_ctrl,
+	.g_volatile_ctrl = flite_g_ctrl,
 };
 
 static const struct v4l2_ctrl_config flite_custom_ctrl[] = {
@@ -822,6 +920,224 @@ static const struct v4l2_ctrl_config flite_custom_ctrl[] = {
 		.flags = V4L2_CTRL_FLAG_SLIDER,
 		.max = 1,
 		.def = true,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_SCENEMODE,
+		.name = "Set camera scene mode",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_SCENE_MODE_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_FOCUS_MODE,
+		.name = "Set camera focus mode",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_WHITE_BALANCE_PRESET,
+		.name = "Set camera white balance",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_WHITE_BALANCE_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_IMAGE_EFFECT,
+		.name = "Set camera image effect",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_IMAGE_EFFECT_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_ISO,
+		.name = "Set camera image effect",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_CONTRAST,
+		.name = "Set camera contrast",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_CONTRAST_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_SATURATION,
+		.name = "Set camera saturation",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_SATURATION_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_SHARPNESS,
+		.name = "Set camera sharpness",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_SHARPNESS_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_BRIGHTNESS,
+		.name = "Set camera brightness",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = -2,
+		.max = 2,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAPTURE,
+		.name = "Set camera start_capture",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = 1,
+		.def = true,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_METERING,
+		.name = "Set camera metering",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_METERING_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_FRAME_RATE,
+		.name = "Set camera frame rate",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_FRAME_RATE_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_SET_AUTO_FOCUS,
+		.name = "Set camera auto focus",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_AUTO_FOCUS_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_OBJECT_POSITION_X,
+		.name = "Set camera object position x",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_OBJECT_POSITION_Y,
+		.name = "Set camera object position y",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_FACE_DETECTION,
+		.name = "Set camera face detection",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_FACE_DETECTION_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_WDR,
+		.name = "Set camera wide dynamic range",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_WDR_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_AUTO_FOCUS_RESULT,
+		.name = "Set camera auto focus result",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_CAMERA_AF_STATUS_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_JPEG_QUALITY,
+		.name = "Set camera jpeg quality",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 100,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_GET_ISO,
+		.name = "Set camera get iso",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_GET_SHT_TIME,
+		.name = "Set camera shutter speed",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 65500,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_AEAWB_LOCK_UNLOCK,
+		.name = "Set camera ae & awb lock & unlock",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_AE_AWB_MAX,
+		.step = 1,
+		.def = 0,
 	},
 };
 
@@ -833,12 +1149,56 @@ static int flite_ctrls_create(struct flite_dev *flite)
 	v4l2_ctrl_handler_init(&flite->ctrl_handler, FLITE_MAX_CTRL_NUM);
 	flite->flite_ctrls.cacheable = v4l2_ctrl_new_custom(&flite->ctrl_handler,
 					&flite_custom_ctrl[0], NULL);
+	flite->flite_ctrls.scenemode = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[1], NULL);
+	flite->flite_ctrls.focusmode = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[2], NULL);
+	flite->flite_ctrls.whitebalance = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[3], NULL);
+	flite->flite_ctrls.effect = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[4], NULL);
+	flite->flite_ctrls.iso = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[5], NULL);
+	flite->flite_ctrls.contrast = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[6], NULL);
+	flite->flite_ctrls.saturation = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[7], NULL);
+	flite->flite_ctrls.sharpness = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[8], NULL);
+	flite->flite_ctrls.brightness = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[9], NULL);
+	flite->flite_ctrls.start_capture = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[10], NULL);
+	flite->flite_ctrls.metering = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[11], NULL);
+	flite->flite_ctrls.framerate = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[12], NULL);
+	flite->flite_ctrls.autofocus = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[13], NULL);
+	flite->flite_ctrls.obj_position_x = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[14], NULL);
+	flite->flite_ctrls.obj_position_y = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[15], NULL);
+	flite->flite_ctrls.face_detection = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[16], NULL);
+	flite->flite_ctrls.wdr = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[17], NULL);
+	flite->flite_ctrls.autofocus_result = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[18], NULL);
+	flite->flite_ctrls.jpeg_quality = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[19], NULL);
+	flite->flite_ctrls.exif_iso = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[20], NULL);
+	flite->flite_ctrls.exif_shutterspeed = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[21], NULL);
+	flite->flite_ctrls.aeawb_lockunlock = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[21], NULL);
 	flite->ctrls_rdy = flite->ctrl_handler.error == 0;
 
 	if (flite->ctrl_handler.error) {
 		int err = flite->ctrl_handler.error;
 		v4l2_ctrl_handler_free(&flite->ctrl_handler);
-		flite_err("Failed to flite control hander create");
+		flite_err("Failed to flite control handler create");
 		return err;
 	}
 
@@ -874,7 +1234,6 @@ static int flite_open(struct file *file)
 			flite_err("flite pipeline initialization failed\n");
 			goto err;
 		}
-
 		ret = flite_ctrls_create(flite);
 		if (ret) {
 			flite_err("failed to create controls\n");
@@ -1933,7 +2292,7 @@ static int flite_runtime_resume(struct device *dev)
 }
 
 static struct v4l2_subdev_core_ops flite_core_ops = {
-	.s_power = flite_s_power,
+	.s_power 	= flite_s_power,
 };
 
 static struct v4l2_subdev_video_ops flite_video_ops = {
