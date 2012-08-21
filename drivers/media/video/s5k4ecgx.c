@@ -27,6 +27,8 @@
 /* TODO : Added Kconfig */
 #define CONFIG_TC4_EVT
 
+/*#define ENABLE*/
+
 #define DEFAULT_SENSOR_WIDTH		640
 #define DEFAULT_SENSOR_HEIGHT		480
 #define DEFAULT_SENSOR_CODE		(V4L2_MBUS_FMT_YUYV8_2X8)
@@ -1379,8 +1381,7 @@ static int s5k4ecgx_start_auto_focus(struct v4l2_subdev *sd)
 	 * to work again, or else we could be locked forever while
 	 * that app is running, which is not the expected behavior.
 	 */
-	//s5k4ecgx_set_from_table(sd, "ae awb lock off",
-	//			&state->regs->ae_awb_lock_off, 1, 0);
+#ifdef ENABLE
 	err = s5k4ecgx_set_parameter(sd, &parms->aeawb_lockunlock,
 				V4L2_AE_LOCK_AWB_LOCK, "aeawb_lockunlock",
 				state->regs->aeawb_lockunlock,
@@ -1389,8 +1390,9 @@ static int s5k4ecgx_start_auto_focus(struct v4l2_subdev *sd)
 		dev_err(&client->dev, "%s: ae & awb lock is fail. \n",
 			__func__);
 	}
+#endif
 
-#if 0
+#ifdef ENABLE
 	if (parms->scene_mode == SCENE_MODE_NIGHTSHOT) {
 		/* user selected night shot mode, assume we need low light
 		 * af mode.  flash is always off in night shot mode
@@ -1459,6 +1461,8 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 	/* always cancel ae_awb, in case AF already finished before
 	 * we got called.
 	 */
+
+#ifdef ENABLE
 	/* restore write mode */
 	//s5k4ecgx_i2c_write_twobyte(client, 0x0028, 0x7000);
 
@@ -1470,8 +1474,6 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 		dev_err(&client->dev, "%s: ae & awb unlock is fail. \n",
 			__func__);
 	}
-	//s5k4ecgx_set_from_table(sd, "ae awb lock off",
-	//			&state->regs->ae_awb_lock_off, 1, 0);
 
 	if (state->af_status != AF_START) {
 		/* we weren't in the middle auto focus operation, we're done */
@@ -1490,6 +1492,7 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 
 		return 0;
 	}
+#endif
 
 	/* auto focus was in progress.  the other thread
 	 * is either in the middle of get_auto_focus_result()
@@ -1516,11 +1519,13 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 	/* wait until the other thread has completed
 	 * aborting the auto focus and restored state
 	 */
+#ifdef ENABLE
 	dev_dbg(&client->dev, "%s: wait AF cancel done start\n", __func__);
 	mutex_unlock(&state->ctrl_lock);
 	wait_for_completion(&state->af_complete);
 	mutex_lock(&state->ctrl_lock);
 	dev_dbg(&client->dev, "%s: wait AF cancel done finished\n", __func__);
+#endif
 
 	return 0;
 }
@@ -1672,6 +1677,8 @@ static void s5k4ecgx_init_parameters(struct v4l2_subdev *sd)
 		container_of(sd, struct s5k4ecgx_state, sd);
 	struct sec_cam_parm *parms =
 		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	struct sec_cam_parm *stored_parms =
+		(struct sec_cam_parm *)&state->stored_parm.parm.raw_data;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	dev_err(&client->dev, "%s: \n", __func__);
 	state->strm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1691,6 +1698,13 @@ static void s5k4ecgx_init_parameters(struct v4l2_subdev *sd)
 	parms->white_balance = V4L2_WHITE_BALANCE_AUTO;
 	parms->aeawb_lockunlock = V4L2_AE_UNLOCK_AWB_UNLOCK;
 
+	stored_parms->effects = V4L2_IMAGE_EFFECT_NORMAL;
+	stored_parms->brightness = V4L2_BRIGHTNESS_DEFAULT;
+	stored_parms->iso = V4L2_ISO_AUTO;
+	stored_parms->metering = V4L2_METERING_CENTER;
+	stored_parms->scene_mode = V4L2_SCENE_MODE_NONE;
+	stored_parms->white_balance = V4L2_WHITE_BALANCE_AUTO;
+
 	state->jpeg.enable = 0;
 	state->jpeg.quality = 100;
 	state->jpeg.main_offset = 0;
@@ -1702,6 +1716,8 @@ static void s5k4ecgx_init_parameters(struct v4l2_subdev *sd)
 	state->fw.major = 1;
 
 	state->one_frame_delay_ms = NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
+
+	s5k4ecgx_stop_auto_focus(sd);
 }
 
 static void s5k4ecgx_set_framesize(struct v4l2_subdev *sd,
@@ -3092,16 +3108,13 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 	dev_err(&client->dev, "%s: start\n", __func__);
 
-	/* s5k4ecgx_power(1);*/
-#if 1
 	if (s5k4ecgx_init_regs(&state->sd) < 0)
 		return -ENODEV;
 
 	dev_dbg(&client->dev, "%s: state->check_dataline : %d\n",
 		__func__, state->check_dataline);
 
-	msleep(10); //many add
-#endif
+	msleep(10);
 
 	if (s5k4ecgx_set_from_table(sd, "init reg 1",
 					&state->regs->init_reg_1, 1, 0) < 0)
@@ -3114,8 +3127,6 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 		return -EIO;
 
 	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
-
-	//s5k4ecgx_s_parm(sd, &state->strm);
 	s5k4ecgx_set_stored_parms(sd);
 
 	msleep(100);
@@ -3128,18 +3139,15 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 				&state->regs->flash_init, 1, 0) < 0)
 		return -EIO;
 #endif
-	printk("%s:(%d) \n", __func__, __LINE__);
 
 	if (state->check_dataline) {
 		if (s5k4ecgx_set_from_table(sd, "dtp start",
 					&state->regs->dtp_start, 1, 0) < 0)
 			return -EIO;
 	}
-	printk("%s:(%d) \n", __func__, __LINE__);
 
 	dev_dbg(&client->dev, "%s: end\n", __func__);
 	state->runmode = S5K4ECGX_RUNMODE_RUNNING;
-	printk("%s:(%d) \n", __func__, __LINE__);
 
 	return 0;
 }

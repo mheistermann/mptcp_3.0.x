@@ -32,7 +32,7 @@ static const u32 s5k4ecgx_init_reg1[] = {
 };
 
 static const u32 s5k4ecgx_init_reg2[] = {
-#if 0
+#if 1
 //==================================================================================
 //02.ETC Setting
 //==================================================================================
@@ -3236,6 +3236,9 @@ static const u32 s5k4ecgx_init_reg2[] = {
 //0x0F120535,	 //REG_0TC_CCFG_usMaxFrTimeMsecMult10
 0x0F120935,//zxz 2012-3-15
 0x0F12029A,	 //REG_0TC_CCFG_usMinFrTimeMsecMult10
+
+0x0F120935,//zxz 2012-3-15
+0x0F12029A,	 //REG_0TC_CCFG_usMinFrTimeMsecMult10
 #else
 
 //==================================================================================
@@ -4772,8 +4775,9 @@ static const u32 s5k4ecgx_init_reg2[] = {
 // End of Patch Data(Last : 7000465Ah)
 // Total Size 2916 (0x0B64)
 // Addr : 3AF8 ,  Size : 2914(B62h)
-// Start of Patch data
+
 #if 0
+// Start of Patch data
 0x00287000,
 0x002A3AF8,
 0x0F12B5F8,	// 70003AF8
@@ -6650,7 +6654,6 @@ static const u32 s5k4ecgx_init_reg2[] = {
 0x0F1207DC,	//senHal_uMinColsBin
 0x0F1205C0,	//senHal_uMinColsNoBin
 
-
 0x002A1AEA,
 0x0F128080,	//senHal_SubF404Tune
 0x0F120080,	//senHal_FullF404Tune
@@ -8239,13 +8242,17 @@ static const u32 s5k4ecgx_init_reg2[] = {
 0x0F120100,
 0x0F120100,
 
+0x002A022C,
+0x0F120001, 	//REG_TC_IPRM_InitParamsUpdated
+
 #endif
 
 };
 
 
 static const u32 s5k4ecgx_init_reg3[] = {
-#if 0
+#if 1
+
 //==================================================================================
 // 19.Select Cofigration Display
 //==================================================================================
@@ -9798,7 +9805,7 @@ static const u32 s5k4ecgx_Single_AF_Off_1[] = {
 
 static const u32 s5k4ecgx_Single_AF_Off_2[] = {
 	0x002A028C,
-	0x0F120004,
+	0x0F120003,
 };
 
 static const u32 s5k4ecgx_Single_AF_Off_3[] = {
