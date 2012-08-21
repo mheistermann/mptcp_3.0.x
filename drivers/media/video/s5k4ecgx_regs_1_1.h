@@ -3159,7 +3159,7 @@ static const u32 s5k4ecgx_init_reg2[] = {
 // 08.Preview & Capture Configration Setting
 //==================================================================================
 //Preview config[0] 640x480  7.5~15fps
-#if 0
+#if 1
 0x002A02A6,
 0x0F120280,	 //REG_0TC_PCFG_usWidth
 0x0F1201E0,	 //REG_0TC_PCFG_usHeight
@@ -3416,6 +3416,14 @@ static const u32 s5k4ecgx_WB_Sunny[] = {
 	0x002A04E6,
 	0x0F120777,
 	0x002A04BA,
+	0x0F120620,  //Gain R
+	0x002A04BE,
+	0x0F1203D0,  //Gain G
+	0x002A04C2,
+	0x0F120580,  //Gain B
+	0x002A04C6,
+	0x0F120001,
+/*
 	0x0F1205E0,
 	0x0F120001,
 	0x0F120400,
@@ -3423,12 +3431,21 @@ static const u32 s5k4ecgx_WB_Sunny[] = {
 	0x0F120530,
 	0x0F120001,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_WB_Cloudy[] = {
 	0x002A04E6,
 	0x0F120777,
 	0x002A04BA,
+	0x0F120710,   //Gain R
+	0x002A04BE,
+	0x0F120400,   //Gain G
+	0x002A04C2,
+	0x0F120580,   //Gain B
+	0x002A04C6,
+	0x0F120001,
+/*
 	0x0F120710,
 	0x0F120001,
 	0x0F120400,
@@ -3436,12 +3453,21 @@ static const u32 s5k4ecgx_WB_Cloudy[] = {
 	0x0F120420,
 	0x0F120001,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_WB_Tungsten[] = {
 	0x002A04E6,
 	0x0F120777,
 	0x002A04BA,
+	0x0F1203B0,   //Gain R
+	0x002A04BE,
+	0x0F120300,   //Gain G
+	0x002A04C2,
+	0x0F1209F0,   //Gain B
+	0x002A04C6,
+	0x0F120001,
+	/*
 	0x0F120390,
 	0x0F120001,
 	0x0F120400,
@@ -3449,12 +3475,22 @@ static const u32 s5k4ecgx_WB_Tungsten[] = {
 	0x0F120920,
 	0x0F120001,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_WB_Fluorescent[] = {
 	0x002A04E6,
 	0x0F120777,
 	0x002A04BA,
+	0x0F120600,  //Gain R
+	0x002A04BE,
+	0x0F120440,  //Gain G
+	0x002A04C2,
+	0x0F1209E0,  //Gain B
+	0x002A04C6,
+	0x0F120001,
+
+	/*
 	0x0F120505,
 	0x0F120001,
 	0x0F120400,
@@ -3462,6 +3498,7 @@ static const u32 s5k4ecgx_WB_Fluorescent[] = {
 	0x0F120875,
 	0x0F120001,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_WDR_on[] = {
@@ -3478,8 +3515,18 @@ static const u32 s5k4ecgx_ISO_Auto[] = {
 	0x002A0938,
 	0x0F120000,
 
-	0x002A0F2A,
-	0x0F120001,
+	0x0F120014,	//SARR_uNormBrInDoor_0_
+	0x0F1200D2,	//SARR_uNormBrInDoor_1_
+	0x0F120384,	//SARR_uNormBrInDoor_2_
+	0x0F1207D0,	//SARR_uNormBrInDoor_3_
+	0x0F121388,	//SARR_uNormBrInDoor_4_
+	0x002A0230,
+	0x0F120000,
+	0x002A1484,
+	0x0F12003C,
+
+	0x002A0F2A,	//AFC_Default 60Hz
+	0x0F120001,	//00:50Hz, 01:60Hz
 	0x002A04E6,
 	0x0F12077F,
 
@@ -3491,7 +3538,33 @@ static const u32 s5k4ecgx_ISO_Auto[] = {
 	0x0F120200,
 };
 
-static const u32 s5k4ecgx_ISO_100[] = {
+static const u32 s5k4ecgx_ISO_50[] = {
+	0x002A0938,
+	0x0F120001,
+
+	0x0F120014,	//SARR_uNormBrInDoor_0_
+	0x0F1200D2,	//SARR_uNormBrInDoor_1_
+	0x0F120384,	//SARR_uNormBrInDoor_2_
+	0x0F1207D0,	//SARR_uNormBrInDoor_3_
+	0x0F121388,	//SARR_uNormBrInDoor_4_
+	0x002A0230,
+	0x0F120000,
+	0x002A1484,
+	0x0F12003C,
+	0x002A04E6,
+	0x0F12065F,
+	0x002A04D6,
+	0x0F120000,	//REG_SF_USER_FlickerQuant
+	0x0F120001,	//REG_SF_USER_FlickerQuantChanged
+
+	0x002A04D0,
+	0x0F120001,	//REG_SF_USER_IsoType
+	0x0F120100,	//REG_SF_USER_IsoVal
+	0x0F120001,	//REG_SF_USER_IsoChanged
+	0x002A06C2,
+	0x0F120100,	//lt_bUseSecISODgain
+
+	/*
 	0x002A04E6,
 	0x0F12065F,
 	0x002A04D6,
@@ -3507,9 +3580,80 @@ static const u32 s5k4ecgx_ISO_100[] = {
 
 	0x002A0938,
 	0x0F120001,
+	*/
+};
+
+static const u32 s5k4ecgx_ISO_100[] = {
+	0x002A0938,
+	0x0F120001,	//afit_bUseNB_Afit
+
+	0x0F120014,	//SARR_uNormBrInDoor_0_
+	0x0F1200D2,	//SARR_uNormBrInDoor_1_
+	0x0F120384,	//SARR_uNormBrInDoor_2_
+	0x0F1207D0,	//SARR_uNormBrInDoor_3_
+	0x0F121388,	//SARR_uNormBrInDoor_4_
+	0x002A0230,
+	0x0F120000,
+	0x002A1484,
+	0x0F12003C,
+	0x002A04E6,
+	0x0F12065F,
+	0x002A04D6,
+	0x0F120000,	//REG_SF_USER_FlickerQuant
+	0x0F120001,	//REG_SF_USER_FlickerQuantChanged
+
+	0x002A04D0,
+	0x0F120001,	//REG_SF_USER_IsoType
+	0x0F1201A0,	//REG_SF_USER_IsoVal/1BA/1CA:16.9msec/1AA: 17.8msec
+	0x0F120001,	//REG_SF_USER_IsoChanged
+	0x002A06C2,
+	0x0F120100,	//lt_bUseSecISODgain
+
+	/*
+	0x002A04E6,
+	0x0F12065F,
+	0x002A04D6,
+	0x0F120000,
+	0x0F120001,
+
+	0x002A04D0,
+	0x0F120001,
+	0x0F1201A0,
+	0x0F120001,
+	0x002A06C2,
+	0x0F120100,
+
+	0x002A0938,
+	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_ISO_200[] = {
+	0x002A0938,
+	0x0F120001,	//afit_bUseNB_Afit
+
+	0x0F120114,	//SARR_uNormBrInDoor_0_
+	0x0F1204A2,	//SARR_uNormBrInDoor_1_
+	0x0F120584,	//SARR_uNormBrInDoor_2_
+	0x0F1208D0,	//SARR_uNormBrInDoor_3_
+	0x0F121388,	//SARR_uNormBrInDoor_4_
+	0x002A0230,
+	0x0F120000,
+	0x002A1484,
+	0x0F12003C,
+	0x002A04E6,
+	0x0F12065F,
+	0x002A04D6,
+	0x0F120000,	//REG_SF_USER_FlickerQuant
+	0x0F120001,	//REG_SF_USER_FlickerQuantChanged
+
+	0x002A04D0,
+	0x0F120001,	//REG_SF_USER_IsoType
+	0x0F120340,	//REG_SF_IsoVal/36A/370:8.9msec/360:8.8msec/400:7.5msec
+	0x0F120001,	//REG_SF_USER_IsoChanged
+	0x002A06C2,
+	0x0F120100,	//lt_bUseSecISODgain
+	/*
 	0x002A04E6,
 	0x0F12065F,
 	0x002A04D6,
@@ -3525,9 +3669,35 @@ static const u32 s5k4ecgx_ISO_200[] = {
 
 	0x002A0938,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_ISO_400[] = {
+	0x002A0938,
+	0x0F120001,	//afit_bUseNB_Afit
+
+	0x0F120214,	//SARR_uNormBrInDoor_0_
+	0x0F120BD2,	//SARR_uNormBrInDoor_1_
+	0x0F120C84,	//SARR_uNormBrInDoor_2_
+	0x0F1210D0,	//SARR_uNormBrInDoor_3_
+	0x0F121388,	//SARR_uNormBrInDoor_4_
+	0x002A0230,
+	0x0F12FFFA,
+	0x002A1484,
+	0x0F12003C,
+	0x002A04E6,
+	0x0F12065F,
+	0x002A04D6,
+	0x0F120000,	//REG_SF_USER_FlickerQuant
+	0x0F120001,	//REG_SF_USER_FlickerQuantChanged
+
+	0x002A04D0,
+	0x0F120001,	//REG_SF_USER_IsoType
+	0x0F120710,	//REGSFUSER_IsoVal/6F4
+	0x0F120001,	//REG_SF_USER_IsoChanged
+	0x002A06C2,
+	0x0F120100,	//lt_bUseSecISODgain
+	/*
 	0x002A04E6,
 	0x0F12065F,
 	0x002A04D6,
@@ -3543,6 +3713,7 @@ static const u32 s5k4ecgx_ISO_400[] = {
 
 	0x002A0938,
 	0x0F120001,
+	*/
 };
 
 static const u32 s5k4ecgx_Metering_Matrix[] = {
@@ -3655,92 +3826,136 @@ static const u32 s5k4ecgx_Metering_Spot[] = {
 
 static const u32 s5k4ecgx_EV_Minus_4[] = {
 	0x002A0230,
-	0x0F12FF30,
+	0x0F120018,
+	//0x0F12FF30,
 };
 
 static const u32 s5k4ecgx_EV_Minus_3[] = {
 	0x002A0230,
-	0x0F12FFA0,
+	0x0F12001E,
+	//0x0F12FFA0,
 };
 
 static const u32 s5k4ecgx_EV_Minus_2[] = {
 	0x002A0230,
-	0x0F12FFC8,
+	0x0F120025,
+	//0x0F12FFC8,
 };
 
 static const u32 s5k4ecgx_EV_Minus_1[] = {
 	0x002A0230,
-	0x0F12FFE0,
+	0x0F120030,
+	//0x0F12FFE0,
 };
 
 static const u32 s5k4ecgx_EV_Default[] = {
 	0x002A0230,
-	0x0F120000,
+	0x0F12003C,
+	//0x0F120000,
 };
 
 static const u32 s5k4ecgx_EV_Plus_1[] = {
 	0x002A0230,
-	0x0F120020,
+	0x0F12004E,
+	//0x0F120020,
 };
 
 static const u32 s5k4ecgx_EV_Plus_2[] = {
 	0x002A0230,
-	0x0F120038,
+	0x0F120060,
+	//0x0F120038,
 };
 
 static const u32 s5k4ecgx_EV_Plus_3[] = {
 	0x002A0230,
-	0x0F120060,
+	0x0F120070,
+	//0x0F120060,
 };
 
 static const u32 s5k4ecgx_EV_Plus_4[] = {
 	0x002A0230,
-	0x0F12007F,
+	0x0F120080,
+	//0x0F12007F,
 };
 
 static const u32 s5k4ecgx_Contrast_Minus_4[] = {
 	0x002A0232,
 	0x0F12FF81,
+	//0x0F12FF81,
 };
 
 static const u32 s5k4ecgx_Contrast_Minus_3[] = {
 	0x002A0232,
 	0x0F12FFA0,
+	//0x0F12FFA0,
 };
 
 static const u32 s5k4ecgx_Contrast_Minus_2[] = {
 	0x002A0232,
 	0x0F12FFC0,
+	//0x0F12FFC0,
 };
 
 static const u32 s5k4ecgx_Contrast_Minus_1[] = {
 	0x002A0232,
 	0x0F12FFE0,
+	//0x0F12FFE0,
 };
 
 static const u32 s5k4ecgx_Contrast_Default[] = {
 	0x002A0232,
 	0x0F120000,
+	//0x0F120000,
 };
 
 static const u32 s5k4ecgx_Contrast_Plus_1[] = {
 	0x002A0232,
 	0x0F120020,
+	//0x0F120020,
 };
 
 static const u32 s5k4ecgx_Contrast_Plus_2[] = {
 	0x002A0232,
 	0x0F120040,
+	//0x0F120040,
 };
 
 static const u32 s5k4ecgx_Contrast_Plus_3[] = {
 	0x002A0232,
 	0x0F120060,
+	//0x0F120060,
 };
 
 static const u32 s5k4ecgx_Contrast_Plus_4[] = {
 	0x002A0232,
 	0x0F12007F,
+	//0x0F12007F,
+};
+
+static const u32 s5k4ecgx_Auto_Contrast_On[] = {
+	0x002A098E,
+	0x0F12FFB0,
+	0x002A0A44,
+	0x0F12FFB0,
+	0x002A0AFA,
+	0x0F12FFB0,
+	0x002A0BB0,
+	0x0F12FFB0,
+	0x002A0C66,
+	0x0F12FFB0,
+};
+
+static const u32 s5k4ecgx_Auto_Contrast_Off[] = {
+	0x002A098E,
+	0x0F12FFB0,
+	0x002A0A44,
+	0x0F12FFB0,
+	0x002A0AFA,
+	0x0F12FFB0,
+	0x002A0BB0,
+	0x0F12FFB0,
+	0x002A0C66,
+	0x0F12FFB0,
 };
 
 static const u32 s5k4ecgx_Sharpness_Minus_3[] = {
@@ -4834,6 +5049,7 @@ static const u32 s5k4ecgx_3M_Capture[] = {
 };
 /* 1600 x 1200 */
 static const u32 s5k4ecgx_2M_Capture[] = {
+#if 0
 	0x002A0398,
 	0x0F120640,	/* #REG_0TC_CCFG_usWidth */
 	0x0F1204B0,	/* #REG_0TC_CCFG_usHeight */
@@ -4846,6 +5062,26 @@ static const u32 s5k4ecgx_2M_Capture[] = {
 	0x0F120001,
 	0x002A0270,
 	0x0F120001,
+#else
+	0x002A0396,
+	0x0F120000,   //REG_0TC_CCFG_uCaptureMode
+	0x0F120640,   //REG_0TC_CCFG_usWidth
+	0x0F1204B0,   //REG_0TC_CCFG_usHeight
+	0x0F120005,   //REG_0TC_CCFG_Format
+	0x0F1227BD,   //REG_0TC_CCFG_usMaxOut4KHzRate
+	0x0F12275D,   //REG_0TC_CCFG_usMinOut4KHzRate
+	0x0F120100,   //REG_0TC_CCFG_OutClkPerPix88
+	0x0F120300,   //REG_0TC_CCFG_uBpp88
+	0x0F120052,   //REG_0TC_CCFG_PVIMask
+	0x0F120000,   //REG_0TC_CCFG_OIFMask
+	0x0F120810,   //REG_0TC_CCFG_usJpegPacketSize
+	0x0F120000,   //REG_0TC_CCFG_usJpegTotalPackets
+	0x0F120001,   //REG_0TC_CCFG_uClockInd
+	0x0F120000,   //REG_0TC_CCFG_usFrTimeType
+	0x0F120002,   //REG_0TC_CCFG_FrRateQualityType
+	0x0F120535,   //REG_0TC_CCFG_usMaxFrTimeMsecMult10
+	0x0F12029A,   //REG_0TC_CCFG_usMinFrTimeMsecMult10
+#endif
 };
 /* 1280 x 960 */
 static const u32 s5k4ecgx_1M_Capture[] = {
@@ -4904,6 +5140,7 @@ static const u32 s5k4ecgx_max_Preview[] = {
 };
 /* 720 x 480 */
 static const u32 s5k4ecgx_720_Preview[] = {
+#if 0
 	0x002A0250,
 	0x0F120A00,
 	0x0F1206A8,
@@ -4952,105 +5189,57 @@ static const u32 s5k4ecgx_720_Preview[] = {
 	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
 	0x002A0268,
 	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+#else
+	0x002A02A6,
+	0x0F1202E0,	 //REG_0TC_PCFG_usWidth
+	0x0F12021C,	 //REG_0TC_PCFG_usHeight
+	0x0F120005,	 //REG_0TC_PCFG_Format
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMaxOut4KHzRate
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMinOut4KHzRate
+	0x0F120100,	 //REG_0TC_PCFG_OutClkPerPix88
+	0x0F120300,	 //REG_0TC_PCFG_uBpp88
+	0x0F120012,	 //REG_0TC_PCFG_PVIMask
+	0x0F120000,	 //REG_0TC_PCFG_OIFMask
+	0x0F1201E0,	 //REG_0TC_PCFG_usJpegPacketSize
+	0x0F120000,	 //REG_0TC_PCFG_usJpegTotalPackets
+	0x0F120000,	 //REG_0TC_PCFG_uClockInd
+	0x0F120000,	 //REG_0TC_PCFG_usFrTimeType
+	0x0F120001,	 //REG_0TC_PCFG_FrRateQualityType
+	//0x0F1203E8,	 //029A  //REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	0x0F120935,  //zxz 2012-3-15
+	0x0F12014A,	 //REG_0TC_PCFG_usMinFrTimeMsecMult10
+	0x002A02E0,
+	0x0F120000,	 //REG_0TC_PCFG_uPrevMirror
+	0x0F120000,	 //REG_0TC_PCFG_uCaptureMirror
+#endif
 };
 /* 640 x 480 */
 static const u32 s5k4ecgx_640_Preview[] = {
-#if 0
-	0x002A0250,
-	0x0F120A00,
-	0x0F120780,
-	0x0F120010,
-	0x0F12000C,
-	0x0F120A00,
-	0x0F120780,
-	0x0F120010,
-	0x0F12000C,
-	0x002A0494,
-	0x0F120A00,
-	0x0F120780,
-	0x0F120000,
-	0x0F120000,
-	0x0F120A00,
-	0x0F120780,
-	0x0F120000,
-	0x0F120000,
-#else
 	0x002A02A6,
-	0x0F120280,	         //REG_0TC_PCFG_usWidth
-	0x0F1201E0,	         //REG_0TC_PCFG_usHeight
-	0x0F120005,	         //REG_0TC_PCFG_Format
-	0x0F121780,	         //4F1A	         //REG_0TC_PCFG_usMaxOut4KHzRate
-	0x0F121760,	         //4F1A	         //REG_0TC_PCFG_usMinOut4KHzRate
-	0x0F120100,	         //REG_0TC_PCFG_OutClkPerPix88
-	0x0F120300,	         //REG_0TC_PCFG_uBpp88
-	0x0F120052,	         //REG_0TC_PCFG_PVIMask
-	0x0F120000,	         //REG_0TC_PCFG_OIFMask
-	0x0F1201E0,	         //REG_0TC_PCFG_usJpegPacketSize
-	0x0F120000,	         //REG_0TC_PCFG_usJpegTotalPackets
-	0x0F120000,	         //REG_0TC_PCFG_uClockInd
-	0x0F120000,	         //REG_0TC_PCFG_usFrTimeType
-	0x0F120001,	         //REG_0TC_PCFG_FrRateQualityType
-	0x0F1203E8,	         //029A          //REG_0TC_PCFG_usMaxFrTimeMsecMult10
-	0x0F12014A,	         //REG_0TC_PCFG_usMinFrTimeMsecMult10
+	0x0F120280,	 //REG_0TC_PCFG_usWidth
+	0x0F1201E0,	 //REG_0TC_PCFG_usHeight
+	0x0F120005,	 //REG_0TC_PCFG_Format
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMaxOut4KHzRate
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMinOut4KHzRate
+	0x0F120100,	 //REG_0TC_PCFG_OutClkPerPix88
+	0x0F120300,	 //REG_0TC_PCFG_uBpp88
+	0x0F120012,	 //REG_0TC_PCFG_PVIMask
+	0x0F120000,	 //REG_0TC_PCFG_OIFMask
+	0x0F1201E0,	 //REG_0TC_PCFG_usJpegPacketSize
+	0x0F120000,	 //REG_0TC_PCFG_usJpegTotalPackets
+	0x0F120000,	 //REG_0TC_PCFG_uClockInd
+	0x0F120000,	 //REG_0TC_PCFG_usFrTimeType
+	0x0F120001,	 //REG_0TC_PCFG_FrRateQualityType
+	//0x0F1203E8,	 //029A  //REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	0x0F120935,  //zxz 2012-3-15
+	0x0F12014A,	 //REG_0TC_PCFG_usMinFrTimeMsecMult10
 	0x002A02D0,
-	0x0F120000,	         //REG_0TC_PCFG_uPrevMirror
-	0x0F120000,	         //REG_0TC_PCFG_uCaptureMirror
-#endif
-
-	0x002A0262,
-	0x0F120001,	/* #REG_TC_GP_bUseReqInputInPre	*/
-	0x002A0A1E,
-	0x0F120028,
-	0x002A0AD4,
-	0x0F12003C,
-#if 1
-	0x002A02A6,
-	0x0F120280,
-	0x0F1201E0,
-	0x0F120005,
-	0x002A02B4,
-	0x0F120052,
-	0x002A02BE,
-	0x0F120000,
-	0x0F120001,
-	0x0F12029A,
-	0x0F12014A,
-	0x002A02D0,
-	0x0F120000,
-	0x0F120000,
-#else
-	0x002A02A6,
-	0x0F120280,	         //REG_0TC_PCFG_usWidth
-	0x0F1201E0,	         //REG_0TC_PCFG_usHeight
-	0x0F120005,	         //REG_0TC_PCFG_Format
-	0x0F121780,	         //4F1A	         //REG_0TC_PCFG_usMaxOut4KHzRate
-	0x0F121760,	         //4F1A	         //REG_0TC_PCFG_usMinOut4KHzRate
-	0x0F120100,	         //REG_0TC_PCFG_OutClkPerPix88
-	0x0F120300,	         //REG_0TC_PCFG_uBpp88
-	0x0F120052,	         //REG_0TC_PCFG_PVIMask
-	0x0F120000,	         //REG_0TC_PCFG_OIFMask
-	0x0F1201E0,	         //REG_0TC_PCFG_usJpegPacketSize
-	0x0F120000,	         //REG_0TC_PCFG_usJpegTotalPackets
-	0x0F120000,	         //REG_0TC_PCFG_uClockInd
-	0x0F120000,	         //REG_0TC_PCFG_usFrTimeType
-	0x0F120001,	         //REG_0TC_PCFG_FrRateQualityType
-	0x0F1203E8,	         //029A          //REG_0TC_PCFG_usMaxFrTimeMsecMult10
-	0x0F12014A,	         //REG_0TC_PCFG_usMinFrTimeMsecMult10
-	0x002A02D0,
-	0x0F120000,	         //REG_0TC_PCFG_uPrevMirror
-	0x0F120000,	         //REG_0TC_PCFG_uCaptureMirror
-#endif
-	0x002A0266,
-	0x0F120000,
-	0x002A026A,
-	0x0F120001,
-	0x002A024E,
-	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
-	0x002A0268,
-	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+	0x0F120000,	 //REG_0TC_PCFG_uPrevMirror
+	0x0F120000,	 //REG_0TC_PCFG_uCaptureMirror
 };
 /* 352 x 288 */
 static const u32 s5k4ecgx_352_Preview[] = {
+#if 0
 	0x002A0250,
 	0x0F120928,
 	0x0F120780,
@@ -5099,9 +5288,34 @@ static const u32 s5k4ecgx_352_Preview[] = {
 	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
 	0x002A0268,
 	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+#else
+
+	0x002A02A6,
+	0x0F120160,	 //REG_0TC_PCFG_usWidth
+	0x0F120120,	 //REG_0TC_PCFG_usHeight
+	0x0F120005,	 //REG_0TC_PCFG_Format
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMaxOut4KHzRate
+	0x0F12278D,	 //4F1A	 //REG_0TC_PCFG_usMinOut4KHzRate
+	0x0F120100,	 //REG_0TC_PCFG_OutClkPerPix88
+	0x0F120300,	 //REG_0TC_PCFG_uBpp88
+	0x0F120012,	 //REG_0TC_PCFG_PVIMask
+	0x0F120000,	 //REG_0TC_PCFG_OIFMask
+	0x0F1201E0,	 //REG_0TC_PCFG_usJpegPacketSize
+	0x0F120000,	 //REG_0TC_PCFG_usJpegTotalPackets
+	0x0F120000,	 //REG_0TC_PCFG_uClockInd
+	0x0F120000,	 //REG_0TC_PCFG_usFrTimeType
+	0x0F120001,	 //REG_0TC_PCFG_FrRateQualityType
+	//0x0F1203E8,	 //029A  //REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	0x0F120935,  //zxz 2012-3-15
+	0x0F12014A,	 //REG_0TC_PCFG_usMinFrTimeMsecMult10
+	0x002A02D0,
+	0x0F120000,	 //REG_0TC_PCFG_uPrevMirror
+	0x0F120000,	 //REG_0TC_PCFG_uCaptureMirror
+#endif
 };
 /* 176 x 144 */
 static const u32 s5k4ecgx_176_Preview[] = {
+#if 0
 	0x002A0250,
 	0x0F120928,
 	0x0F120780,
@@ -5150,15 +5364,69 @@ static const u32 s5k4ecgx_176_Preview[] = {
 	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
 	0x002A0268,
 	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+#else
+	0x002A02A6,
+	0x0F1200B0,
+	0x0F120090,
+	0x0F120005,
+	0x002A02B4,
+	0x0F120052,
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12029A,
+	0x0F12014D,
+	0x002A02D0,
+	0x0F120000,
+	0x0F120000,
+	0x002A0266,
+	0x0F120000,
+	0x002A026A,
+	0x0F120001,
+	0x002A024E,
+	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
+	0x002A0268,
+	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+#endif
 };
 
 static const u32 s5k4ecgx_AE_AWB_Lock_On[] = {
+	/* AE Lock */
 	0x002A2C5E,
+	0x0F120000,
+
+	/* AWB Lock */
+	0x002A2C66,
+	0x0F120000,
+};
+
+static const u32 s5k4ecgx_AE_Lock_On_AWB_Lock_Off[] = {
+	/* AE Lock */
+	0x002A2C5E,
+	0x0F120000,
+
+	/* AWB Unlock */
+	0x002A2C66,
+	0x0F120001,
+};
+
+static const u32 s5k4ecgx_AE_Lock_Off_AWB_Lock_On[] = {
+	/* AE Unlock */
+	0x002A2C5E,
+	0x0F120001,
+
+	/* AWB Lock */
+	0x002A2C66,
 	0x0F120000,
 };
 
 static const u32 s5k4ecgx_AE_AWB_Lock_Off[] = {
+	/* AE Unlock */
 	0x002A2C5E,
+	0x0F120001,
+
+	/* AWB Unlock */
+	0x002A2C66,
 	0x0F120001,
 };
 
