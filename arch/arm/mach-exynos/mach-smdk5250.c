@@ -70,6 +70,11 @@
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 #include <plat/tvout.h>
 #endif
+#ifdef CONFIG_VIDEO_S5K4ECGX
+#include <media/s5k4ecgx.h>
+#define temp_width 640
+#define temp_height 480
+#endif
 
 #include <plat/media.h>
 
@@ -370,9 +375,28 @@ static struct i2c_board_info m5mols_board_info = {
 	.platform_data = &m5mols_platdata,
 };
 #endif
+
+#ifdef CONFIG_VIDEO_S5K4ECGX
+static struct s5k4ecgx_platform_data s5k4ecgx_platdata = {
+#ifdef CONFIG_CSI_C
+	.gpio_rst = EXYNOS5_GPX1(2), /* ISP_RESET */
+#endif
+#ifdef CONFIG_CSI_D
+	.gpio_rst = EXYNOS5_GPX1(0), /* ISP_RESET */
+#endif
+	.enable_rst = true, /* positive reset */
+	.irq = IRQ_EINT(22),
+};
+
+static struct i2c_board_info s5k4ecgx_board_info = {
+	I2C_BOARD_INFO("S5K4ECGX", 0xAC>>1),
+	.platform_data = &s5k4ecgx_platdata,
+};
+#endif
 #endif /* CONFIG_VIDEO_EXYNOS_FIMC_LITE */
 
 #ifdef CONFIG_VIDEO_EXYNOS_MIPI_CSIS
+
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
 	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.0"),
 	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.1"),
@@ -432,6 +456,45 @@ static struct platform_device m5mols_fixed_voltage = {
 	.id		= 4,
 	.dev		= {
 		.platform_data	= &m5mols_fixed_voltage_config,
+	},
+};
+#endif
+
+#ifdef CONFIG_VIDEO_S5K4ECGX
+static struct regulator_consumer_supply s5k4ecgx_fixed_voltage_supplies[] = {
+	REGULATOR_SUPPLY("core", NULL),
+	REGULATOR_SUPPLY("dig_18", NULL),
+	REGULATOR_SUPPLY("d_sensor", NULL),
+	REGULATOR_SUPPLY("dig_28", NULL),
+	REGULATOR_SUPPLY("a_sensor", NULL),
+	REGULATOR_SUPPLY("dig_12", NULL),
+	/*
+	REGULATOR_SUPPLY("cam_isp_core", NULL),
+	REGULATOR_SUPPLY("cam_isp_host", NULL),
+	REGULATOR_SUPPLY("cam_af", NULL),
+	*/
+};
+
+static struct regulator_init_data s5k4ecgx_fixed_voltage_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(s5k4ecgx_fixed_voltage_supplies),
+	.consumer_supplies	= s5k4ecgx_fixed_voltage_supplies,
+};
+
+static struct fixed_voltage_config s5k4ecgx_fixed_voltage_config = {
+	.supply_name	= "CAM_SENSOR",
+	.microvolts	= 1800000,
+	.gpio		= -EINVAL,
+	.init_data	= &s5k4ecgx_fixed_voltage_init_data,
+};
+
+static struct platform_device s5k4ecgx_fixed_voltage = {
+	.name		= "reg-fixed-voltage",
+	.id		= 4,
+	.dev		= {
+		.platform_data	= &s5k4ecgx_fixed_voltage_config,
 	},
 };
 #endif
@@ -531,6 +594,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_M5MOLS
 	&m5mols_fixed_voltage,
+#endif
+#ifdef CONFIG_VIDEO_S5K4ECGX
+	&s5k4ecgx_fixed_voltage,
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
 	&exynos_device_rotator,
@@ -767,7 +833,8 @@ static void __init smdk5250_camera_gpio_cfg(void)
 	/* CAM B port(b0010) : BAY_Hsync, BAY_MCLK */
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPG2(0), 2, S3C_GPIO_SFN(2));
 	/* This is externel interrupt for m5mo */
-#ifdef CONFIG_VIDEO_M5MOLS
+
+#if defined(CONFIG_VIDEO_M5MOLS) || defined(CONFIG_VIDEO_S5K4ECGX)
 	s3c_gpio_cfgpin(EXYNOS5_GPX2(6), S3C_GPIO_SFN(0xF));
 	s3c_gpio_setpull(EXYNOS5_GPX2(6), S3C_GPIO_PULL_NONE);
 #endif
@@ -833,6 +900,37 @@ static struct s3c_platform_camera flite_m5mo = {
 };
 #endif
 
+#if defined(CONFIG_VIDEO_S5K4ECGX)
+static struct exynos_isp_info s5k4ecgx = {
+	.board_info	= &s5k4ecgx_board_info,
+	.cam_srclk_name	= "xxti",
+	.clk_frequency  = 24000000UL,
+	.bus_type	= CAM_TYPE_MIPI,
+#ifdef CONFIG_CSI_C
+	.cam_clk_name	= "sclk_cam0",
+	.i2c_bus_num	= 4,
+	.cam_port	= CAM_PORT_A, /* A-Port : 0, B-Port : 1 */
+#endif
+#ifdef CONFIG_CSI_D
+	.cam_clk_name	= "sclk_cam1",
+	.i2c_bus_num	= 5,
+	.cam_port	= CAM_PORT_B, /* A-Port : 0, B-Port : 1 */
+#endif
+	.flags		= CAM_CLK_INV_PCLK | CAM_CLK_INV_VSYNC,
+	.csi_data_align = 32,
+};
+
+/* This is for platdata of fimc-lite */
+static struct s3c_platform_camera flite_s5k4ecgx = {
+	.type		= CAM_TYPE_MIPI,
+	.use_isp	= true,
+	.inv_pclk	= 1,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+};
+#endif
+
 static void __set_gsc_camera_config(struct exynos_platform_gscaler *data,
 					u32 active_index, u32 preview,
 					u32 camcording, u32 max_cam)
@@ -868,6 +966,21 @@ static void __init smdk5250_set_camera_platdata(void)
 	flite1_cam_index++;
 #endif
 #endif
+
+#if defined(CONFIG_VIDEO_S5K4ECGX)
+	exynos_gsc0_default_data.isp_info[gsc_cam_index++] = &s5k4ecgx;
+#if defined(CONFIG_CSI_C)
+	exynos_flite0_default_data.cam[flite0_cam_index] = &flite_s5k4ecgx;
+	exynos_flite0_default_data.isp_info[flite0_cam_index] = &s5k4ecgx;
+	flite0_cam_index++;
+#endif
+#if defined(CONFIG_CSI_D)
+	exynos_flite1_default_data.cam[flite1_cam_index] = &flite_s5k4ecgx;
+	exynos_flite1_default_data.isp_info[flite1_cam_index] = &s5k4ecgx;
+	flite1_cam_index++;
+#endif
+#endif
+
 	/* flite platdata register */
 	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
 	__set_flite_camera_config(&exynos_flite1_default_data, 0, flite1_cam_index);
