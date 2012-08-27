@@ -120,17 +120,17 @@ static int audss_clk_div_init(struct clk *src_clk)
 	if (i2s_rate != src_clk_rate)
 		clk_set_rate(audss.i2s_clk, i2s_rate);
 
-	pr_info("%s: CLKDIV[0x%x]\n", __func__, readl(S5P_CLKDIV_AUDSS));
-	pr_info("%s: SRPCLK[%ld]\n", __func__, clk_get_rate(audss.srp_clk));
-	pr_info("%s: BUSCLK[%ld]\n", __func__, clk_get_rate(audss.bus_clk));
-	pr_info("%s: I2SCLK[%ld]\n", __func__, clk_get_rate(audss.i2s_clk));
+	pr_debug("%s: CLKDIV[0x%x]\n", __func__, readl(S5P_CLKDIV_AUDSS));
+	pr_debug("%s: SRPCLK[%ld]\n", __func__, clk_get_rate(audss.srp_clk));
+	pr_debug("%s: BUSCLK[%ld]\n", __func__, clk_get_rate(audss.bus_clk));
+	pr_debug("%s: I2SCLK[%ld]\n", __func__, clk_get_rate(audss.i2s_clk));
 
 	clk_disable(audss.srp_clk);
 	clk_disable(audss.bus_clk);
 	if (!strcmp(audss.rclksrc, "i2sclk"))
 		clk_disable(audss.i2s_clk);
 
-	pr_info("%s: CLKGATE[0x%x]\n", __func__, readl(S5P_CLKGATE_AUDSS));
+	pr_debug("%s: CLKGATE[0x%x]\n", __func__, readl(S5P_CLKGATE_AUDSS));
 
 	clk_put(fout_epll);
 
@@ -264,7 +264,7 @@ static int audss_init(void)
 	}
 
 	audss.rclksrc = rclksrc[BUSCLK];
-	pr_info("%s: RCLK SRC[%s]\n", __func__, audss.rclksrc);
+	pr_debug("%s: RCLK SRC[%s]\n", __func__, audss.rclksrc);
 
 	audss.reg_saved = false;
 	audss.clk_enabled = false;
@@ -329,7 +329,7 @@ int __init samsung_audss_init(struct platform_device *pdev)
 	audss.pd_ctl_enable = soc_is_exynos5250() ? true : false;
 
 	if (audss.pd_ctl_enable) {
-		pr_info("%s: Enabled runtime PM for audss\n", __func__);
+		pr_debug("%s: Enabled runtime PM for audss\n", __func__);
 		pm_runtime_enable(&audss.pdev->dev);
 	}
 #endif
@@ -347,7 +347,7 @@ void samsung_audss_exit(void)
 
 #ifdef CONFIG_PM_RUNTIME
 	if (audss.pd_ctl_enable) {
-		pr_info("%s: Disabled runtime PM for audio subsystem\n", __func__);
+		pr_debug("%s: Disabled runtime PM for audio subsystem\n", __func__);
 		pm_runtime_disable(&audss.pdev->dev);
 		audss.pd_ctl_enable = false;
 	}
