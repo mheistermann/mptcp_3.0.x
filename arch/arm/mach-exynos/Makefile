@@ -75,7 +75,6 @@ obj-$(CONFIG_MACH_ARNDALE)		+= board-arndale-power.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-arndale-audio.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-arndale-usb.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-arndale-input.o
-obj-$(CONFIG_MACH_ARNDALE)		+= board-arndale-spi.o
 
 # device support
 

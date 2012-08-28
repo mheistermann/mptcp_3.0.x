@@ -915,7 +915,7 @@ static struct s5p_mfc_platdata smdk5250_mfc_pd = {
 };
 #endif
 
-static void __init smdk5250_map_io(void)
+static void __init arndale_map_io(void)
 {
 	clk_xxti.rate = 24000000;
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
@@ -1036,7 +1036,7 @@ err_power:
 	return ret;
 }
 
-static void __init smdk5250_machine_init(void)
+static void __init arndale_machine_init(void)
 {
 	samsung_board_rev = get_samsung_board_rev();
 
@@ -1045,9 +1045,6 @@ static void __init smdk5250_machine_init(void)
 	exynos5_smdk5250_audio_init();
 	exynos5_smdk5250_usb_init();
 	exynos5_smdk5250_input_init();
-#if defined(CONFIG_S3C64XX_DEV_SPI)
-	exynos5_smdk5250_spi_init();
-#endif
 
 	s3c_i2c2_set_platdata(NULL);
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
@@ -1253,8 +1250,8 @@ static void __init exynos_c2c_reserve(void)
 MACHINE_START(ARNDALE, "ARNDALE")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos5_init_irq,
-	.map_io		= smdk5250_map_io,
-	.init_machine	= smdk5250_machine_init,
+	.map_io		= arndale_map_io,
+	.init_machine	= arndale_machine_init,
 	.timer		= &exynos4_timer,
 #ifdef CONFIG_EXYNOS_C2C
 	.reserve	= &exynos_c2c_reserve,
