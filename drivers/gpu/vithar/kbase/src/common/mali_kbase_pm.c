@@ -116,7 +116,7 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 	}
 	osk_waitq_set(&kbdev->pm.policy_outstanding_event);
 
-	osk_err = osk_workq_init(&kbdev->pm.workqueue, "kbase_pm", OSK_WORKQ_NON_REENTRANT);
+	osk_err = osk_workq_init(&kbdev->pm.workqueue, "kbase_pm", OSK_WORKQ_NON_REENTRANT | OSK_WORKQ_HIGH_PRIORITY);
 	if (OSK_ERR_NONE != osk_err)
 	{
 		goto workq_fail;
