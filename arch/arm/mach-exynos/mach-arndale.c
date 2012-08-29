@@ -16,12 +16,12 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/memblock.h>
-#include <linux/smsc911x.h>
 #include <linux/delay.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 
 #include <asm/mach/arch.h>
+#include <asm/io.h>
 #include <asm/mach-types.h>
 
 #include <media/s5k4ba_platform.h>
@@ -78,78 +78,47 @@
 #define REG_INFORM4            (S5P_INFORM4)
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
-#define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
+#define ARNDALE_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
 				 S3C2410_UCON_TXIRQMODE |	\
 				 S3C2410_UCON_RXIRQMODE |	\
 				 S3C2410_UCON_RXFIFO_TOI |	\
 				 S3C2443_UCON_RXERR_IRQEN)
 
-#define SMDK5250_ULCON_DEFAULT	S3C2410_LCON_CS8
+#define ARNDALE_ULCON_DEFAULT	S3C2410_LCON_CS8
 
-#define SMDK5250_UFCON_DEFAULT	(S3C2410_UFCON_FIFOMODE |	\
+#define ARNDALE_UFCON_DEFAULT	(S3C2410_UFCON_FIFOMODE |	\
 				 S5PV210_UFCON_TXTRIG4 |	\
 				 S5PV210_UFCON_RXTRIG4)
 
-static struct s3c2410_uartcfg smdk5250_uartcfgs[] __initdata = {
+static struct s3c2410_uartcfg arndale_uartcfgs[] __initdata = {
 	[0] = {
 		.hwport		= 0,
 		.flags		= 0,
-		.ucon		= SMDK5250_UCON_DEFAULT,
-		.ulcon		= SMDK5250_ULCON_DEFAULT,
-		.ufcon		= SMDK5250_UFCON_DEFAULT,
+		.ucon		= ARNDALE_UCON_DEFAULT,
+		.ulcon		= ARNDALE_ULCON_DEFAULT,
+		.ufcon		= ARNDALE_UFCON_DEFAULT,
 	},
 	[1] = {
 		.hwport		= 1,
 		.flags		= 0,
-		.ucon		= SMDK5250_UCON_DEFAULT,
-		.ulcon		= SMDK5250_ULCON_DEFAULT,
-		.ufcon		= SMDK5250_UFCON_DEFAULT,
+		.ucon		= ARNDALE_UCON_DEFAULT,
+		.ulcon		= ARNDALE_ULCON_DEFAULT,
+		.ufcon		= ARNDALE_UFCON_DEFAULT,
 	},
 	[2] = {
 		.hwport		= 2,
 		.flags		= 0,
-		.ucon		= SMDK5250_UCON_DEFAULT,
-		.ulcon		= SMDK5250_ULCON_DEFAULT,
-		.ufcon		= SMDK5250_UFCON_DEFAULT,
+		.ucon		= ARNDALE_UCON_DEFAULT,
+		.ulcon		= ARNDALE_ULCON_DEFAULT,
+		.ufcon		= ARNDALE_UFCON_DEFAULT,
 	},
 	[3] = {
 		.hwport		= 3,
 		.flags		= 0,
-		.ucon		= SMDK5250_UCON_DEFAULT,
-		.ulcon		= SMDK5250_ULCON_DEFAULT,
-		.ufcon		= SMDK5250_UFCON_DEFAULT,
-	},
-};
-
-static struct resource smdk5250_smsc911x_resources[] = {
-	[0] = {
-		.start	= EXYNOS4_PA_SROM_BANK(1),
-		.end	= EXYNOS4_PA_SROM_BANK(1) + SZ_64K - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IRQ_EINT(5),
-		.end	= IRQ_EINT(5),
-		.flags	= IORESOURCE_IRQ | IRQF_TRIGGER_LOW,
-	},
-};
-
-static struct smsc911x_platform_config smsc9215_config = {
-	.irq_polarity	= SMSC911X_IRQ_POLARITY_ACTIVE_LOW,
-	.irq_type	= SMSC911X_IRQ_TYPE_PUSH_PULL,
-	.flags		= SMSC911X_USE_16BIT | SMSC911X_FORCE_INTERNAL_PHY,
-	.phy_interface	= PHY_INTERFACE_MODE_MII,
-	.mac		= {0x00, 0x80, 0x00, 0x23, 0x45, 0x67},
-};
-
-static struct platform_device smdk5250_smsc911x = {
-	.name		= "smsc911x",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(smdk5250_smsc911x_resources),
-	.resource	= smdk5250_smsc911x_resources,
-	.dev		= {
-		.platform_data	= &smsc9215_config,
+		.ucon		= ARNDALE_UCON_DEFAULT,
+		.ulcon		= ARNDALE_ULCON_DEFAULT,
+		.ufcon		= ARNDALE_UFCON_DEFAULT,
 	},
 };
 
@@ -487,7 +456,7 @@ static struct notifier_block exynos5_reboot_notifier = {
 	.notifier_call = exynos5_notifier_call,
 };
 
-static struct platform_device *smdk5250_devices[] __initdata = {
+static struct platform_device *arndale_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c2,
 	&s3c_device_i2c3,
@@ -536,7 +505,6 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos_device_rotator,
 #endif
 	&s3c_device_rtc,
-	&smdk5250_smsc911x,
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI
 	&s5p_device_hdmi,
@@ -882,29 +850,6 @@ static void __init smdk5250_set_camera_platdata(void)
 }
 #endif /* CONFIG_VIDEO_EXYNOS_GSCALER */
 
-static void __init smdk5250_smsc911x_init(void)
-{
-	u32 cs1;
-
-	/* configure nCS1 width to 16 bits */
-	cs1 = __raw_readl(S5P_SROM_BW) &
-		~(S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS1__SHIFT);
-	cs1 |= ((1 << S5P_SROM_BW__DATAWIDTH__SHIFT) |
-		(1 << S5P_SROM_BW__WAITENABLE__SHIFT) |
-		(1 << S5P_SROM_BW__BYTEENABLE__SHIFT)) <<
-		S5P_SROM_BW__NCS1__SHIFT;
-	__raw_writel(cs1, S5P_SROM_BW);
-
-	/* set timing for nCS1 suitable for ethernet chip */
-	__raw_writel((0x1 << S5P_SROM_BCX__PMC__SHIFT) |
-		     (0x9 << S5P_SROM_BCX__TACP__SHIFT) |
-		     (0xc << S5P_SROM_BCX__TCAH__SHIFT) |
-		     (0x1 << S5P_SROM_BCX__TCOH__SHIFT) |
-		     (0x6 << S5P_SROM_BCX__TACC__SHIFT) |
-		     (0x1 << S5P_SROM_BCX__TCOS__SHIFT) |
-		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
-}
-
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 static struct s5p_mfc_platdata smdk5250_mfc_pd = {
 	.clock_rate = 333000000,
@@ -920,7 +865,7 @@ static void __init arndale_map_io(void)
 	clk_xxti.rate = 24000000;
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
-	s3c24xx_init_uarts(smdk5250_uartcfgs, ARRAY_SIZE(smdk5250_uartcfgs));
+	s3c24xx_init_uarts(arndale_uartcfgs, ARRAY_SIZE(arndale_uartcfgs));
 	exynos_reserve_mem();
 }
 
@@ -1091,7 +1036,7 @@ static void __init arndale_machine_init(void)
 #endif
 	exynos_sysmmu_init();
 
-	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
+	platform_add_devices(arndale_devices, ARRAY_SIZE(arndale_devices));
 
 	exynos5_smdk5250_display_init();
 
