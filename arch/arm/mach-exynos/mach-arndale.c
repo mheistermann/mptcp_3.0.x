@@ -1223,9 +1223,6 @@ static void __init arndale_machine_init(void)
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
 #endif
 #endif
-
-	smdk5250_smsc911x_init();
-
 	register_reboot_notifier(&exynos5_reboot_notifier);
 }
 
