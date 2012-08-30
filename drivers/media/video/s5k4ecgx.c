@@ -169,6 +169,7 @@ static struct v4l2_mbus_framefmt default_fmt[S5K4ECGX_OPRMODE_MAX] = {
 enum s5k4ecgx_preview_frame_size {
 	S5K4ECGX_PREVIEW_QCIF = 0,	/* 176x144 */
 	S5K4ECGX_PREVIEW_CIF,		/* 352x288 */
+	S5K4ECGX_PREVIEW_QVGA,		/* 320x240 */
 	S5K4ECGX_PREVIEW_VGA,		/* 640x480 */
 	S5K4ECGX_PREVIEW_D1,		/* 720x480 */
 	S5K4ECGX_PREVIEW_WVGA,		/* 800x480 */
@@ -177,6 +178,7 @@ enum s5k4ecgx_preview_frame_size {
 	S5K4ECGX_PREVIEW_WSVGA,		/* 1024x600*/
 	S5K4ECGX_PREVIEW_1024,		/* 1024x768*/
 	S5K4ECGX_PREVIEW_1280,		/* 1280x720*/
+	S5K4ECGX_PREVIEW_1920,		/* 1920x1080*/
 	S5K4ECGX_PREVIEW_2560,		/* 2560x1920*/
 	S5K4ECGX_PREVIEW_MAX,
 };
@@ -202,6 +204,7 @@ static const struct s5k4ecgx_resolution s5k4ecgx_resolutions[] = {
 	/* monitor size */
 	{S5K4ECGX_PREVIEW_QCIF 	, S5K4ECGX_OPRMODE_VIDEO, 176,  144  },
 	{S5K4ECGX_PREVIEW_CIF 	, S5K4ECGX_OPRMODE_VIDEO, 352,  288  },
+	{S5K4ECGX_PREVIEW_QVGA 	, S5K4ECGX_OPRMODE_VIDEO, 320,  240  },
 	{S5K4ECGX_PREVIEW_VGA 	, S5K4ECGX_OPRMODE_VIDEO, 640,  480  },
 	{S5K4ECGX_PREVIEW_D1  	, S5K4ECGX_OPRMODE_VIDEO, 720,  480  },
 	{S5K4ECGX_PREVIEW_WVGA	, S5K4ECGX_OPRMODE_VIDEO, 800,  480  },
@@ -210,6 +213,7 @@ static const struct s5k4ecgx_resolution s5k4ecgx_resolutions[] = {
 	{S5K4ECGX_PREVIEW_WSVGA	, S5K4ECGX_OPRMODE_VIDEO, 1024, 600  },
 	{S5K4ECGX_PREVIEW_1024	, S5K4ECGX_OPRMODE_VIDEO, 1024, 768  },
 	{S5K4ECGX_PREVIEW_1280	, S5K4ECGX_OPRMODE_VIDEO, 1280, 720  },
+	{S5K4ECGX_PREVIEW_1920	, S5K4ECGX_OPRMODE_VIDEO, 1920, 1080  },
 	{S5K4ECGX_PREVIEW_2560	, S5K4ECGX_OPRMODE_VIDEO, 2560, 1920 },
 
 	/* capture(JPEG or Bayer RAW or YUV Raw) size */
@@ -235,9 +239,9 @@ struct s5k4ecgx_framesize {
 
 static const struct s5k4ecgx_framesize s5k4ecgx_preview_framesize_list[] = {
 	{ S5K4ECGX_PREVIEW_VGA,		640,  480   },
-	{ S5K4ECGX_PREVIEW_880,		880,  720   },
 	{ S5K4ECGX_PREVIEW_1024,	1024, 768   },
 	{ S5K4ECGX_PREVIEW_1280,	1280,  720  },
+	{ S5K4ECGX_PREVIEW_1920,	1920,  1080 },
 	{ S5K4ECGX_PREVIEW_2560,	2560,  1920 },
 };
 
@@ -365,6 +369,8 @@ struct s5k4ecgx_regs {
 	struct s5k4ecgx_regset_table single_af_start;
 	struct s5k4ecgx_regset_table single_af_off_1;
 	struct s5k4ecgx_regset_table single_af_off_2;
+	struct s5k4ecgx_regset_table continuous_af_on;
+	struct s5k4ecgx_regset_table continuous_af_off;
 	struct s5k4ecgx_regset_table dtp_start;
 	struct s5k4ecgx_regset_table dtp_stop;
 	struct s5k4ecgx_regset_table init_reg_1;
@@ -401,9 +407,9 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 
 	.preview_size = {
 			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_VGA, s5k4ecgx_640_Preview),
-			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_880, s5k4ecgx_880_Preview),
 			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_1024, s5k4ecgx_1024_Preview),
 			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_1280, s5k4ecgx_1280_Preview),
+			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_1920, s5k4ecgx_1920_Preview),
 			S5K4ECGX_REGSET(S5K4ECGX_PREVIEW_2560, s5k4ecgx_max_Preview),
 	},
 
@@ -570,6 +576,8 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 	.single_af_start = S5K4ECGX_REGSET_TABLE(s5k4ecgx_Single_AF_Start),
 	.single_af_off_1 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_Single_AF_Off_1),
 	.single_af_off_2 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_Single_AF_Off_2),
+	.continuous_af_on = S5K4ECGX_REGSET_TABLE(s5k4ecgx_Continuous_AF_On),
+	.continuous_af_off = S5K4ECGX_REGSET_TABLE(s5k4ecgx_Continuous_AF_Off),
 	.dtp_start = S5K4ECGX_REGSET_TABLE(s5k4ecgx_DTP_init),
 	.dtp_stop = S5K4ECGX_REGSET_TABLE(s5k4ecgx_DTP_stop),
 ///	.init_reg_1 = S5K4ECGX_REGSET_TABLE(s5k4ecgx_init_reg1),
@@ -875,9 +883,10 @@ static int s5k4ecgx_set_parameter(struct v4l2_subdev *sd,
 				int table_size)
 {
 	int err;
-
+/*
 	if (*current_value_ptr == new_value)
 		return 0;
+		*/
 
 	err = s5k4ecgx_set_from_table(sd, setting_name, table,
 				table_size, new_value);
@@ -1363,6 +1372,28 @@ static void s5k4ecgx_auto_focus_flash_start(struct v4l2_subdev *sd)
 	}
 }
 
+static int s5k4ecgx_start_continuous_auto_focus(struct v4l2_subdev *sd)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+
+	s5k4ecgx_set_from_table(sd, "continuous af start",
+				&state->regs->continuous_af_on, 1, 0);
+
+	return 0;
+}
+static int s5k4ecgx_stop_continuous_auto_focus(struct v4l2_subdev *sd)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+
+	s5k4ecgx_set_from_table(sd, "continuous af stop",
+				&state->regs->continuous_af_off, 1, 0);
+
+	return 0;
+}
 static int s5k4ecgx_start_auto_focus(struct v4l2_subdev *sd)
 {
 	int light_level;
@@ -1515,6 +1546,8 @@ static int s5k4ecgx_stop_auto_focus(struct v4l2_subdev *sd)
 
 	s5k4ecgx_set_from_table(sd, "single af off 2",
 				&state->regs->single_af_off_2, 1, 0);
+
+	msleep(state->one_frame_delay_ms);
 
 	/* wait until the other thread has completed
 	 * aborting the auto focus and restored state
@@ -2402,6 +2435,9 @@ static int s5k4ecgx_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAM_GET_SHT_TIME:
 		err = s5k4ecgx_get_shutterspeed(sd, ctrl);
 		break;
+	case V4L2_CID_CAM_GET_FRAME_COUNT:
+		err = s5k4ecgx_get_frame_count(sd, ctrl);
+		break;
 
 #if 0 //many del
 
@@ -2483,8 +2519,6 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	mutex_lock(&state->ctrl_lock);
 
 	switch (ctrl->id) {
-
-#if 1
 	case V4L2_CID_CAMERA_FLASH_MODE:
 		err = s5k4ecgx_set_flash_mode(sd, value);
 		dev_err(&client->dev, "V4L2_CID_CAMERA_FLASH_MODE\n");
@@ -2667,15 +2701,25 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAM_OBJECT_POSITION_Y:
 		state->position.y = value;
 		break;
+	case V4L2_CID_CAM_CAF_START_STOP:
+		dev_err(&client->dev, "V4L2_CID_CAM_CAF_START_STOP\n");
+		if (value == V4L2_CAF_START) {
+			err = s5k4ecgx_start_continuous_auto_focus(sd);
+		} else if (value == V4L2_CAF_STOP) {
+			err = s5k4ecgx_stop_continuous_auto_focus(sd);
+
+		} else {
+			err = -EINVAL;
+			dev_err(&client->dev,
+				"%s: bad focus value requestion %d\n",
+				__func__, value);
+		}
+		break;
 	case V4L2_CID_CAM_SET_AUTO_FOCUS:
 		dev_err(&client->dev, "V4L2_CID_CAM_SET_AUTO_FOCUS\n");
 		if (value == V4L2_AUTO_FOCUS_ON) {
 			err = s5k4ecgx_start_auto_focus(sd);
 		} else if (value == V4L2_AUTO_FOCUS_OFF) {
-			/*TODO: When stop AF is supported it will be deleted.*/
-			dev_err(&client->dev, "stop auto focus is not supported now\n");
-			break;
-
 			err = s5k4ecgx_stop_auto_focus(sd);
 
 		} else {
@@ -2687,10 +2731,6 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAM_FRAME_RATE:
 		dev_err(&client->dev, "V4L2_CID_CAM_SET_FRAME_RATE\n");
-
-		/*TODO: When frame rate change is supported it will be deleted.*/
-		dev_err(&client->dev, "Frame rate change is not supported now\n");
-		break;
 
 		parms->capture.timeperframe.numerator = 1;
 		parms->capture.timeperframe.denominator = value;
@@ -2704,7 +2744,6 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					state->regs->fps,
 					ARRAY_SIZE(state->regs->fps));
 		break;
-#endif
 	case V4L2_CID_CAPTURE:
 		dev_err(&client->dev, "V4L2_CID_CAPTURE\n");
 		err = s5k4ecgx_start_capture(sd);
@@ -3126,15 +3165,15 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 	if (s5k4ecgx_write_init_reg2_burst(sd) < 0)
 		return -EIO;
 
-	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
-	s5k4ecgx_set_stored_parms(sd);
+	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
 
 	msleep(100);
 
 	if (s5k4ecgx_set_from_table(sd, "init reg 3",
 					&state->regs->init_reg_3, 1, 0) < 0)
 		return -EIO;
-#if 0 //many del
+#ifdef ENABLE
 	if (s5k4ecgx_set_from_table(sd, "flash init",
 				&state->regs->flash_init, 1, 0) < 0)
 		return -EIO;
@@ -3145,6 +3184,13 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 					&state->regs->dtp_start, 1, 0) < 0)
 			return -EIO;
 	}
+
+	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+		return 0;
+
+	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
+	s5k4ecgx_set_from_table(sd, "capture start",
+				&state->regs->capture_start, 1, 0);
 
 	dev_dbg(&client->dev, "%s: end\n", __func__);
 	state->runmode = S5K4ECGX_RUNMODE_RUNNING;
