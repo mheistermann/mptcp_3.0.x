@@ -1045,6 +1045,31 @@ out:
 	return read_value;
 }
 
+static int s5k4ecgx_set_zoom(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+	struct sec_cam_parm *parms =
+		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	struct sec_cam_parm *stored_parms =
+		(struct sec_cam_parm *)&state->stored_parm.parm.raw_data;
+	u16 zoom_ratio;
+
+	zoom_ratio = (unsigned int)(0x100 + value * 12);
+
+	s5k4ecgx_i2c_write_twobyte(client,  0x0028,  0x7000);
+	s5k4ecgx_i2c_write_twobyte(client,  0x002A,  0x048E);
+	s5k4ecgx_i2c_write_twobyte(client,  0x0F12,  zoom_ratio);
+	s5k4ecgx_i2c_write_twobyte(client,  0x002A,  0x04A4);
+	s5k4ecgx_i2c_write_twobyte(client,  0x0F12,  0x05);
+
+	stored_parms->zoom_ratio = value;
+	parms->zoom_ratio = value;
+
+	return 0;
+}
+
 static int s5k4ecgx_start_capture(struct v4l2_subdev *sd)
 {
 	int err;
@@ -2011,7 +2036,6 @@ static int s5k4ecgx_set_stored_parms(struct v4l2_subdev *sd)
 	else
 		state->one_frame_delay_ms = NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
 	*/
-
 	dev_dbg(&client->dev, "%s: return %d\n", __func__, err);
 	return err;
 }
@@ -2749,6 +2773,11 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		err = s5k4ecgx_start_capture(sd);
 		break;
 
+	case V4L2_CID_CAM_ZOOM:
+		dev_err(&client->dev, "V4L2_CID_CAM_ZOOM\n");
+		err = s5k4ecgx_set_zoom(sd, value);
+		break;
+
 	/* Used to start / stop preview operation.
 	 * This call can be modified to START/STOP operation,
 	 * which can be used in image capture also
@@ -3143,6 +3172,8 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 		container_of(sd, struct s5k4ecgx_state, sd);
 	struct sec_cam_parm *parms =
 		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	struct sec_cam_parm *stored_parms =
+		(struct sec_cam_parm *)&state->stored_parm.parm.raw_data;
 	int err;
 
 	dev_err(&client->dev, "%s: start\n", __func__);
@@ -3168,11 +3199,17 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
 		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
 
+	s5k4ecgx_set_stored_parms(sd);
+
 	msleep(100);
 
 	if (s5k4ecgx_set_from_table(sd, "init reg 3",
 					&state->regs->init_reg_3, 1, 0) < 0)
 		return -EIO;
+
+	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+		err = s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
+
 #ifdef ENABLE
 	if (s5k4ecgx_set_from_table(sd, "flash init",
 				&state->regs->flash_init, 1, 0) < 0)
@@ -3189,6 +3226,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 		return 0;
 
 	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
+
 	s5k4ecgx_set_from_table(sd, "capture start",
 				&state->regs->capture_start, 1, 0);
 
