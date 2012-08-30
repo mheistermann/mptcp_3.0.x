@@ -1021,6 +1021,14 @@ enum v4l2_cam_zoom_level {
 	V4L2_ZOOM_LEVEL_MAX = 31,
 };
 
+#define V4L2_CID_CAM_GET_FRAME_COUNT			(V4L2_CID_CAMERA_CLASS_BASE+60)
+
+#define V4L2_CID_CAM_CAF_START_STOP			(V4L2_CID_CAMERA_CLASS_BASE+61)
+enum v4l2_cam_caf_start_stop {
+	V4L2_CAF_STOP = 0,
+	V4L2_CAF_START,
+	V4L2_CAF_MAX,
+};
 
 #define V4L2_CID_CAMERA_ZOOM				(V4L2_CID_PRIVATE_BASE+90)
 enum v4l2_zoom_level {
@@ -1411,6 +1419,7 @@ struct sec_cam_parm {
 	int white_balance;
 	int fps;
 	int aeawb_lockunlock;
+	int zoom_ratio;
 };
 
 #endif /* __LINUX_VIDEODEV2_SAMSUNG_H */
