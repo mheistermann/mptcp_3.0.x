@@ -54,7 +54,7 @@
 #endif
 
 #define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
-#define FLITE_MAX_CTRL_NUM		23
+#define FLITE_MAX_CTRL_NUM		25
 #define FLITE_MAX_OUT_BUFS (soc_is_exynos5250_rev1 ? flite->reqbufs_cnt	: 1)
 #ifdef CONFIG_ARCH_EXYNOS4
 #define FLITE_MAX_MBUS_NUM		1
@@ -193,6 +193,8 @@ struct flite_ctrls {
 	struct v4l2_ctrl	*exif_iso;
 	struct v4l2_ctrl	*exif_shutterspeed;
 	struct v4l2_ctrl	*aeawb_lockunlock;
+	struct v4l2_ctrl	*caf_startstop;
+	struct v4l2_ctrl	*digital_zoom;
 };
 /**
   * struct flite_dev - top structure of FIMC-Lite device

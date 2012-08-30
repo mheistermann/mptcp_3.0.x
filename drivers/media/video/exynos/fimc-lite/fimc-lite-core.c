@@ -835,6 +835,8 @@ static int flite_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_CAM_AUTO_FOCUS_RESULT:
 	case V4L2_CID_JPEG_QUALITY:
 	case V4L2_CID_CAM_AEAWB_LOCK_UNLOCK:
+	case V4L2_CID_CAM_CAF_START_STOP:
+	case V4L2_CID_CAM_ZOOM:
 		ctrl_con.id = ctrl->id;
 		ctrl_con.value = ctrl->val;
 
@@ -1137,6 +1139,26 @@ static const struct v4l2_ctrl_config flite_custom_ctrl[] = {
 		.max = V4L2_AE_AWB_MAX,
 		.step = 1,
 		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_CAF_START_STOP,
+		.name = "Set camera continuous AF start stop",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_CAF_MAX,
+		.step = 1,
+		.def = 0,
+	}, {
+		.ops = &flite_ctrl_ops,
+		.id = V4L2_CID_CAM_ZOOM,
+		.name = "Set camera Zoom",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = V4L2_ZOOM_LEVEL_MAX,
+		.step = 1,
+		.def = 0,
 	},
 };
 
@@ -1191,7 +1213,11 @@ static int flite_ctrls_create(struct flite_dev *flite)
 	flite->flite_ctrls.exif_shutterspeed = v4l2_ctrl_new_custom(&flite->ctrl_handler,
 					&flite_custom_ctrl[21], NULL);
 	flite->flite_ctrls.aeawb_lockunlock = v4l2_ctrl_new_custom(&flite->ctrl_handler,
-					&flite_custom_ctrl[21], NULL);
+					&flite_custom_ctrl[22], NULL);
+	flite->flite_ctrls.caf_startstop = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[23], NULL);
+	flite->flite_ctrls.digital_zoom = v4l2_ctrl_new_custom(&flite->ctrl_handler,
+					&flite_custom_ctrl[24], NULL);
 	flite->ctrls_rdy = flite->ctrl_handler.error == 0;
 
 	if (flite->ctrl_handler.error) {
