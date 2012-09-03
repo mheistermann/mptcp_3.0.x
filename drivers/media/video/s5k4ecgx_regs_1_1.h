@@ -5646,6 +5646,49 @@ static const u32 s5k4ecgx_1M_Capture[] = {
 	0x0F120535,   //REG_0TC_CCFG_usMaxFrTimeMsecMult10
 	0x0F12029A,   //REG_0TC_CCFG_usMinFrTimeMsecMult10
 };
+/* 1024 x 768 */
+static const u32 s5k4ecgx_XGA_Capture[] = {
+	0xFCFCD000,
+	0x00287000,
+	0x002A0258,
+	0x0F120A00,	//REG_TC_GP_CapReqInputWidth //2560
+	0x0F120780,	//REG_TC_GP_CapReqInputHeight //1920
+	0x0F120010,	//REG_TC_GP_CapInputWidthOfs //(2592-2560)/2
+	0x0F12000C,	//REG_TC_GP_CapInputHeightOfs //(1944-1920)/2
+	0x002A0264,
+	0x0F120001,	//REG_TC_GP_bUseReqInputInCap
+
+	0x002A049C,
+	0x0F120A00,	//REG_TC_PZOOM_CapZoomReqInputWidth //2560
+	0x0F120780,	//REG_TC_PZOOM_CapZoomReqInputHeight //1920
+	0x0F120000,	//REG_TC_PZOOM_CapZoomReqInputWidthOfs
+	0x0F120000,	//REG_TC_PZOOM_CapZoomReqInputHeightOfs
+
+	0x002A047C,
+	0x0F120001,	//REG_TC_THUMB_Thumb_bActive
+	0x0F120280,	//REG_TC_THUMB_Thumb_uWidth //640
+	0x0F1201E0,	//REG_TC_THUMB_Thumb_uHeight //480
+
+	0x00287000,
+	0x002A0396,
+	0x0F120000,   //REG_0TC_CCFG_uCaptureMode
+	0x0F120400,   //REG_0TC_CCFG_usWidth
+	0x0F120300,   //REG_0TC_CCFG_usHeight
+	0x0F120005,   //REG_0TC_CCFG_Format
+	0x0F12278D,   //REG_0TC_CCFG_usMaxOut4KHzRate
+	0x0F12278D,   //REG_0TC_CCFG_usMinOut4KHzRate
+	0x0F120100,   //REG_0TC_CCFG_OutClkPerPix88
+	0x0F120300,   //REG_0TC_CCFG_uBpp88
+	0x0F120052,   //REG_0TC_CCFG_PVIMask
+	0x0F120000,   //REG_0TC_CCFG_OIFMask
+	0x0F120810,   //REG_0TC_CCFG_usJpegPacketSize
+	0x0F120000,   //REG_0TC_CCFG_usJpegTotalPackets
+	0x0F120000,   //REG_0TC_CCFG_uClockInd
+	0x0F120000,   //REG_0TC_CCFG_usFrTimeType
+	0x0F120002,   //REG_0TC_CCFG_FrRateQualityType
+	0x0F120535,   //REG_0TC_CCFG_usMaxFrTimeMsecMult10
+	0x0F12029A,   //REG_0TC_CCFG_usMinFrTimeMsecMult10
+};
 /* 640 x 480 */
 static const u32 s5k4ecgx_VGA_Capture[] = {
 	0xFCFCD000,
@@ -5682,6 +5725,45 @@ static const u32 s5k4ecgx_VGA_Capture[] = {
 	0x002A0270,
 	0x0F120001,
 };
+/* 320 x 240 */
+static const u32 s5k4ecgx_QVGA_Capture[] = {
+	0xFCFCD000,
+	0x00287000,
+	0x002A0258,
+	0x0F120A00,	//REG_TC_GP_CapReqInputWidth //2560
+	0x0F120780,	//REG_TC_GP_CapReqInputHeight //1920
+	0x0F120010,	//REG_TC_GP_CapInputWidthOfs //(2592-2560)/2
+	0x0F12000C,	//REG_TC_GP_CapInputHeightOfs //(1944-1920)/2
+	0x002A0264,
+	0x0F120001,	//REG_TC_GP_bUseReqInputInCap
+
+	0x002A049C,
+	0x0F120A00,	//REG_TC_PZOOM_CapZoomReqInputWidth //2560
+	0x0F120780,	//REG_TC_PZOOM_CapZoomReqInputHeight //1920
+	0x0F120000,	//REG_TC_PZOOM_CapZoomReqInputWidthOfs
+	0x0F120000,	//REG_TC_PZOOM_CapZoomReqInputHeightOfs
+
+	0x002A047C,
+	0x0F120001,	//REG_TC_THUMB_Thumb_bActive
+	0x0F120140,	//REG_TC_THUMB_Thumb_uWidth //640
+	0x0F1200F0,	//REG_TC_THUMB_Thumb_uHeight //480
+
+	0x002A0398,
+	0x0F120140,	/* #REG_0TC_CCFG_usWidth */
+	0x0F1200F0,	/* #REG_0TC_CCFG_usHeight */
+	0x0F120005,
+	0x002A03B2,
+	0x0F120002,
+	0x002A03B0,
+	0x0F120002,
+	0x002A024E,
+	0x0F120001,
+	0x002A0270,
+	0x0F120001,
+};
+
+////////////////// Preview ////////////////////
+
 /* 2560 x 1920 */
 static const u32 s5k4ecgx_max_Preview[] = {
 
@@ -5867,7 +5949,7 @@ static const u32  s5k4ecgx_1920_Preview[] = {
 
 };
 /* 1280x720 */
-static const u32  s5k4ecgx_1280_Preview[] = {
+static const u32  s5k4ecgx_W1280_Preview[] = {
 	0xFCFCD000,
 	0x00287000,
 
@@ -6101,6 +6183,87 @@ static const u32  s5k4ecgx_880_Preview[] = {
 	0x0F120000,	//REG_0TC_PCFG_uPrevMirror
 	0x0F120000,	//REG_0TC_PCFG_uCaptureMirror
 };
+/* 1280 x 960 */
+static const u32  s5k4ecgx_1280_Preview[] = {
+	0xFCFCD000,
+	0x00287000,
+	0x002A18AC,
+	0x0F120060,	//senHal_uAddColsBin
+	0x0F120060,	//senHal_uAddColsNoBin
+	0x0F1207DC,	//senHal_uMinColsBin
+	0x0F1205C0,	//senHal_uMinColsNoBin
+
+	0x002A0250,
+	0x0F120A00,	//REG_TC_GP_CapReqInputWidth
+	0x0F120780,	//REG_TC_GP_CapReqInputHeight
+	0x0F120010,	//REG_TC_GP_CapInputWidthOfs
+	0x0F12000C,	//REG_TC_GP_CapInputHeightOfs
+
+	0x002A0494,
+	0x0F120A00,	//REG_TC_PZOOM_ZoomInputWidth
+	0x0F120780,	//REG_TC_PZOOM_ZoomInputHeight
+	0x0F120000,	//REG_TC_PZOOM_ZoomInputWidthOfs
+	0x0F120000,	//REG_TC_PZOOM_ZoomInputHeightOfs
+	0x0F120A00,	//REG_TC_CZOOM_ZoomInputWidth
+	0x0F120780,	//REG_TC_CZOOM_ZoomInputHeight
+	0x0F120000,	//REG_TC_CZOOM_ZoomInputWidthOfs
+	0x0F120000,	//REG_TC_CZOOM_ZoomInputHeightOfs
+
+	0x002A0262,
+	0x0F120001,	// #REG_TC_GP_bUseReqInputInPre
+	0x0F120001,	//REG_TC_GP_bUseReqInputInCap
+
+	0x002A0A1E,
+	0x0F120028,	// AfitBaseVals_0__73_ 0040		Why??
+	0x002A0AD4,
+	0x0F12003C, // AfitBaseVals_1__73_ 0060		Why??
+
+	0x002A02A6,
+	0x0F120500,	// REG_0TC_PCFG_usWidth  1024
+	0x0F1203C0,	// REG_0TC_PCFG_usHeight 0768
+	0x0F120005, //  REG_0TC_PCFG_Format 0005
+	0x002A02B4,
+	0x0F120052,	// REG_0TC_PCFG_PVIMask 0082
+	0x002A02BE,
+	0x0F120000,
+	0x0F120001,
+	0x0F12029A,
+	0x0F12014D,
+	0x002A02D0,
+	0x0F120000,
+	0x0F120000,
+	0x002A0266,
+	0x0F120000,
+	0x002A026A,
+	0x0F120001,
+	0x002A024E,
+	0x0F120001,	/* #REG_TC_GP_NewConfigSync */
+	0x002A0268,
+	0x0F120001,	/* #REG_TC_GP_CapConfigChanged */
+
+	0x002A02A6,
+	0x0F120500,	// REG_0TC_PCFG_usWidth  1024
+	0x0F1203C0,	// REG_0TC_PCFG_usHeight 0768
+	0x0F120005, //  REG_0TC_PCFG_Format 0005
+	0x0F12278D,	//4F1A	 //REG_0TC_PCFG_usMaxOut4KHzRate
+	0x0F12278D,	//4F1A	 //REG_0TC_PCFG_usMinOut4KHzRate
+	0x0F120100,	//REG_0TC_PCFG_OutClkPerPix88
+	0x0F120300,	//REG_0TC_PCFG_uBpp88
+	0x0F120012,	//REG_0TC_PCFG_PVIMask
+	0x0F120000,	//REG_0TC_PCFG_OIFMask
+	0x0F1201E0,	//REG_0TC_PCFG_usJpegPacketSize
+	0x0F120000,	//REG_0TC_PCFG_usJpegTotalPackets
+	0x0F120000,	//REG_0TC_PCFG_uClockInd
+	0x0F120000,	//REG_0TC_PCFG_usFrTimeType
+	0x0F120001,	//REG_0TC_PCFG_FrRateQualityType
+	//0x0F1203E8,	 //029A  //REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	0x0F1203E8, //zxz 2012-3-15
+	0x0F12014D,	//REG_0TC_PCFG_usMinFrTimeMsecMult10
+	0x002A02E0,
+	0x0F120000,	//REG_0TC_PCFG_uPrevMirror
+	0x0F120000,	//REG_0TC_PCFG_uCaptureMirror
+};
+
 /* 1024 x 768 */
 static const u32  s5k4ecgx_1024_Preview[] = {
 	0xFCFCD000,
