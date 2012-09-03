@@ -140,7 +140,7 @@ static int s5m87xx_i2c_probe(struct i2c_client *i2c,
 
 	s5m_reg_read(i2c, S5M8767_REG_ID, &data);
 
-	if ((data == 0x01) || (data == 0x02) || (data == 0x03))
+	if ((data == 0x01) || (data == 0x02) || (data == 0x03) || (data == 0x05))
 		dev_info(s5m87xx->dev, "S5M MFD Detected. DEVICE ID = %x\n", data);
 	else {
 		dev_err(s5m87xx->dev,
