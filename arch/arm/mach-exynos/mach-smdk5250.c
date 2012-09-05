@@ -31,7 +31,6 @@
 #include <media/exynos_fimc_is.h>
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
-#include <plat/regs-adc.h>
 #include <plat/regs-serial.h>
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
@@ -52,8 +51,6 @@
 #include <mach/ppmu.h>
 #include <mach/dev.h>
 #include <mach/regs-pmu.h>
-#include <mach/regs-clock.h>
-#include <mach/regs-pmu5.h>
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 #include <mach/secmem.h>
 #endif
@@ -1041,76 +1038,8 @@ static inline void exynos_sysmmu_init(void)
 }
 #endif
 
-#define SMDK5250_REV_0_0_ADC_VALUE 0
-#define SMDK5250_REV_0_2_ADC_VALUE 500
-
-#define PMUREG_ISP_CONFIGURATION	(S5P_VA_PMU  + 0x4020)
-#define PMUREG_ISP_STATUS		(S5P_VA_PMU  + 0x4024)
-
-int samsung_board_rev;
-
-static int get_samsung_board_rev(void)
-{
-	int ret = 0;
-	int adc_val = 0;
-	void __iomem *adc_regs;
-	unsigned int timeout, con;
-
-	writel(0x7, PMUREG_ISP_CONFIGURATION);
-	timeout = 1000;
-	while ((__raw_readl(PMUREG_ISP_STATUS) & 0x7) != 0x7) {
-		if (timeout == 0)
-			err("A5 power on failed1\n");
-		timeout--;
-		udelay(1);
-		goto err_power;
-	}
-	__raw_writel(0x1, EXYNOS5_MTCADC_PHY_CONTROL);
-
-	__raw_writel(0x00000031, EXYNOS5_CLKDIV_ISP0);
-	__raw_writel(0x00000031, EXYNOS5_CLKDIV_ISP1);
-	__raw_writel(0x00000001, EXYNOS5_CLKDIV_ISP2);
-
-	__raw_writel(0xDFF000FF, EXYNOS5_CLKGATE_ISP0);
-	__raw_writel(0x00003007, EXYNOS5_CLKGATE_ISP1);
-
-	adc_regs = ioremap(EXYNOS5_PA_FIMC_IS_ADC, SZ_4K);
-	if (unlikely(!adc_regs))
-		goto err_power;
-
-	/* SELMUX Channel 3 */
-	writel(S5PV210_ADCCON_SELMUX(3), adc_regs + S5P_ADCMUX);
-
-	con = readl(adc_regs + S3C2410_ADCCON);
-	con &= ~S3C2410_ADCCON_MUXMASK;
-	con &= ~S3C2410_ADCCON_STDBM;
-	con &= ~S3C2410_ADCCON_STARTMASK;
-	con |=  S3C2410_ADCCON_PRSCEN;
-
-	/* ENABLE START */
-	con |= S3C2410_ADCCON_ENABLE_START;
-	writel(con, adc_regs + S3C2410_ADCCON);
-
-	udelay (50);
-
-	/* Read Data*/
-	adc_val = readl(adc_regs + S3C2410_ADCDAT0) & 0xFFF;
-	/* CLRINT */
-	writel(0, adc_regs + S3C64XX_ADCCLRINT);
-
-	iounmap(adc_regs);
-err_power:
-	ret = (adc_val < SMDK5250_REV_0_2_ADC_VALUE/2) ?
-			SAMSUNG_BOARD_REV_0_0 : SAMSUNG_BOARD_REV_0_2;
-
-	pr_info ("SMDK MAIN Board Rev 0.%d (ADC value:%d)\n", ret, adc_val);
-	return ret;
-}
-
 static void __init smdk5250_machine_init(void)
 {
-	samsung_board_rev = get_samsung_board_rev();
-
 	exynos5_smdk5250_mmc_init();
 	exynos5_smdk5250_power_init();
 	exynos5_smdk5250_audio_init();
