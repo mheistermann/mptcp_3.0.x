@@ -30,12 +30,13 @@
 
 #include <mach/map.h>
 #include <mach/dev.h>
-#include <mach/board_rev.h>
 
 #ifdef CONFIG_FB_MIPI_DSIM
 #include <plat/dsim.h>
 #include <plat/mipi_dsi.h>
 #endif
+
+#include "board-smdk5250.h"
 
 #if defined(CONFIG_LCD_MIPI_S6E8AB0)
 static void mipi_lcd_set_power(struct plat_lcd_data *pd,
@@ -281,7 +282,7 @@ static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 static void dp_lcd_set_power(struct plat_lcd_data *pd,
 			     unsigned int power)
 {
-	if (samsung_board_rev_is_0_0()) {
+	if (get_smdk5250_rev() == SMDK5250_REV_0_0) {
 #ifndef CONFIG_BACKLIGHT_PWM
 		/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
 		gpio_request(EXYNOS5_GPB2(0), "GPB2");

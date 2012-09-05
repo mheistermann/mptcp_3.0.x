@@ -19,7 +19,6 @@
 #include <plat/iic.h>
 
 #include <mach/irqs.h>
-#include <mach/board_rev.h>
 
 #include "board-smdk5250.h"
 
@@ -67,7 +66,7 @@ static struct platform_device *smdk5250_input_devices[] __initdata = {
 	&smdk5250_gpio_keys,
 };
 
-#define TS_RST  samsung_board_rev_is_0_0() ? EXYNOS5_GPX2(4) : EXYNOS5_GPX2(1)
+#define TS_RST  (get_smdk5250_rev() == SMDK5250_REV_0_0) ? EXYNOS5_GPX2(4) : EXYNOS5_GPX2(1)
 
 static void exynos5_smdk5250_touch_init(void)
 {
