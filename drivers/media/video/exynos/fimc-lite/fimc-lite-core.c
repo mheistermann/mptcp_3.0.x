@@ -84,8 +84,9 @@ static struct flite_fmt flite_formats[] = {
 		.is_yuv		= 0,
 	}, {
 		.name		= "User Defined(JPEG)",
-		.code		= V4L2_MBUS_FMT_JPEG_1X8,
+		.pixelformat	= V4L2_PIX_FMT_JPEG,
 		.depth		= { 8 },
+		.code		= V4L2_MBUS_FMT_JPEG_1X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_USER(1),
 		.is_yuv		= 0,
 	},
@@ -483,6 +484,7 @@ static int flite_subdev_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *f
 
 	flite_try_format(flite, fh, &fmt->format, fmt->which);
 	*mf = fmt->format;
+	flite->s_frame.fmt = find_format(NULL, &fmt->format.code, 0);
 
 	return 0;
 }
