@@ -182,4 +182,6 @@ void __init exynos5_smdk5250_input_init(void)
 
 	platform_add_devices(smdk5250_input_devices,
 			ARRAY_SIZE(smdk5250_input_devices));
+
+	s3c_gpio_setpull(EXYNOS5_GPX1(3), S3C_GPIO_PULL_UP);
 }
