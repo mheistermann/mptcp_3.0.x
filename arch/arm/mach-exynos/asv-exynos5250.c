@@ -20,10 +20,12 @@
 
 #include <mach/asv-exynos.h>
 #include <mach/asv-exynos5250.h>
-
 #include <mach/map.h>
+#include <mach/regs-pmu5.h>
 
 #include <plat/cpu.h>
+
+#include "board-smdk5250.h"
 
 /* ASV function for Fused Chip */
 #define IDS_ARM_OFFSET		24
@@ -38,18 +40,47 @@
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
 #define LOT_ID_REG		(S5P_VA_CHIPID + 0x14)
 
+void exynos5250_set_abb(struct asv_info *asv_inform)
+{
+	void __iomem *target_reg;
+	unsigned int target_value = asv_inform->abb_info->target_abb;
+
+	switch (asv_inform->asv_type) {
+	case ID_ARM:
+		target_reg = EXYNOS5_ABB_MEMBER(ABB_ARM);
+		break;
+	case ID_INT:
+		target_reg = EXYNOS5_ABB_MEMBER(ABB_INT);
+		break;
+	case ID_MIF:
+		target_reg = EXYNOS5_ABB_MEMBER(ABB_MIF);
+		break;
+	case ID_G3D:
+		target_reg = EXYNOS5_ABB_MEMBER(ABB_G3D);
+		break;
+	default:
+		return;
+	}
+
+	set_abb(target_reg, target_value);
+}
+
+struct abb_common exynos5250_abb_info = {
+	.set_target_abb	= exynos5250_set_abb,
+};
+
 char *special_lot_list[] = {
 	"NZVPU",
 	"NZVR7",
 };
 
-bool is_special_lot = false;
+bool is_special_lot;
 
 unsigned int exynos5250_check_lot_id(const char *target_lot_id)
 {
 	unsigned int i;
 
-	for(i = 0; i < ARRAY_SIZE(special_lot_list); i++ ){
+	for (i = 0; i < ARRAY_SIZE(special_lot_list); i++) {
 		if (!strncmp(target_lot_id, special_lot_list[i], LOT_ID_LEN)) {
 			pr_info("Exynos5250 : Lot ID is %s\n", target_lot_id);
 			return 1;
@@ -66,7 +97,7 @@ static unsigned int exynos5250_get_asv_group_arm(struct asv_common *asv_comm)
 	unsigned int refer_hpm;
 	struct asv_info *target_asv_info = asv_get(ID_ARM);
 
-	for(i = 0; i < target_asv_info->asv_group_nr; i++) {
+	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
 		if (is_special_lot) {
 			refer_ids = arm_org_refer_table_get_asv[0][i];
 			refer_hpm = arm_org_refer_table_get_asv[1][i];
@@ -82,6 +113,8 @@ static unsigned int exynos5250_get_asv_group_arm(struct asv_common *asv_comm)
 	return 0;
 }
 
+bool is_pmic_max;
+
 static void exynos5250_set_asv_info_arm(struct asv_info *asv_inform, bool show_volt)
 {
 	unsigned int i;
@@ -96,8 +129,13 @@ static void exynos5250_set_asv_info_arm(struct asv_info *asv_inform, bool show_v
 			target_freq = arm_org_asv_volt_info[i][0];
 			target_volt = arm_org_asv_volt_info[i][target_asv_grp_nr + 1];
 		} else {
-			target_freq = arm_asv_volt_info[i][0];
-			target_volt = arm_asv_volt_info[i][target_asv_grp_nr + 1];
+			if (is_pmic_max)	{
+				target_freq = arm_asv_volt_info_max[i][0];
+				target_volt = arm_asv_volt_info_max[i][target_asv_grp_nr + 1];
+			} else {
+				target_freq = arm_asv_volt_info_s5m8767[i][0];
+				target_volt = arm_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+			}
 		}
 
 		asv_inform->asv_volt[i].asv_freq = target_freq;
@@ -111,6 +149,12 @@ static void exynos5250_set_asv_info_arm(struct asv_info *asv_inform, bool show_v
 					asv_inform->asv_volt[i].asv_freq,
 					asv_inform->asv_volt[i].asv_volt);
 	}
+
+	/* Set ABB value */
+	if (is_special_lot)
+		asv_inform->abb_info->target_abb = arm_org_abb_ref_table[target_asv_grp_nr];
+	else
+		asv_inform->abb_info->target_abb = arm_abb_ref_table[target_asv_grp_nr];
 }
 
 struct asv_ops exynos5250_asv_ops_arm = {
@@ -125,7 +169,7 @@ static unsigned int exynos5250_get_asv_group_int(struct asv_common *asv_comm)
 	unsigned int refer_hpm;
 	struct asv_info *target_asv_info = asv_get(ID_INT);
 
-	for(i = 0; i < target_asv_info->asv_group_nr; i++) {
+	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
 		if (is_special_lot) {
 			refer_ids = int_org_refer_table_get_asv[0][i];
 			refer_hpm = int_org_refer_table_get_asv[1][i];
@@ -155,8 +199,13 @@ static void exynos5250_set_asv_info_int(struct asv_info *asv_inform, bool show_v
 			target_freq = int_org_asv_volt_info[i][0];
 			target_volt = int_org_asv_volt_info[i][target_asv_grp_nr + 1];
 		} else {
-			target_freq = int_asv_volt_info[i][0];
-			target_volt = int_asv_volt_info[i][target_asv_grp_nr + 1];
+			if (is_pmic_max)	{
+				target_freq = int_asv_volt_info_max[i][0];
+				target_volt = int_asv_volt_info_max[i][target_asv_grp_nr + 1];
+			} else {
+				target_freq = int_asv_volt_info_s5m8767[i][0];
+				target_volt = int_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+			}
 		}
 
 		asv_inform->asv_volt[i].asv_freq = target_freq;
@@ -170,6 +219,12 @@ static void exynos5250_set_asv_info_int(struct asv_info *asv_inform, bool show_v
 					asv_inform->asv_volt[i].asv_freq,
 					asv_inform->asv_volt[i].asv_volt);
 	}
+
+	/* Set ABB value */
+	if (is_special_lot)
+		asv_inform->abb_info->target_abb = int_org_abb_ref_table[target_asv_grp_nr];
+	else
+		asv_inform->abb_info->target_abb = int_abb_ref_table[target_asv_grp_nr];
 }
 
 struct asv_ops exynos5250_asv_ops_int = {
@@ -184,7 +239,7 @@ static unsigned int exynos5250_get_asv_group_mif(struct asv_common *asv_comm)
 	unsigned int refer_hpm;
 	struct asv_info *target_asv_info = asv_get(ID_MIF);
 
-	for(i = 0; i < target_asv_info->asv_group_nr; i++) {
+	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
 		if (is_special_lot) {
 			refer_ids = mif_org_refer_table_get_asv[0][i];
 			refer_hpm = mif_org_refer_table_get_asv[1][i];
@@ -216,8 +271,13 @@ static void exynos5250_set_asv_info_mif(struct asv_info *asv_inform, bool show_v
 			target_freq = mif_org_asv_volt_info[i][0];
 			target_volt = mif_org_asv_volt_info[i][target_asv_grp_nr + 1];
 		} else {
-			target_freq = mif_asv_volt_info[i][0];
-			target_volt = mif_asv_volt_info[i][target_asv_grp_nr + 1];
+			if (is_pmic_max)	{
+				target_freq = mif_asv_volt_info_max[i][0];
+				target_volt = mif_asv_volt_info_max[i][target_asv_grp_nr + 1];
+			} else {
+				target_freq = mif_asv_volt_info_s5m8767[i][0];
+				target_volt = mif_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+			}
 		}
 
 		asv_inform->asv_volt[i].asv_freq = target_freq;
@@ -231,6 +291,12 @@ static void exynos5250_set_asv_info_mif(struct asv_info *asv_inform, bool show_v
 					asv_inform->asv_volt[i].asv_freq,
 					asv_inform->asv_volt[i].asv_volt);
 	}
+
+	/* Set ABB value */
+	if (is_special_lot)
+		asv_inform->abb_info->target_abb = mif_org_abb_ref_table[target_asv_grp_nr];
+	else
+		asv_inform->abb_info->target_abb = mif_abb_ref_table[target_asv_grp_nr];
 }
 
 struct asv_ops exynos5250_asv_ops_mif = {
@@ -245,7 +311,7 @@ static unsigned int exynos5250_get_asv_group_g3d(struct asv_common *asv_comm)
 	unsigned int refer_hpm;
 	struct asv_info *target_asv_info = asv_get(ID_G3D);
 
-	for(i = 0; i < target_asv_info->asv_group_nr; i++) {
+	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
 		if (is_special_lot) {
 			refer_ids = g3d_org_refer_table_get_asv[0][i];
 			refer_hpm = g3d_org_refer_table_get_asv[1][i];
@@ -275,8 +341,13 @@ static void exynos5250_set_asv_info_g3d(struct asv_info *asv_inform, bool show_v
 			target_freq = g3d_org_asv_volt_info[i][0];
 			target_volt = g3d_org_asv_volt_info[i][target_asv_grp_nr + 1];
 		} else {
-			target_freq = g3d_asv_volt_info[i][0];
-			target_volt = g3d_asv_volt_info[i][target_asv_grp_nr + 1];
+			if (is_pmic_max)	{
+				target_freq = g3d_asv_volt_info_max[i][0];
+				target_volt = g3d_asv_volt_info_max[i][target_asv_grp_nr + 1];
+			} else {
+				target_freq = g3d_asv_volt_info_s5m8767[i][0];
+				target_volt = g3d_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+			}
 		}
 
 		asv_inform->asv_volt[i].asv_freq = target_freq;
@@ -290,6 +361,12 @@ static void exynos5250_set_asv_info_g3d(struct asv_info *asv_inform, bool show_v
 					asv_inform->asv_volt[i].asv_freq,
 					asv_inform->asv_volt[i].asv_volt);
 	}
+
+	/* Set ABB value */
+	if (is_special_lot)
+		asv_inform->abb_info->target_abb = g3d_org_abb_ref_table[target_asv_grp_nr];
+	else
+		asv_inform->abb_info->target_abb = g3d_abb_ref_table[target_asv_grp_nr];
 }
 
 struct asv_ops exynos5250_asv_ops_g3d = {
@@ -305,6 +382,7 @@ struct asv_info exynos5250_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(ARM),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(ARM),
 		.max_volt_value	= MAX_VOLT(ARM),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_INT,
 		.name		= "VDD_INT",
@@ -312,6 +390,7 @@ struct asv_info exynos5250_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(INT),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(INT),
 		.max_volt_value	= MAX_VOLT(INT),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_MIF,
 		.name		= "VDD_MIF",
@@ -319,6 +398,7 @@ struct asv_info exynos5250_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(MIF),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(MIF),
 		.max_volt_value	= MAX_VOLT(MIF),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_G3D,
 		.name		= "VDD_G3D",
@@ -326,6 +406,7 @@ struct asv_info exynos5250_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(G3D),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(G3D),
 		.max_volt_value	= MAX_VOLT(G3D),
+		.abb_info	= &exynos5250_abb_info,
 	},
 };
 
@@ -337,6 +418,7 @@ struct asv_info exynos5250_org_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(ARM_ORG),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(ARM_ORG),
 		.max_volt_value	= MAX_VOLT(ARM_ORG),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_INT,
 		.name		= "VDD_INT",
@@ -344,6 +426,7 @@ struct asv_info exynos5250_org_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(INT_ORG),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(INT_ORG),
 		.max_volt_value	= MAX_VOLT(INT_ORG),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_MIF,
 		.name		= "VDD_MIF",
@@ -351,6 +434,7 @@ struct asv_info exynos5250_org_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(MIF_ORG),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(MIF_ORG),
 		.max_volt_value	= MAX_VOLT(MIF_ORG),
+		.abb_info	= &exynos5250_abb_info,
 	}, {
 		.asv_type	= ID_G3D,
 		.name		= "VDD_G3D",
@@ -358,6 +442,7 @@ struct asv_info exynos5250_org_asv_member[] = {
 		.asv_group_nr	= ASV_GRP_NR(G3D_ORG),
 		.dvfs_level_nr	= DVFS_LEVEL_NR(G3D_ORG),
 		.max_volt_value	= MAX_VOLT(G3D_ORG),
+		.abb_info	= &exynos5250_abb_info,
 	},
 };
 
@@ -366,8 +451,12 @@ static unsigned int exynos5250_regist_asv_member(void)
 	unsigned int i;
 
 	/* Regist asv member into list */
-	for (i = 0; i < ARRAY_SIZE(exynos5250_asv_member); i++)
-		add_asv_member(&exynos5250_asv_member[i]);
+	if (is_special_lot)
+		for (i = 0; i < ARRAY_SIZE(exynos5250_org_asv_member); i++)
+			add_asv_member(&exynos5250_org_asv_member[i]);
+	else
+		for (i = 0; i < ARRAY_SIZE(exynos5250_asv_member); i++)
+			add_asv_member(&exynos5250_asv_member[i]);
 
 	return 0;
 }
@@ -379,6 +468,8 @@ int exynos5250_init_asv(struct asv_common *asv_info)
 	unsigned int lid_reg;
 	unsigned int rev_lid = 0;
 	char lot_id[LOT_ID_LEN];
+
+	is_special_lot = false;
 
 	/* read IDS and HPM value from  CHIP ID */
 	tmp = __raw_readl(CHIP_ID_REG);
@@ -406,6 +497,19 @@ int exynos5250_init_asv(struct asv_common *asv_info)
 	asv_info->lot_name = lot_id;
 
 	is_special_lot = exynos5250_check_lot_id(lot_id);
+
+	tmp = get_smdk5250_regulator();
+	switch (tmp)	{
+	case SMDK5250_REGULATOR_MAX77686:
+	case SMDK5250_REGULATOR_MAX8997:
+		is_pmic_max = true;
+		pr_info("EXYNOS ASV PMIC MAXIM Detected!\n");
+		break;
+	case SMDK5250_REGULATOR_S5M8767:
+		is_pmic_max = false;
+		pr_info("EXYNOS ASV PMIC S5M Detected!\n");
+		break;
+	}
 
 	pr_info("EXYNOS5250 ASV : %s IDS : %d HPM : %d\n", asv_info->lot_name,
 				asv_info->ids_value, asv_info->hpm_value);
