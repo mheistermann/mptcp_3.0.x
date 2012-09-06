@@ -3363,18 +3363,19 @@ static int __find_resolution(struct v4l2_subdev *sd,
 	enum s5k4ecgx_oprmode stype = __find_oprmode(mf->code);
 	int i = ARRAY_SIZE(s5k4ecgx_resolutions);
 	unsigned int min_err = ~0;
+	int err;
 
 	while (i--) {
-		int err;
-		err = abs(fsize->width - mf->width)
-			+ abs(fsize->height - mf->height);
+		if (stype == fsize->type) {
+			err = abs(fsize->width - mf->width)
+				+ abs(fsize->height - mf->height);
 
-		if (err < min_err) {
-			min_err = err;
-			match = fsize;
-			stype = fsize->type;
+			if (err < min_err) {
+				min_err = err;
+				match = fsize;
+				stype = fsize->type;
+			}
 		}
-
 		fsize++;
 	}
 	printk("LINE(%d): mf width: %d, mf height: %d, mf code: %d\n", __LINE__,
