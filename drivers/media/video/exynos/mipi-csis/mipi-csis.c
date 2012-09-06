@@ -103,6 +103,8 @@ enum {
 	ST_POWERED	= 1,
 	ST_STREAMING	= 2,
 	ST_SUSPENDED	= 4,
+	ST_OPEN		= 8,
+	ST_SUBDEV_OPEN	= 16,
 };
 
 /**
@@ -461,15 +463,20 @@ static struct v4l2_subdev_ops s5pcsis_subdev_ops = {
 static int s5pcsis_init_formats(struct v4l2_subdev *sd,
 				struct v4l2_subdev_fh *fh)
 {
+	struct csis_state *state = sd_to_csis_state(sd);
 	struct v4l2_subdev_format format;
 
-	memset(&format, 0, sizeof(format));
-	format.pad = CSIS_PAD_SINK;
-	format.which = fh ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
-	format.format.code = s5pcsis_formats[0].code;
-	format.format.width = DEFAULT_CSIS_SINK_WIDTH;
-	format.format.height = DEFAULT_CSIS_SINK_HEIGHT;
-	s5pcsis_set_fmt(sd, fh, &format);
+	if (!(state->flags & ST_SUBDEV_OPEN)) {
+		memset(&format, 0, sizeof(format));
+		format.pad = CSIS_PAD_SINK;
+		format.which = fh ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
+		format.format.code = s5pcsis_formats[0].code;
+		format.format.width = DEFAULT_CSIS_SINK_WIDTH;
+		format.format.height = DEFAULT_CSIS_SINK_HEIGHT;
+		s5pcsis_set_fmt(sd, fh, &format);
+
+		state->flags |= ST_SUBDEV_OPEN;
+	}
 
 	return 0;
 }
@@ -477,7 +484,10 @@ static int s5pcsis_init_formats(struct v4l2_subdev *sd,
 static int s5pcsis_subdev_close(struct v4l2_subdev *sd,
 				struct v4l2_subdev_fh *fh)
 {
+	struct csis_state *state = sd_to_csis_state(sd);
+
 	v4l2_info(sd, "%s\n", __func__);
+	state->flags &= ~ST_SUBDEV_OPEN;
 	return 0;
 }
 
