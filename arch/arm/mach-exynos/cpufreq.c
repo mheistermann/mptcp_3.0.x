@@ -30,6 +30,8 @@
 #include <plat/pm.h>
 #include <plat/cpu.h>
 
+#include <mach/asv-exynos.h>
+
 static struct exynos_dvfs_info *exynos_info;
 
 static struct regulator *arm_regulator;
@@ -76,7 +78,7 @@ static unsigned int exynos_get_safe_armvolt(unsigned int old_index, unsigned int
 		if (exynos_info->need_apll_change(old_index, new_index) &&
 			(freq_table[new_index].frequency < exynos_info->mpll_freq_khz) &&
 			(freq_table[old_index].frequency < exynos_info->mpll_freq_khz)) {
-				safe_arm_volt = volt_table[exynos_info->pll_safe_idx];
+				safe_arm_volt = get_match_volt(ID_ARM, exynos_info->mpll_freq_khz);
 			}
 
 	}
@@ -125,7 +127,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 
 	safe_arm_volt = exynos_get_safe_armvolt(old_index, index);
 
-	arm_volt = volt_table[index];
+	arm_volt = get_match_volt(ID_ARM, freqs.new);
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 

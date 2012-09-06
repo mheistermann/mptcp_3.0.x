@@ -46,6 +46,8 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
+#include <mach/asv-exynos.h>
+
 #define MIF_MAX_THRESHOLD	13
 #define INT_MAX_THRESHOLD	8
 #define MIF_IDLE_THRESHOLD	3
@@ -485,17 +487,11 @@ static void exynos5250_set_bus_volt(void)
 
 	for (i = LV_0; i < LV_MIF_END; i++)
 		exynos5_busfreq_table_mif[i].volt =
-			exynos5_mif_volt[mif_asv_group_index][i];
+			get_match_volt(ID_MIF, exynos5_busfreq_table_mif[i].mem_clk);
 
 	for (i = LV_0; i < LV_INT_END; i++) {
-		if (exynos_lot_is_nzvpu)
-			exynos5_busfreq_table_int[i].volt = 1025000;
-		else if (exynos_lot_id)
-			exynos5_busfreq_table_int[i].volt =
-				exynos5_int_volt_orig[asv_group_index][i];
-		else
-			exynos5_busfreq_table_int[i].volt =
-				exynos5_int_volt[asv_group_index][i];
+		exynos5_busfreq_table_int[i].volt =
+			get_match_volt(ID_INT, exynos5_busfreq_table_int[i].mem_clk);
 	}
 
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);

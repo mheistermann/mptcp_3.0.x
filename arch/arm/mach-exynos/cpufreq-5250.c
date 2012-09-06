@@ -22,6 +22,7 @@
 #include <mach/regs-pmu-5250.h>
 #include <mach/cpufreq.h>
 #include <mach/asv.h>
+#include <mach/asv-exynos.h>
 
 #include <plat/clock.h>
 #include <plat/cpu.h>
@@ -441,12 +442,7 @@ static void __init set_volt_table(void)
 
 	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
-		if (samsung_rev() < EXYNOS5250_REV_1_0)
-			exynos5250_volt_table[i] = asv_voltage_rev0[i][asv_group];
-		else if (exynos_lot_id)
-			exynos5250_volt_table[i] = asv_voltage_special[i][asv_group];
-		else
-			exynos5250_volt_table[i] = asv_voltage[i][asv_group];
+		exynos5250_volt_table[i] = get_match_volt(ID_ARM, exynos5250_freq_table[i].frequency);
 		pr_info("VDD_ARM : L%d, %d uV\n", i, exynos5250_volt_table[i]);
 	}
 }
