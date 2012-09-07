@@ -3209,7 +3209,6 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 					&state->regs->flash_init, 1, 0) < 0)
 			return -EIO;
 #endif
-
 		if (state->check_dataline) {
 			if (s5k4ecgx_set_from_table(sd, "dtp start",
 						&state->regs->dtp_start, 1, 0) < 0)
@@ -3218,10 +3217,8 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 	} else {
 
-		if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
-			return 0;
-
 		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
+		s5k4ecgx_set_stored_parms(sd);
 
 		s5k4ecgx_set_from_table(sd, "capture start",
 					&state->regs->capture_start, 1, 0);
