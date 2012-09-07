@@ -560,6 +560,12 @@ static struct regulator_consumer_supply s5m8767_buck3_consumer =
 static struct regulator_consumer_supply s5m8767_buck4_consumer =
 	REGULATOR_SUPPLY("vdd_g3d", NULL);
 
+static struct regulator_consumer_supply s5m8767_ldo11_consumer =
+	REGULATOR_SUPPLY("vdd_ldo11", NULL);
+
+static struct regulator_consumer_supply s5m8767_ldo14_consumer =
+	REGULATOR_SUPPLY("vdd_ldo14", NULL);
+
 static struct regulator_init_data s5m8767_buck1_data = {
 	.constraints	= {
 		.name		= "vdd_mif range",
@@ -639,16 +645,50 @@ static struct regulator_init_data s5m8767_ldo4_data = {
 	.consumer_supplies	= &s5m8767_ldo4_consumer,
 };
 
+static struct regulator_init_data s5m8767_ldo11_data = {
+	.constraints	= {
+		.name		= "vdd_ldo11 range",
+		.min_uV		= 1900000,
+		.max_uV		= 1900000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_ldo11_consumer,
+};
+
+static struct regulator_init_data s5m8767_ldo14_data = {
+	.constraints	= {
+		.name		= "vdd_ldo14 range",
+		.min_uV		= 1900000,
+		.max_uV		= 1900000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_ldo14_consumer,
+};
+
 static struct s5m_regulator_data gaia_regulators[] = {
 	{S5M8767_LDO4, &s5m8767_ldo4_data},
 	{S5M8767_BUCK1, &s5m8767_buck1_data},
 	{S5M8767_BUCK2, &s5m8767_buck2_data},
 	{S5M8767_BUCK3, &s5m8767_buck3_data},
 	{S5M8767_BUCK4, &s5m8767_buck4_data},
+	{S5M8767_LDO11, &s5m8767_ldo11_data,},
+	{S5M8767_LDO14, &s5m8767_ldo14_data,},
 };
 
 struct s5m_opmode_data s5m8767_opmode_data[S5M8767_REG_MAX] = {
 	[S5M8767_LDO4] = {S5M8767_LDO4, S5M_OPMODE_STANDBY},
+	[S5M8767_LDO11] = {S5M8767_LDO11, S5M_OPMODE_STANDBY},
+	[S5M8767_LDO14] = {S5M8767_LDO14, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK1] = {S5M8767_BUCK1, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK2] = {S5M8767_BUCK2, S5M_OPMODE_STANDBY},
 	[S5M8767_BUCK3] = {S5M8767_BUCK3, S5M_OPMODE_STANDBY},
