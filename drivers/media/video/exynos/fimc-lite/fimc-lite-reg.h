@@ -29,7 +29,7 @@
 #define FLITE_REG_CIGCTRL_RAW12				(0x2C << 24)
 #define FLITE_REG_CIGCTRL_RAW14				(0x2D << 24)
 /* User defined formats. x = 0...0xF. */
-#define FLITE_REG_CIGCTRL_USER(x)			(0x30 + x - 1)
+#define FLITE_REG_CIGCTRL_USER(x)			((0x30 + x - 1) <<24)
 #define FLITE_REG_CIGCTRL_OUT_LOCAL_ENABLE		(1 << 22)
 #define FLITE_REG_CIGCTRL_SHADOWMASK_DISABLE		(1 << 21)
 #define FLITE_REG_CIGCTRL_ODMA_DISABLE			(1 << 20)
