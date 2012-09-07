@@ -733,6 +733,13 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 	s5m8767->buck4_ramp = pdata->buck4_ramp_enable;
 	s5m8767->opmode_data = pdata->opmode_data;
 
+	buck_init = s5m8767_convert_voltage(&buck_voltage_val1,
+					pdata->buck1_init,
+					pdata->buck1_init +
+					buck_voltage_val1.step);
+
+	s5m_reg_write(i2c, S5M8767_REG_BUCK1DVS2, buck_init);
+
 	buck_init = s5m8767_convert_voltage(&buck_voltage_val2,
 						pdata->buck2_init,
 						pdata->buck2_init +
@@ -836,6 +843,9 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 	gpio_direction_output(pdata->buck_ds[1], 0x0);
 	/* DS4 GPIO */
 	gpio_direction_output(pdata->buck_ds[2], 0x0);
+
+	/* Buck1 DVS2 Enable */
+	s5m_reg_update(i2c, S5M8767_REG_BUCK1CTRL1, 0x02, 0x02);
 
 	if (pdata->buck2_gpiodvs) {
 		if (pdata->buck3_gpiodvs || pdata->buck4_gpiodvs) {
