@@ -190,9 +190,9 @@ unsigned int s5m8767_opmode_reg[][3] = {
 	{0x3, 0x1, 0x1},
 	{0x3, 0x1, 0x1}, /* BUCK9 */
 	/* 32KHZ */
-	{0x1, 0x1, 0x1},
-	{0x2, 0x2, 0x2},
-	{0x4, 0x4, 0x4},
+	{0x1, 0x0, 0x0},
+	{0x1, 0x0, 0x0},
+	{0x1, 0x0, 0x0},
 };
 
 static int s5m8767_get_register(struct regulator_dev *rdev, int *reg, int *pmic_en)
@@ -222,6 +222,8 @@ static int s5m8767_get_register(struct regulator_dev *rdev, int *reg, int *pmic_
 		break;
 	case S5M8767_AP_EN32KHZ ... S5M8767_BT_EN32KHZ:
 		*reg = S5M8767_REG_CTRL1;
+		*pmic_en = 0x01 << (reg_id - S5M8767_AP_EN32KHZ);
+		return 0;
 		break;
 	default:
 		return -EINVAL;
