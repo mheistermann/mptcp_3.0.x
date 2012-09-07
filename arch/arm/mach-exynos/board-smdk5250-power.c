@@ -719,6 +719,7 @@ static struct s5m_platform_data smdk5250_s5m8767_pdata = {
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
 
+	.buck1_init		= 1100000,
 	.buck2_init		= 1200000,
 	.buck3_init		= 1200000,
 	.buck4_init		= 1200000,
