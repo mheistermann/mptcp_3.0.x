@@ -3192,42 +3192,43 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 	if (s5k4ecgx_write_init_reg2_burst(sd) < 0)
 		return -EIO;
 
-	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO) {
 		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
+		s5k4ecgx_set_stored_parms(sd);
+		msleep(100);
 
-	s5k4ecgx_set_stored_parms(sd);
+		if (s5k4ecgx_set_from_table(sd, "init reg 3",
+						&state->regs->init_reg_3, 1, 0) < 0)
+			return -EIO;
 
-	msleep(100);
-
-	if (s5k4ecgx_set_from_table(sd, "init reg 3",
-					&state->regs->init_reg_3, 1, 0) < 0)
-		return -EIO;
-
-	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
-		err = s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
+		if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+			err = s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
 
 #ifdef ENABLE
-	if (s5k4ecgx_set_from_table(sd, "flash init",
-				&state->regs->flash_init, 1, 0) < 0)
-		return -EIO;
+		if (s5k4ecgx_set_from_table(sd, "flash init",
+					&state->regs->flash_init, 1, 0) < 0)
+			return -EIO;
 #endif
 
-	if (state->check_dataline) {
-		if (s5k4ecgx_set_from_table(sd, "dtp start",
-					&state->regs->dtp_start, 1, 0) < 0)
-			return -EIO;
+		if (state->check_dataline) {
+			if (s5k4ecgx_set_from_table(sd, "dtp start",
+						&state->regs->dtp_start, 1, 0) < 0)
+				return -EIO;
+		}
+
+	} else {
+
+		if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
+			return 0;
+
+		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
+
+		s5k4ecgx_set_from_table(sd, "capture start",
+					&state->regs->capture_start, 1, 0);
+
+		dev_dbg(&client->dev, "%s: end\n", __func__);
+		state->runmode = S5K4ECGX_RUNMODE_RUNNING;
 	}
-
-	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
-		return 0;
-
-	s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
-
-	s5k4ecgx_set_from_table(sd, "capture start",
-				&state->regs->capture_start, 1, 0);
-
-	dev_dbg(&client->dev, "%s: end\n", __func__);
-	state->runmode = S5K4ECGX_RUNMODE_RUNNING;
 
 	return 0;
 }
