@@ -1018,7 +1018,8 @@ config SOC_CAMERA_MT9T112
 
 config VIDEO_S5K4ECGX
         tristate "S5K4ECGX Camera Sensor"
-        depends on I2C && VIDEO_V4L2
+	depends on I2C && VIDEO_V4L2 && \
+	(VIDEO_S5P_MIPI_CSIS || VIDEO_EXYNOS_MIPI_CSIS)
         ---help---
           This driver supports S5K4ECGX SoC camera module
 
@@ -1029,12 +1030,12 @@ config VIDEO_S5K4ECGX_DEBUG
 	---help---
 	  Enable extra debug messages for S5K4ECGX camera driver
 
-config VIDEO_S5K4ECGX_V_1_1
-	bool "S5K4ECGX Camera Sensor Version 1.1 Support"
+config VIDEO_S5K4ECGX_SENSOR_JPEG
+	bool "Use S5K4ECGX Camera Sensor JPEG"
 	depends on VIDEO_S5K4ECGX
-	default n
+	default y
 	---help---
-	  Enabled support for Rev 1.1 sensor
+	  Enabled supporting camera sensor JPEG
 
 config SOC_CAMERA_MT9V022
 	tristate "mt9v022 support"
