@@ -58,7 +58,7 @@ static inline void __bic32(void __iomem *ptr, u32 val)
 
 static void exynos_xhci_change_mode(struct usb_hcd *hcd, bool host)
 {
-	u32 gctl;
+	u32 gctl=0;
 
 	__bic32(hcd->regs + EXYNOS_USB3_GCTL,
 			    EXYNOS_USB3_GCTL_PrtCapDir_MASK);
