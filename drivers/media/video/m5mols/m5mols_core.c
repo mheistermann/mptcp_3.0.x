@@ -1479,11 +1479,6 @@ static int m5mols_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	if (!pdata->irq) {
-		dev_err(&client->dev, "Interrupt not assigned.\n");
-		return -EINVAL;
-	}
-
 	info = kzalloc(sizeof(struct m5mols_info), GFP_KERNEL);
 	if (info == NULL) {
 		dev_err(&client->dev, "Failed to allocate info\n");
