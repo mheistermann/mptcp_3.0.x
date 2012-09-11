@@ -116,10 +116,21 @@ static struct flite_fmt *find_format(u32 *pixelformat, u32 *mbus_code, int index
 
 	for (i = 0; i < ARRAY_SIZE(flite_formats); ++i) {
 		fmt = get_format(i);
-		if (pixelformat && fmt->pixelformat == *pixelformat)
+		if (pixelformat && fmt->pixelformat == *pixelformat) {
+#ifndef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
+			if (i == 7)
+				fmt = get_format(2);
+#endif
 			return fmt;
-		if (mbus_code && fmt->code == *mbus_code)
+		}
+
+		if (mbus_code && fmt->code == *mbus_code) {
+#ifndef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
+			if (i == 7)
+				fmt = get_format(2);
+#endif
 			return fmt;
+		}
 		if (index == i)
 			def_fmt = fmt;
 	}
