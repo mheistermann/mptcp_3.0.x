@@ -3453,11 +3453,19 @@ static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 		state->oprmode  		= type;
 		state->ffmt[type].width 	= format->width;
 		state->ffmt[type].height 	= format->height;
+#ifndef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
+		state->ffmt[type].code 		= V4L2_MBUS_FMT_YUYV8_2X8;
+#else
 		state->ffmt[type].code 		= format->code;
+#endif
 
 		/* find adaptable resolution */
 		state->resolution 		= resolution;
+#ifndef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
+		state->code 			= V4L2_MBUS_FMT_YUYV8_2X8;
+#else
 		state->code 			= format->code;
+#endif
 		state->res_type 		= type;
 
 		/* for set foramat */

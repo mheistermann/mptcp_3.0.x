@@ -14,8 +14,6 @@
 #ifndef __S5K4ECGX_REGS_1_1_H__
 #define __S5K4ECGX_REGS_1_1_H__
 
-#define USE_SENSOR_JPEG
-
 static const u32 s5k4ecgx_init_reg1[] = {
  //==================================================================================
  // 00.History
@@ -5471,7 +5469,8 @@ static const u32 s5k4ecgx_Flash_End[] = {
 	0x002A17E8,	/* fls_afl_FlashMode  Flash alg end */
 	0x0F120000,
 };
-#ifdef USE_SENSOR_JPEG
+
+#ifdef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
 /* 2560 x 1920 */
 #if 0
 static const u32  s5k4ecgx_5M_Capture[] = {
