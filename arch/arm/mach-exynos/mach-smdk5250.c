@@ -362,7 +362,7 @@ static struct i2c_board_info s5k4ba_info = {
 static struct m5mols_platform_data m5mols_platdata = {
 	.gpio_rst = EXYNOS5_GPX1(0), /* ISP_RESET CAM A port : 2/ CAM B port : 0 */
 	.enable_rst = true, /* positive reset */
-	.irq = IRQ_EINT(22),
+	.irq = 0,
 };
 
 static struct i2c_board_info m5mols_board_info = {
@@ -822,11 +822,6 @@ static void __init smdk5250_camera_gpio_cfg(void)
 	/* CAM B port(b0010) : BAY_Hsync, BAY_MCLK */
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPG2(0), 2, S3C_GPIO_SFN(2));
 	/* This is externel interrupt for m5mo */
-
-#if defined(CONFIG_VIDEO_M5MOLS) || defined(CONFIG_VIDEO_S5K4ECGX)
-	s3c_gpio_cfgpin(EXYNOS5_GPX2(6), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS5_GPX2(6), S3C_GPIO_PULL_NONE);
-#endif
 }
 #endif
 
