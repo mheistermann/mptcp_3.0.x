@@ -177,8 +177,13 @@ static const struct csis_pix_format *find_csis_format(
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(s5pcsis_formats); i++)
-		if (mf->code == s5pcsis_formats[i].code)
+		if (mf->code == s5pcsis_formats[i].code) {
+#ifndef CONFIG_VIDEO_S5K4ECGX_SENSOR_JPEG
+			if (i == 1)
+				return &s5pcsis_formats[0];
+#endif
 			return &s5pcsis_formats[i];
+		}
 	return NULL;
 }
 
