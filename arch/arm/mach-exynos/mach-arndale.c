@@ -91,6 +91,27 @@
 				 S5PV210_UFCON_TXTRIG4 |	\
 				 S5PV210_UFCON_RXTRIG4)
 
+#if CONFIG_INV_SENSORS
+#include <linux/mpu.h>
+//gyro
+static struct mpu_platform_data mpu6050_data = {
+	.int_config = 0x10,
+	.level_shifter = 0,
+	.orientation = { 1, 0, 0, 
+					0, 1, 0,
+					0, 0, -1 },
+};
+//compass
+static struct ext_slave_platform_data inv_mpu_ak8975_data = {
+	.address	= 0x0C,
+	.adapt_num	= 5,
+	.bus		= EXT_SLAVE_BUS_PRIMARY,
+	.orientation = { 1, 0, 0,
+					0, -1, 0,
+					0, 0, -1 },
+};
+#endif
+
 static struct s3c2410_uartcfg arndale_uartcfgs[] __initdata = {
 	[0] = {
 		.hwport		= 0,
@@ -265,6 +286,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 #if defined(CONFIG_ITU_A)
 static int smdk5250_cam0_reset(int dummy)
 {
+#if 0
 	int err;
 	/* Camera A */
 	err = gpio_request(EXYNOS5_GPX1(2), "GPX1");
@@ -275,7 +297,7 @@ static int smdk5250_cam0_reset(int dummy)
 	gpio_direction_output(EXYNOS5_GPX1(2), 0);
 	gpio_direction_output(EXYNOS5_GPX1(2), 1);
 	gpio_free(EXYNOS5_GPX1(2));
-
+#endif
 	return 0;
 }
 #endif
@@ -429,6 +451,21 @@ struct s3c2410_platform_i2c i2c_data3 __initdata = {
 	.frequency	= 200*1000,
 	.sda_delay	= 100,
 };
+
+#ifdef CONFIG_INV_SENSORS
+static struct i2c_board_info i2c_devs5[] __initdata = {
+        {
+                I2C_BOARD_INFO("mpu6050", 0x68),
+                .irq = IRQ_EINT(10),
+                .platform_data = &mpu6050_data,
+        },
+        {
+                I2C_BOARD_INFO("ak8975", 0x0C),
+                .irq = IRQ_EINT(5),
+                .platform_data = &inv_mpu_ak8975_data,
+        },
+};
+#endif
 
 #ifdef CONFIG_S3C_DEV_HWMON
 static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
@@ -1006,6 +1043,9 @@ static void __init arndale_machine_init(void)
 
 	s3c_i2c4_set_platdata(NULL);
 	s3c_i2c5_set_platdata(NULL);
+#ifdef CONFIG_INV_SENSORS
+	i2c_register_board_info(5, i2c_devs5, ARRAY_SIZE(i2c_devs5));
+#endif
 
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();

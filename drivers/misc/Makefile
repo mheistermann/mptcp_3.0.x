@@ -52,3 +52,4 @@ obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_SAMSUNG_C2C)	+= c2c/
 obj-$(CONFIG_SAMSUNG_HSI)	+= hsi/
+obj-$(CONFIG_INV_SENSORS)	+= inv_mpu/
