@@ -3549,15 +3549,15 @@ static const u32 s5k4ecgx_init_reg2[] = {
 0x0F120100,
 
 0x002A022C,
-0x0F120001	//REG_TC_IPRM_InitParamsUpdated
+0x0F120001, 	//REG_TC_IPRM_InitParamsUpdated
 
+/*TODO: Dummy register because of a bug of reading regsters as burst*/
+0x002A022C,
+0x0F120001 	//REG_TC_IPRM_InitParamsUpdated
 };
 
 
 static const u32 s5k4ecgx_init_reg3[] = {
-
-0x002A022C,
-0x0F120001, 	//REG_TC_IPRM_InitParamsUpdated
 
 //==================================================================================
 // 21.Select Cofigration Display

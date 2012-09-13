@@ -2034,11 +2034,12 @@ static int s5k4ecgx_set_stored_parms(struct v4l2_subdev *sd)
 				state->regs->fps,
 				ARRAY_SIZE(state->regs->fps));
 
-	if (parms->scene_mode == SCENE_MODE_NIGHTSHOT)
+	*/
+	if (stored_parms->scene_mode == SCENE_MODE_NIGHTSHOT)
 		state->one_frame_delay_ms = NIGHT_MODE_MAX_ONE_FRAME_DELAY_MS;
 	else
 		state->one_frame_delay_ms = NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
-	*/
+
 	dev_dbg(&client->dev, "%s: return %d\n", __func__, err);
 	return err;
 }
@@ -2700,6 +2701,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			state->one_frame_delay_ms =
 				NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
 		}
+		stored_parms->scene_mode = value;
 
 		break;
 	case V4L2_CID_CAMERA_GPS_LATITUDE:
@@ -3201,12 +3203,13 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 	if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO) {
 		s5k4ecgx_s_mbus_fmt(sd, &state->ffmt[state->oprmode]);
-		s5k4ecgx_set_stored_parms(sd);
 		msleep(100);
 
 		if (s5k4ecgx_set_from_table(sd, "init reg 3",
 						&state->regs->init_reg_3, 1, 0) < 0)
 			return -EIO;
+
+		s5k4ecgx_set_stored_parms(sd);
 
 		if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
 			err = s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
