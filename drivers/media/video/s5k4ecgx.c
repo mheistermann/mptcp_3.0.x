@@ -3211,8 +3211,7 @@ static int s5k4ecgx_init(struct v4l2_subdev *sd, u32 val)
 
 		s5k4ecgx_set_stored_parms(sd);
 
-		if (state->oprmode == S5K4ECGX_OPRMODE_VIDEO)
-			err = s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
+		s5k4ecgx_set_zoom(sd, stored_parms->zoom_ratio);
 
 #ifdef ENABLE
 		if (s5k4ecgx_set_from_table(sd, "flash init",
