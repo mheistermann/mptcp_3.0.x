@@ -2921,6 +2921,9 @@ static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 		state->runmode = S5K4ECGX_RUNMODE_RUNNING;
 	} else {
 		/* TODO: implementation stream off */
+		if (s5k4ecgx_set_from_table(sd, "init reg 4",
+				&state->regs->init_reg_4, 1, 0) < 0)
+			return -EIO;
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING)
 			state->runmode = S5K4ECGX_RUNMODE_IDLE;
 	}
