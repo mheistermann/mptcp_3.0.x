@@ -442,6 +442,9 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 	{
 		I2C_BOARD_INFO("ak4678", 0x12),
 	},
+	{
+		I2C_BOARD_INFO("alc5631", 0x1a),
+	},
 };
 
 struct s3c2410_platform_i2c i2c_data3 __initdata = {
