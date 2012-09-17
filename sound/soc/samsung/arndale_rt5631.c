@@ -184,7 +184,7 @@ static struct snd_soc_dai_link arndale_dai[] = {
 		.cpu_dai_name = "samsung-i2s.0",
 		.codec_dai_name = "alc5631-hifi",
 		.platform_name = "samsung-audio",
-		.codec_name = "alc5631.1-001a",
+		.codec_name = "alc5631.3-001a",
 		.init = arndale_alc5631_init_paiftx,
 		.ops = &arndale_ops,
 	},
