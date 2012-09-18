@@ -433,6 +433,11 @@
 #define REG_CLKGATE_MODE_AUTO_CLOCK_GATE	(0 << 0)
 #define REG_CLKGATE_MODE_NON_CLOCK_GATE		(1 << 0)
 
+/* Blending Equation */
+#define BLENDEQ					(0x240)
+#define BLENDEQ_DEFAULT				(0xC2)
+#define BLENDEQ_PREMULT				(0xC1)
+
 /* Blending equation control */
 #define BLENDCON				(0x260)
 #define BLENDCON_NEW_MASK			(1 << 0)

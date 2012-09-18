@@ -1404,6 +1404,28 @@ int s3c_fb_get_cur_win_buf_addr(struct fb_info *info, int id)
 	return start_addr;
 }
 
+int s3cfb_set_blend_mode(struct fb_info *info, int mode)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	int win_no = win->index;
+	void __iomem *regs = sfb->regs;
+	u32 val;
+
+	if (win_no == 0)
+		return 0;
+
+	val = readl(regs + BLENDEQ + win_no * 4);
+	val &= (~ 0x3FF);
+	if (mode == 1) /*PREMULT*/
+		val |= BLENDEQ_PREMULT;
+	else
+		val |= BLENDEQ_DEFAULT;
+
+	writel(val, regs + BLENDEQ + win_no * 4);
+	return 0;
+}
+
 #ifdef CONFIG_ION_EXYNOS
 static int s3c_fb_get_user_ion_handle(struct s3c_fb *sfb,
 				struct s3c_fb_win *win,
@@ -1445,6 +1467,7 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		struct s3c_fb_user_chroma user_chroma;
 		struct s3c_fb_user_ion_client user_ion_client;
 		u32 vsync;
+		u32 blend_mode;
 	} p;
 
 	if (pm_runtime_suspended(sfb->dev))
@@ -1591,6 +1614,12 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 	}
 #endif
+	case S3CFB_SET_BLEND_MODE:
+		if (get_user(p.blend_mode,(u32 __user *)arg))
+			ret = -EFAULT;
+		else
+			ret = s3cfb_set_blend_mode(info, p.blend_mode);
+		break;
 
 	default:
 		ret = -ENOTTY;
