@@ -1235,9 +1235,23 @@ static void __init exynos_c2c_reserve(void)
 }
 #endif
 
+static void __init arndale_fixup(struct machine_desc *desc,
+				struct tag *tags, char **cmdline,
+				struct meminfo *mi)
+{
+	mi->bank[0].start = 0x40000000;
+	mi->bank[0].size = 1024 * SZ_1M;
+
+	mi->bank[1].start = 0x80000000;
+	mi->bank[1].size = 1024 * SZ_1M;
+
+	mi->nr_banks = 2;
+}
+
 MACHINE_START(ARNDALE, "ARNDALE")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos5_init_irq,
+	.fixup		= arndale_fixup,
 	.map_io		= arndale_map_io,
 	.init_machine	= arndale_machine_init,
 	.timer		= &exynos4_timer,
