@@ -2012,7 +2012,7 @@ static int s5k4ecgx_set_stored_parms(struct v4l2_subdev *sd)
 	err |= s5k4ecgx_set_parameter(sd, &parms->metering, stored_parms->metering,
 				"metering", state->regs->metering,
 				ARRAY_SIZE(state->regs->metering));
-	if (parms->scene_mode != stored_parms->scene_mode)
+
 	err |= s5k4ecgx_set_parameter(sd, &parms->scene_mode,
 				stored_parms->scene_mode, "scene_mode",
 				state->regs->scene_mode,
@@ -2034,11 +2034,11 @@ static int s5k4ecgx_set_stored_parms(struct v4l2_subdev *sd)
 				state->regs->fps,
 				ARRAY_SIZE(state->regs->fps));
 
-	*/
 	if (stored_parms->scene_mode == SCENE_MODE_NIGHTSHOT)
 		state->one_frame_delay_ms = NIGHT_MODE_MAX_ONE_FRAME_DELAY_MS;
 	else
 		state->one_frame_delay_ms = NORMAL_MODE_MAX_ONE_FRAME_DELAY_MS;
+	*/
 
 	dev_dbg(&client->dev, "%s: return %d\n", __func__, err);
 	return err;
