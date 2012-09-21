@@ -125,6 +125,14 @@ static struct platform_device smdk5250_gpio_keys = {
 	},
 };
 
+#ifdef CONFIG_MACH_ARNDALE
+static struct i2c_board_info i2c_devs7[] __initdata = {
+	{
+		I2C_BOARD_INFO("unidisplay_ts", 0x41),
+		.irq		= IRQ_EINT(9),
+	},
+};
+#else
 struct egalax_i2c_platform_data {
 	unsigned int gpio_int;
 	unsigned int gpio_en;
@@ -142,6 +150,7 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 		.platform_data	= &exynos5_egalax_data,
 	},
 };
+#endif
 
 static struct platform_device *smdk5250_input_devices[] __initdata = {
 	&s3c_device_i2c7,

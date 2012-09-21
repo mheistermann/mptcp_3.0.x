@@ -458,6 +458,12 @@ struct s3c2410_platform_i2c i2c_data3 __initdata = {
 	.sda_delay	= 100,
 };
 
+static struct i2c_board_info i2c_devs4[] __initdata = {
+	{
+		I2C_BOARD_INFO("unidisplay_ts", 0x41),
+	},
+};
+
 #ifdef CONFIG_S3C_DEV_HWMON
 static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
 	/* Reference voltage (1.2V) */
@@ -1060,6 +1066,7 @@ static void __init smdk5250_machine_init(void)
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c4_set_platdata(NULL);
+	i2c_register_board_info(4, i2c_devs4, ARRAY_SIZE(i2c_devs4));
 	s3c_i2c5_set_platdata(NULL);
 
 #ifdef CONFIG_ION_EXYNOS

@@ -25,4 +25,9 @@ void s3c_i2c7_cfg_gpio(struct platform_device *dev)
 	else
 		s3c_gpio_cfgall_range(EXYNOS4_GPD0(2), 2,
 			S3C_GPIO_SFN(3), S3C_GPIO_PULL_UP);
+
+	if (soc_is_exynos5250()) {
+		s5p_gpio_set_drvstr(EXYNOS5_GPB2(2), S5P_GPIO_DRVSTR_LV4);
+		s5p_gpio_set_drvstr(EXYNOS5_GPB2(3), S5P_GPIO_DRVSTR_LV4);
+	}
 }
