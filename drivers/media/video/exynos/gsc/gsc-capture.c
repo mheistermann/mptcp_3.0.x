@@ -168,7 +168,9 @@ static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 		!test_bit(ST_CAPT_STREAM, &gsc->state)) {
 		if (!test_and_set_bit(ST_CAPT_PIPE_STREAM, &gsc->state)) {
 			spin_unlock_irqrestore(&gsc->slock, flags);
-			if (!mdev->is_flite_on)
+			if ((!mdev->is_flite_on && gsc->pipeline.sensor &&
+					gsc->pipeline.flite) ||
+					gsc->pipeline.disp)
 				gsc_cap_pipeline_s_stream(gsc, 1);
 			else
 				v4l2_subdev_call(gsc->cap.sd_cap, video,
@@ -289,7 +291,9 @@ static int gsc_capture_start_streaming(struct vb2_queue *q)
 		!test_bit(ST_CAPT_STREAM, &gsc->state)) {
 		if (!test_and_set_bit(ST_CAPT_PIPE_STREAM, &gsc->state)) {
 			gsc_info("");
-			if (!mdev->is_flite_on)
+			if ((!mdev->is_flite_on && gsc->pipeline.sensor &&
+					gsc->pipeline.flite) ||
+					gsc->pipeline.disp)
 				gsc_cap_pipeline_s_stream(gsc, 1);
 			else
 				v4l2_subdev_call(gsc->cap.sd_cap, video,
@@ -315,7 +319,9 @@ static int gsc_capture_state_cleanup(struct gsc_dev *gsc)
 	spin_unlock_irqrestore(&gsc->slock, flags);
 
 	if (streaming) {
-		if (!mdev->is_flite_on)
+		if ((!mdev->is_flite_on && gsc->pipeline.sensor &&
+				gsc->pipeline.flite) ||
+				gsc->pipeline.disp)
 			return gsc_cap_pipeline_s_stream(gsc, 0);
 		else
 			return v4l2_subdev_call(gsc->cap.sd_cap, video,
