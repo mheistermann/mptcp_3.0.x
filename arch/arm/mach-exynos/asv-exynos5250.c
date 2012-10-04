@@ -27,6 +27,10 @@
 
 #include "board-smdk5250.h"
 
+#define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
+#define MIF_ASV_REG		(S5P_VA_CHIPID + 0x8)
+#define LOT_ID_REG		(S5P_VA_CHIPID + 0x14)
+
 /* ASV function for Fused Chip */
 #define IDS_ARM_OFFSET		24
 #define IDS_ARM_MASK		0xFF
@@ -37,8 +41,28 @@
 #define LOT_ID_MASK		0x1FFFFF
 #define LOT_ID_LEN		5
 
-#define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
-#define LOT_ID_REG		(S5P_VA_CHIPID + 0x14)
+/* ASV function for Speed group Fused Chip */
+#define SG_FUSE_OFFSET		3
+#define SG_FUSE_MASK		0x1
+
+#define G1_ORG_SG_OFFSET	17
+#define G1_ORG_SG_MASK		0xF
+#define G1_MOD_SG_OFFSET	21
+#define G1_MOD_SG_MASK		0x7
+
+#define G2_ORG_SG_OFFSET	26
+#define G2_ORG_SG_MASK		0x3
+#define G2_MOD_SG_OFFSET	28
+#define G2_MOD_SG_MASK		0x3
+
+bool exynos5250_is_use_sg_fused(void)
+{
+	unsigned int tmp;
+
+	tmp = __raw_readl(CHIP_ID_REG);
+
+	return (tmp >> SG_FUSE_OFFSET) & SG_FUSE_MASK;
+}
 
 void exynos5250_set_abb(struct asv_info *asv_inform)
 {
@@ -95,22 +119,36 @@ static unsigned int exynos5250_get_asv_group_arm(struct asv_common *asv_comm)
 	unsigned int i;
 	unsigned int refer_ids;
 	unsigned int refer_hpm;
+	unsigned int asv_group = 0;
+	unsigned int group_shift = 0;
 	struct asv_info *target_asv_info = asv_get(ID_ARM);
 
-	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
-		if (is_special_lot) {
-			refer_ids = arm_org_refer_table_get_asv[0][i];
-			refer_hpm = arm_org_refer_table_get_asv[1][i];
-		} else {
-			refer_ids = arm_refer_table_get_asv[0][i];
-			refer_hpm = arm_refer_table_get_asv[1][i];
-		}
+	if (exynos5250_is_use_sg_fused()) {
+		asv_group = (__raw_readl(CHIP_ID_REG) >> G1_ORG_SG_OFFSET) & G1_ORG_SG_MASK;
+		group_shift = (__raw_readl(CHIP_ID_REG) >> G1_MOD_SG_OFFSET) & G1_MOD_SG_MASK;
 
-		if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm))
-			return i;
+		asv_group -= group_shift;
+
+		if (asv_group < 0)
+			asv_group = 0;
+	} else {
+		for (i = 0; i < target_asv_info->asv_group_nr; i++) {
+			if (is_special_lot) {
+				refer_ids = arm_org_refer_table_get_asv[0][i];
+				refer_hpm = arm_org_refer_table_get_asv[1][i];
+			} else {
+				refer_ids = arm_refer_table_get_asv[0][i];
+				refer_hpm = arm_refer_table_get_asv[1][i];
+			}
+
+			if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm)) {
+				asv_group = i;
+				break;
+			}
+		}
 	}
 
-	return 0;
+	return asv_group;
 }
 
 bool is_pmic_max;
@@ -167,22 +205,36 @@ static unsigned int exynos5250_get_asv_group_int(struct asv_common *asv_comm)
 	unsigned int i;
 	unsigned int refer_ids;
 	unsigned int refer_hpm;
+	unsigned int asv_group = 0;
+	unsigned int group_shift = 0;
 	struct asv_info *target_asv_info = asv_get(ID_INT);
 
-	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
-		if (is_special_lot) {
-			refer_ids = int_org_refer_table_get_asv[0][i];
-			refer_hpm = int_org_refer_table_get_asv[1][i];
-		} else {
-			refer_ids = int_refer_table_get_asv[0][i];
-			refer_hpm = int_refer_table_get_asv[1][i];
-		}
+	if (exynos5250_is_use_sg_fused()) {
+		asv_group = (__raw_readl(CHIP_ID_REG) >> G1_ORG_SG_OFFSET) & G1_ORG_SG_MASK;
+		group_shift = (__raw_readl(CHIP_ID_REG) >> G1_MOD_SG_OFFSET) & G1_MOD_SG_MASK;
 
-		if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm))
-			return i;
+		asv_group -= group_shift;
+
+		if (asv_group < 0)
+			asv_group = 0;
+	} else {
+		for (i = 0; i < target_asv_info->asv_group_nr; i++) {
+			if (is_special_lot) {
+				refer_ids = int_org_refer_table_get_asv[0][i];
+				refer_hpm = int_org_refer_table_get_asv[1][i];
+			} else {
+				refer_ids = int_refer_table_get_asv[0][i];
+				refer_hpm = int_refer_table_get_asv[1][i];
+			}
+
+			if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm)) {
+				asv_group = i;
+				break;
+			}
+		}
 	}
 
-	return 0;
+	return asv_group;
 }
 
 static void exynos5250_set_asv_info_int(struct asv_info *asv_inform, bool show_volt)
@@ -237,24 +289,40 @@ static unsigned int exynos5250_get_asv_group_mif(struct asv_common *asv_comm)
 	unsigned int i;
 	unsigned int refer_ids;
 	unsigned int refer_hpm;
+	unsigned int asv_group = 0;
+	unsigned int group_shift = 0;
 	struct asv_info *target_asv_info = asv_get(ID_MIF);
 
-	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
-		if (is_special_lot) {
-			refer_ids = mif_org_refer_table_get_asv[0][i];
-			refer_hpm = mif_org_refer_table_get_asv[1][i];
+	if (exynos5250_is_use_sg_fused()) {
+		asv_group = (__raw_readl(MIF_ASV_REG) >> G2_ORG_SG_OFFSET) & G2_ORG_SG_MASK;
+		group_shift = (__raw_readl(MIF_ASV_REG) >> G2_MOD_SG_OFFSET) & G2_MOD_SG_MASK;
 
-			if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm))
-				return i;
-		} else {
-			refer_hpm = mif_refer_table_get_asv[0][i];
+		asv_group -= group_shift;
 
-			if (asv_comm->hpm_value <= refer_hpm)
-				return i;
+		if (asv_group < 0)
+			asv_group = 0;
+	} else {
+		for (i = 0; i < target_asv_info->asv_group_nr; i++) {
+			if (is_special_lot) {
+				refer_ids = mif_org_refer_table_get_asv[0][i];
+				refer_hpm = mif_org_refer_table_get_asv[1][i];
+
+				if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm)) {
+					asv_group = i;
+					break;
+				}
+			} else {
+				refer_hpm = mif_refer_table_get_asv[0][i];
+
+				if (asv_comm->hpm_value <= refer_hpm) {
+					asv_group = i;
+					break;
+				}
+			}
 		}
 	}
 
-	return 0;
+	return asv_group;
 }
 
 static void exynos5250_set_asv_info_mif(struct asv_info *asv_inform, bool show_volt)
@@ -309,22 +377,36 @@ static unsigned int exynos5250_get_asv_group_g3d(struct asv_common *asv_comm)
 	unsigned int i;
 	unsigned int refer_ids;
 	unsigned int refer_hpm;
+	unsigned int group_shift = 0;
+	unsigned int asv_group = 0;
 	struct asv_info *target_asv_info = asv_get(ID_G3D);
 
-	for (i = 0; i < target_asv_info->asv_group_nr; i++) {
-		if (is_special_lot) {
-			refer_ids = g3d_org_refer_table_get_asv[0][i];
-			refer_hpm = g3d_org_refer_table_get_asv[1][i];
-		} else {
-			refer_ids = g3d_refer_table_get_asv[0][i];
-			refer_hpm = g3d_refer_table_get_asv[1][i];
-		}
+	if (exynos5250_is_use_sg_fused()) {
+		asv_group = (__raw_readl(CHIP_ID_REG) >> G1_ORG_SG_OFFSET) & G1_ORG_SG_MASK;
+		group_shift = (__raw_readl(CHIP_ID_REG) >> G1_MOD_SG_OFFSET) & G1_MOD_SG_MASK;
 
-		if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm))
-			return i;
+		asv_group -= group_shift;
+
+		if (asv_group < 0)
+			asv_group = 0;
+	} else {
+		for (i = 0; i < target_asv_info->asv_group_nr; i++) {
+			if (is_special_lot) {
+				refer_ids = g3d_org_refer_table_get_asv[0][i];
+				refer_hpm = g3d_org_refer_table_get_asv[1][i];
+			} else {
+				refer_ids = g3d_refer_table_get_asv[0][i];
+				refer_hpm = g3d_refer_table_get_asv[1][i];
+			}
+
+			if ((asv_comm->ids_value <= refer_ids) || (asv_comm->hpm_value <= refer_hpm)) {
+				asv_group = i;
+				break;
+			}
+		}
 	}
 
-	return 0;
+	return asv_group;
 }
 
 static void exynos5250_set_asv_info_g3d(struct asv_info *asv_inform, bool show_volt)
@@ -455,8 +537,12 @@ static unsigned int exynos5250_regist_asv_member(void)
 		for (i = 0; i < ARRAY_SIZE(exynos5250_org_asv_member); i++)
 			add_asv_member(&exynos5250_org_asv_member[i]);
 	else
-		for (i = 0; i < ARRAY_SIZE(exynos5250_asv_member); i++)
+		for (i = 0; i < ARRAY_SIZE(exynos5250_asv_member); i++) {
+			if (exynos5250_is_use_sg_fused())
+				exynos5250_asv_member[i].use_sg_fused = true;
+
 			add_asv_member(&exynos5250_asv_member[i]);
+		}
 
 	return 0;
 }
@@ -511,8 +597,9 @@ int exynos5250_init_asv(struct asv_common *asv_info)
 		break;
 	}
 
-	pr_info("EXYNOS5250 ASV : %s IDS : %d HPM : %d\n", asv_info->lot_name,
-				asv_info->ids_value, asv_info->hpm_value);
+	if (!exynos5250_is_use_sg_fused())
+		pr_info("EXYNOS5250 ASV : %s IDS : %d HPM : %d\n", asv_info->lot_name,
+					asv_info->ids_value, asv_info->hpm_value);
 
 	asv_info->regist_asv_member = exynos5250_regist_asv_member;
 

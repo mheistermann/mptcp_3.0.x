@@ -66,8 +66,10 @@ static void set_asv_info(struct asv_common *exynos_asv_common, bool show_volt)
 	list_for_each_entry(exynos_asv_info, &asv_list, node) {
 		match_grp_nr = exynos_asv_info->ops->get_asv_group(exynos_asv_common);
 		exynos_asv_info->result_asv_grp = match_grp_nr;
-		pr_info("%s ASV group is %d\n", exynos_asv_info->name,
-						exynos_asv_info->result_asv_grp);
+		pr_info("%s[%s] ASV group is %d\n", exynos_asv_info->name,
+				exynos_asv_info->use_sg_fused ? "SG FUSED" : "SG NON-FUSED",
+				exynos_asv_info->result_asv_grp);
+
 		exynos_asv_info->ops->set_asv_info(exynos_asv_info, show_volt);
 
 		/* If need to set abb, call abb set function */

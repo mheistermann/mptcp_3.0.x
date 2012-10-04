@@ -88,6 +88,7 @@ struct asv_info {
 	unsigned int		max_volt_value;
 	struct asv_volt_table	*asv_volt;
 	struct abb_common	*abb_info;
+	bool			use_sg_fused;
 };
 
 /* Struct for ABB function */
