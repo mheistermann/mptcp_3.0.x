@@ -55,6 +55,20 @@
 #define G2_MOD_SG_OFFSET	28
 #define G2_MOD_SG_MASK		0x3
 
+/* ASV function for Lock feature */
+#define MIF_LOCK_OFFSET		7
+#define MIF_LOCK_MASK		0x1
+#define INT_LOCK_OFFSET		8
+#define INT_LOCK_MASK		0x1
+#define G3D_LOCK_OFFSET		9
+#define G3D_LOCK_MASK		0x1
+#define ARM_LOCK_OFFSET		10
+#define ARM_LOCK_MASK		0x3
+
+#define ARM_LOCK_800MHZ		0x1
+#define ARM_LOCK_1000MHZ	0x2
+#define ARM_LOCK_1100MHZ	0x3
+
 bool exynos5250_is_use_sg_fused(void)
 {
 	unsigned int tmp;
@@ -62,6 +76,55 @@ bool exynos5250_is_use_sg_fused(void)
 	tmp = __raw_readl(CHIP_ID_REG);
 
 	return (tmp >> SG_FUSE_OFFSET) & SG_FUSE_MASK;
+}
+
+unsigned int exynos5250_check_lock_info(enum asv_type_id target_id)
+{
+	unsigned int lock_info = 0;
+	unsigned int tmp = __raw_readl(CHIP_ID_REG);
+
+	switch (target_id) {
+	case ID_ARM:
+		lock_info = (tmp >> ARM_LOCK_OFFSET) & ARM_LOCK_MASK;
+		break;
+	case ID_INT:
+		lock_info = (tmp >> INT_LOCK_OFFSET) & INT_LOCK_MASK;
+		break;
+	case ID_MIF:
+		lock_info = (tmp >> MIF_LOCK_OFFSET) & MIF_LOCK_MASK;
+		break;
+	case ID_G3D:
+		lock_info = (tmp >> G3D_LOCK_OFFSET) & G3D_LOCK_MASK;
+		break;
+	}
+
+	return lock_info;
+}
+
+unsigned int exynos5250_calc_asv(enum asv_type_id target_id, unsigned int input_volt)
+{
+	unsigned int calc_volt = input_volt;
+
+	if (!exynos5250_is_use_sg_fused() || !exynos5250_check_lock_info(target_id))
+		return calc_volt;
+
+	switch (target_id) {
+	case ID_ARM:
+		/* This function is not support ARM */
+		calc_volt = input_volt;
+		break;
+	case ID_INT:
+		calc_volt += 25000;
+		break;
+	case ID_MIF:
+		calc_volt += 50000;
+		break;
+	case ID_G3D:
+		calc_volt += 25000;
+		break;
+	}
+
+	return calc_volt;
 }
 
 void exynos5250_set_abb(struct asv_info *asv_inform)
@@ -159,6 +222,7 @@ static void exynos5250_set_asv_info_arm(struct asv_info *asv_inform, bool show_v
 	unsigned int target_freq;
 	unsigned int target_volt;
 	unsigned int target_asv_grp_nr = asv_inform->result_asv_grp;
+	unsigned int target_arm_lock_volt = 0;
 
 	asv_inform->asv_volt = kmalloc((sizeof(struct asv_volt_table) * asv_inform->dvfs_level_nr), GFP_KERNEL);
 
@@ -180,6 +244,32 @@ static void exynos5250_set_asv_info_arm(struct asv_info *asv_inform, bool show_v
 		asv_inform->asv_volt[i].asv_volt = target_volt;
 	}
 
+	if ((!exynos5250_check_lock_info(ID_ARM)) || !exynos5250_is_use_sg_fused())
+		goto skip_arm_lock;
+
+	/* Get valid locking value for ARM*/
+	if (exynos5250_check_lock_info(ID_ARM) == ARM_LOCK_800MHZ) {
+		for (i = 0; i < asv_inform->dvfs_level_nr; i++)
+			if (asv_inform->asv_volt[i].asv_freq == 800000)
+				target_arm_lock_volt = asv_inform->asv_volt[i].asv_volt;
+	} else if (exynos5250_check_lock_info(ID_ARM) == ARM_LOCK_1000MHZ) {
+		for (i = 0; i < asv_inform->dvfs_level_nr; i++)
+			if (asv_inform->asv_volt[i].asv_freq == 1000000)
+				target_arm_lock_volt = asv_inform->asv_volt[i].asv_volt;
+	} else if (exynos5250_check_lock_info(ID_ARM) == ARM_LOCK_1100MHZ) {
+		for (i = 0; i < asv_inform->dvfs_level_nr; i++)
+			if (asv_inform->asv_volt[i].asv_freq == 1100000)
+				target_arm_lock_volt = asv_inform->asv_volt[i].asv_volt;
+	} else {
+		pr_info("Can not set with ARM lock bit\n");
+		goto skip_arm_lock;
+	}
+
+	for (i = 0; i < asv_inform->dvfs_level_nr; i++)
+		if (asv_inform->asv_volt[i].asv_volt < target_arm_lock_volt)
+			asv_inform->asv_volt[i].asv_volt = target_arm_lock_volt;
+
+skip_arm_lock:
 	if (show_volt) {
 		for (i = 0; i < asv_inform->dvfs_level_nr; i++)
 			pr_info("%s LV%d freq : %d volt : %d\n",
@@ -253,10 +343,12 @@ static void exynos5250_set_asv_info_int(struct asv_info *asv_inform, bool show_v
 		} else {
 			if (is_pmic_max)	{
 				target_freq = int_asv_volt_info_max[i][0];
-				target_volt = int_asv_volt_info_max[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_INT,
+						int_asv_volt_info_max[i][target_asv_grp_nr + 1]);
 			} else {
 				target_freq = int_asv_volt_info_s5m8767[i][0];
-				target_volt = int_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_INT,
+						int_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1]);
 			}
 		}
 
@@ -341,10 +433,12 @@ static void exynos5250_set_asv_info_mif(struct asv_info *asv_inform, bool show_v
 		} else {
 			if (is_pmic_max)	{
 				target_freq = mif_asv_volt_info_max[i][0];
-				target_volt = mif_asv_volt_info_max[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_MIF,
+						mif_asv_volt_info_max[i][target_asv_grp_nr + 1]);
 			} else {
 				target_freq = mif_asv_volt_info_s5m8767[i][0];
-				target_volt = mif_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_MIF,
+						mif_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1]);
 			}
 		}
 
@@ -425,10 +519,12 @@ static void exynos5250_set_asv_info_g3d(struct asv_info *asv_inform, bool show_v
 		} else {
 			if (is_pmic_max)	{
 				target_freq = g3d_asv_volt_info_max[i][0];
-				target_volt = g3d_asv_volt_info_max[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_MIF,
+						g3d_asv_volt_info_max[i][target_asv_grp_nr + 1]);
 			} else {
 				target_freq = g3d_asv_volt_info_s5m8767[i][0];
-				target_volt = g3d_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1];
+				target_volt = exynos5250_calc_asv(ID_MIF,
+						g3d_asv_volt_info_s5m8767[i][target_asv_grp_nr + 1]);
 			}
 		}
 
