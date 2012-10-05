@@ -1243,7 +1243,7 @@ static void __init arndale_fixup(struct machine_desc *desc,
 	mi->bank[0].size = 1024 * SZ_1M;
 
 	mi->bank[1].start = 0x80000000;
-	mi->bank[1].size = 1024 * SZ_1M;
+	mi->bank[1].size = 1023 * SZ_1M;
 
 	mi->nr_banks = 2;
 }
