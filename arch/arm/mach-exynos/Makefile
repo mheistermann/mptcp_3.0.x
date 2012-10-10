@@ -72,7 +72,6 @@ obj-$(CONFIG_MACH_ARNDALE)		+= mach-arndale.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-mmc.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-display.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-power.o
-obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-audio.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-usb.o
 obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-input.o
 

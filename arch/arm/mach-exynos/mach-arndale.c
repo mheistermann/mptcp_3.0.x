@@ -15,6 +15,7 @@
 #include <linux/i2c.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
+#include <linux/mfd/wm8994/pdata.h>
 #include <linux/memblock.h>
 #include <linux/delay.h>
 #include <linux/notifier.h>
@@ -427,6 +428,123 @@ static struct platform_device m5mols_fixed_voltage = {
 };
 #endif
 
+/* audio wm8994/wm1811 configurations */
+static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
+	REGULATOR_SUPPLY("AVDD2", "3-001a"),
+	REGULATOR_SUPPLY("CPVDD", "3-001a"),
+};
+
+static struct regulator_consumer_supply wm8994_fixed_voltage1_supplies[] = {
+	REGULATOR_SUPPLY("SPKVDD1", "3-001a"),
+	REGULATOR_SUPPLY("SPKVDD2", "3-001a"),
+};
+
+static struct regulator_consumer_supply wm8994_fixed_voltage2_supplies =
+	REGULATOR_SUPPLY("DBVDD", "3-001a");
+
+static struct regulator_init_data wm8994_fixed_voltage0_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(wm8994_fixed_voltage0_supplies),
+	.consumer_supplies	= wm8994_fixed_voltage0_supplies,
+};
+
+static struct regulator_init_data wm8994_fixed_voltage1_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(wm8994_fixed_voltage1_supplies),
+	.consumer_supplies	= wm8994_fixed_voltage1_supplies,
+};
+
+static struct regulator_init_data wm8994_fixed_voltage2_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_fixed_voltage2_supplies,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage0_config = {
+	.supply_name	= "VDD_1.8V",
+	.microvolts	= 1800000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage0_init_data,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage1_config = {
+	.supply_name	= "DC_5V",
+	.microvolts	= 5000000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage1_init_data,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage2_config = {
+	.supply_name	= "VDD_3.3V",
+	.microvolts	= 3300000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage2_init_data,
+};
+
+static struct platform_device wm8994_fixed_voltage0 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 0,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage0_config,
+	},
+};
+
+static struct platform_device wm8994_fixed_voltage1 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 1,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage1_config,
+	},
+};
+
+static struct platform_device wm8994_fixed_voltage2 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 2,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage2_config,
+	},
+};
+
+static struct regulator_consumer_supply wm8994_avdd1_supply =
+	REGULATOR_SUPPLY("AVDD1", "3-001a");
+
+static struct regulator_consumer_supply wm8994_dcvdd_supply =
+	REGULATOR_SUPPLY("DCVDD", "3-001a");
+
+static struct regulator_init_data wm8994_ldo1_data = {
+	.constraints	= {
+		.name		= "AVDD1",
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_avdd1_supply,
+};
+
+static struct regulator_init_data wm8994_ldo2_data = {
+	.constraints	= {
+		.name		= "DCVDD",
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_dcvdd_supply,
+};
+
+static struct wm8994_pdata wm8994_platform_data = {
+	/* configure gpio1 function: 0x0001(Logic level input/output) */
+	.gpio_defaults[0] = 0x0001,
+	/* If the i2s0 and i2s2 is enabled simultaneously */
+	.gpio_defaults[7] = 0x8100, /* GPIO8  DACDAT3 in */
+	.gpio_defaults[8] = 0x0100, /* GPIO9  ADCDAT3 out */
+	.gpio_defaults[9] = 0x0100, /* GPIO10 LRCLK3  out */
+	.gpio_defaults[10] = 0x0100,/* GPIO11 BCLK3   out */
+	.ldo[0] = { 0, NULL, &wm8994_ldo1_data },
+	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
+};
+
 static struct i2c_board_info i2c_devs2[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 	{
@@ -442,9 +560,17 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 	{
 		I2C_BOARD_INFO("ak4678", 0x12),
 	},
+#if defined(CONFIG_SND_SOC_ALC5631)
 	{
 		I2C_BOARD_INFO("alc5631", 0x1a),
 	},
+#endif
+#if defined(CONFIG_SND_SOC_WM8994)
+	{
+		I2C_BOARD_INFO("wm8994", 0x1a),
+		.platform_data	= &wm8994_platform_data,
+	},
+#endif
 };
 
 struct s3c2410_platform_i2c i2c_data3 __initdata = {
@@ -505,6 +631,14 @@ static struct platform_device *arndale_devices[] __initdata = {
 	&s3c_device_i2c3,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
+
+	&exynos_device_i2s0,
+	&wm8994_fixed_voltage0,
+	&wm8994_fixed_voltage1,
+	&wm8994_fixed_voltage2,
+	&samsung_asoc_dma,
+	&samsung_asoc_idma,
+
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
@@ -1052,7 +1186,6 @@ static void __init arndale_machine_init(void)
 
 	exynos5_smdk5250_mmc_init();
 	exynos5_smdk5250_power_init();
-	exynos5_smdk5250_audio_init();
 	exynos5_smdk5250_usb_init();
 	exynos5_smdk5250_input_init();
 
