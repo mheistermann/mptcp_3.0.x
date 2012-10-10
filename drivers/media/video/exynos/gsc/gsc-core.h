@@ -37,6 +37,10 @@
 #include <media/videobuf2-ion.h>
 #endif
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+
 extern const int h_coef_8t[7][16][8];
 extern const int v_coef_4t[7][16][4];
 extern int gsc_dbg;
@@ -100,6 +104,8 @@ extern int gsc_dbg;
 #define	GSC_CTX_OUTPUT			(1 << 4)
 #define	GSC_CTX_START			(1 << 5)
 #define	GSC_CTX_STOP_REQ		(1 << 6)
+#define	GSC_CTX_SUSPEND			(1 << 7)
+#define	GSC_CTX_STREAMOFF		(1 << 8)
 #define	GSC_CTX_CAP			(1 << 10)
 
 #define GSC_SC_UP_MAX_RATIO		65536
@@ -550,6 +556,9 @@ struct gsc_dev {
 	struct exynos_entity_data	md_data;
 	bool				use_sysmmu;
 	struct device			*bus_dev;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend		early_suspend;
+#endif
 };
 
 /**

@@ -791,7 +791,7 @@ static int gsc_capture_close(struct file *file)
 		gsc_ctrls_delete(gsc->cap.ctx);
 	}
 
-	pm_runtime_put(&gsc->pdev->dev);
+	pm_runtime_put_sync(&gsc->pdev->dev);
 
 	return v4l2_fh_release(file);
 }

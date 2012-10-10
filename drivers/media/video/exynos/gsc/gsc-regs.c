@@ -754,19 +754,16 @@ void gsc_hw_set_pxlasync_camif_lo_mask(struct gsc_dev *dev, bool on)
 {
 	u32 cfg = 0;
 
-	if (dev->id == 3) {
-		cfg = readl(SYSREG_GSCBLK_CFG0);
-		if (on)
-			cfg |= PXLASYNC_LO_MASK_CAMIF_TOP;
-		else
-			cfg &= ~(PXLASYNC_LO_MASK_CAMIF_TOP);
-		writel(cfg, SYSREG_GSCBLK_CFG0);
-	} else {
+	if (likely(dev->pipeline.flite)) {
+		struct platform_device *pdev;
+
+		pdev = v4l2_get_subdev_hostdata(dev->pipeline.flite);
+
 		cfg = readl(SYSREG_GSCBLK_CFG2);
 		if (on)
-			cfg |= PXLASYNC_LO_MASK_CAMIF_GSCL(dev->id);
+			cfg |= PXLASYNC_LO_MASK_CAMIF_GSCL(pdev->id);
 		else
-			cfg &= ~PXLASYNC_LO_MASK_CAMIF_GSCL(dev->id);
+			cfg &= ~PXLASYNC_LO_MASK_CAMIF_GSCL(pdev->id);
 		writel(cfg, SYSREG_GSCBLK_CFG2);
 	}
 }

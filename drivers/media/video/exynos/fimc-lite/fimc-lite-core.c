@@ -2021,8 +2021,7 @@ static int flite_probe(struct platform_device *pdev)
 
 	flite->sd_flite = sd;
 	v4l2_set_subdevdata(flite->sd_flite, flite);
-	if (soc_is_exynos4212() || soc_is_exynos4412())
-		v4l2_set_subdev_hostdata(sd, pdev);
+	v4l2_set_subdev_hostdata(sd, pdev);
 #if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	flite->vb2 = &flite_vb2_cma;
