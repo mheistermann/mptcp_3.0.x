@@ -461,6 +461,7 @@ static int wm8994_device_init(struct wm8994 *wm8994, int irq)
 		goto err_enable;
 	}
 	switch (ret) {
+	case 0x1811:
 	case 0x8994:
 		devname = "WM8994";
 		if (wm8994->type != WM8994)
