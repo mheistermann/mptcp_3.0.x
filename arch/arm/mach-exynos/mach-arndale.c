@@ -72,6 +72,10 @@
 #include <plat/tvout.h>
 #endif
 
+#ifdef CONFIG_ATH6KL_PLATFORM_DATA
+#include <linux/ath6kl.h>
+#endif 
+
 #include <plat/media.h>
 
 #include "board-smdk5250.h"
@@ -604,6 +608,74 @@ static struct s3c_hwmon_pdata smdk5250_hwmon_pdata __initdata = {
 		.mult		= 3300,
 		.div		= 4096,
 	},
+};
+#endif
+
+#ifdef CONFIG_ATH6KL_PLATFORM_DATA
+
+#define ARNDALE_WLAN_WOW    EXYNOS5_GPX1(0)
+#define ARNDALE_WLAN_RESET  EXYNOS5_GPX3(0)
+
+static void a51h_wlan_setup_power(bool val)
+{
+        int err;
+	printk("a51h_wlan_setup_power ~~~~~~~~~~~~~~~~\n");
+
+        if (val) {
+                err = gpio_request_one(ARNDALE_WLAN_RESET,
+                                GPIOF_OUT_INIT_LOW, "GPX3_0");
+                if (err) {
+                        pr_warning("ARNDALE: Not obtain WIFI gpios\n");
+                        return;
+                }
+                s3c_gpio_cfgpin(ARNDALE_WLAN_RESET, S3C_GPIO_OUTPUT);
+                s3c_gpio_setpull(ARNDALE_WLAN_RESET,
+                                                S3C_GPIO_PULL_NONE);
+                /* VDD33,I/O Supply must be done */
+                gpio_set_value(ARNDALE_WLAN_WOW, 0);
+                gpio_set_value(ARNDALE_WLAN_RESET, 0);
+                udelay(30);     /*Tb */
+                gpio_direction_output(ARNDALE_WLAN_RESET, 1);
+        } else {
+                gpio_direction_output(ARNDALE_WLAN_RESET, 0);
+                gpio_free(ARNDALE_WLAN_RESET);
+        }
+
+        mdelay(100);
+
+        return;
+}
+
+/*
+#define ARNDALE_BT_RESET    EXYNOS5_GPX2(7)
+*/
+
+static int a51h_wifi_set_detect(bool val)
+{
+/*
+        if (!wifi_status_cb) {
+                pr_warning("ORIGEN: WLAN: No callback \n"
+                "ORIGEN: WLAN: MMC should boot earlier than net \n");
+
+                return -EAGAIN;
+        }
+*/
+
+	printk("a51h_wifi_set_detect ~~~~~~~~~~~~~~~~\n");
+
+        if (true == val) {
+                a51h_wlan_setup_power(true);
+//                wifi_status_cb(&s3c_device_hsmmc3, 1);
+        } else {
+                a51h_wlan_setup_power(false);
+//                wifi_status_cb(&s3c_device_hsmmc3, 0);
+        }
+
+        return 0;
+}
+
+struct ath6kl_platform_data a51h_wlan_data  __initdata = {
+        .setup_power = a51h_wifi_set_detect,
 };
 #endif
 
@@ -1368,6 +1440,10 @@ static void __init arndale_machine_init(void)
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
 #endif
+#endif
+
+#ifdef CONFIG_ATH6KL_PLATFORM_DATA
+    ath6kl_set_platform_data(&a51h_wlan_data);
 #endif
 
 	smdk5250_uhostphy_reset();

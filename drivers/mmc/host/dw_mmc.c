@@ -40,6 +40,11 @@
 
 #include "dw_mmc.h"
 
+/* mmc detect function */
+#ifdef CONFIG_ATH6KL_PLATFORM_DATA
+#define MMC_DETECT (1)
+#endif
+
 /* Common flag combinations */
 #define DW_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DTO | SDMMC_INT_DCRC | \
 				 SDMMC_INT_HTO | SDMMC_INT_SBE  | \
@@ -1790,6 +1795,26 @@ static irqreturn_t dw_mci_detect_interrupt(int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
+
+#if MMC_DETECT
+#include <plat/devs.h>
+void sdmmc_cd_control(int state)
+{
+	struct dw_mci *host = platform_get_drvdata(&exynos_device_dwmci1);
+	struct dw_mci_board *brd = host->pdata;
+
+	/* Use platform get_cd function, else try onboard card detect */
+	if (state)
+		brd->quirks |= DW_MCI_QUIRK_BROKEN_CARD_DETECTION;
+	else
+		brd->quirks &= ~DW_MCI_QUIRK_BROKEN_CARD_DETECTION;
+
+	printk("%s :: %d :: %d \n", __func__, __LINE__, state);
+	mci_writel(host, RINTSTS, SDMMC_INT_CD);
+	tasklet_schedule(&host->card_tasklet);
+}
+EXPORT_SYMBOL(sdmmc_cd_control);
+#endif
 
 static int __init dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 {
