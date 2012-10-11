@@ -17,6 +17,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/memblock.h>
+#include <linux/rfkill-gpio.h>
 #include <linux/delay.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
@@ -549,6 +550,35 @@ static struct wm8994_pdata wm8994_platform_data = {
 	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
 };
 
+//#ifdef CONFIG_RFKILL
+/* Bluetooth rfkill gpio platform data */
+struct rfkill_gpio_platform_data arndale_bt_pdata = {
+	.reset_gpio	= EXYNOS5_GPX2(7),
+	.shutdown_gpio	= -1,
+	.type		= RFKILL_TYPE_BLUETOOTH,
+	.name		= "arndale-bt",
+};
+
+/* Bluetooth Platform device */
+static struct platform_device arndale_device_bluetooth = {
+	.name		= "rfkill_gpio",
+	.id		= -1,
+	.dev		= {
+		.platform_data	= &arndale_bt_pdata,
+	},
+};
+
+static void __init arndale_bt_setup(void)
+{
+	gpio_request(EXYNOS5_GPA0(0), "GPIO BT_UART");
+	/* 4 UART Pins configuration */
+	s3c_gpio_cfgrange_nopull(EXYNOS5_GPA0(0), 4, S3C_GPIO_SFN(2));
+	/* Setup BT Reset, this gpio will be requesed by rfkill-gpio */
+	s3c_gpio_cfgpin(EXYNOS5_GPX2(7), S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(EXYNOS5_GPX2(7), S3C_GPIO_PULL_NONE);
+}
+//#endif
+
 static struct i2c_board_info i2c_devs2[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 	{
@@ -778,6 +808,10 @@ static struct platform_device *arndale_devices[] __initdata = {
 	&exynos_device_hsi,
 #endif
 	&exynos5_device_ahci,
+
+//#ifdef CONFIG_RFKILL
+	&arndale_device_bluetooth,
+//#endif
 };
 
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
@@ -1445,6 +1479,10 @@ static void __init arndale_machine_init(void)
 #ifdef CONFIG_ATH6KL_PLATFORM_DATA
     ath6kl_set_platform_data(&a51h_wlan_data);
 #endif
+
+//#ifdef CONFIG_RFKILL
+	arndale_bt_setup();
+//#endif
 
 	smdk5250_uhostphy_reset();
 
