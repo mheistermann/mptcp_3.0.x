@@ -765,7 +765,7 @@ static const struct ath6kl_hif_ops ath6kl_sdio_ops = {
 	.enable_scatter = ath6kl_sdio_enable_scatter,
 	.scat_req_rw = ath6kl_sdio_async_rw_scatter,
 	.cleanup_scatter = ath6kl_sdio_cleanup_scatter,
-	.suspend = ath6kl_sdio_suspend,
+//	.suspend = ath6kl_sdio_suspend,
 };
 
 static int ath6kl_sdio_probe(struct sdio_func *func,
