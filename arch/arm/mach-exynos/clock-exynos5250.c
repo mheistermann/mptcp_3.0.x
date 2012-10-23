@@ -2658,6 +2658,32 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	clk_fout_vpll.ops = &exynos5_vpll_ops;
 	clk_fout_gpll.ops = &exynos5_gpll_ops;
 
+#if (CONFIG_S3C_LOWLEVEL_UART_PORT != 0)
+	if (clk_set_parent(&exynos5_clksrcs[0].clk,
+				&exynos5_clk_mout_mpll_user.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_mout_mpll_user.clk.name, exynos5_clksrcs[0].clk.name);
+#endif
+#if (CONFIG_S3C_LOWLEVEL_UART_PORT != 1)
+	if (clk_set_parent(&exynos5_clksrcs[1].clk,
+				&exynos5_clk_mout_mpll_user.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_mout_mpll_user.clk.name, exynos5_clksrcs[1].clk.name);
+#endif
+#if (CONFIG_S3C_LOWLEVEL_UART_PORT != 2)
+	if (clk_set_parent(&exynos5_clksrcs[2].clk,
+				&exynos5_clk_mout_mpll_user.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_mout_mpll_user.clk.name, exynos5_clksrcs[2].clk.name);
+#endif
+#if (CONFIG_S3C_LOWLEVEL_UART_PORT != 3)
+	if (clk_set_parent(&exynos5_clksrcs[3].clk,
+				&exynos5_clk_mout_mpll_user.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_mout_mpll_user.clk.name, exynos5_clksrcs[3].clk.name);
+#endif
+
+
 	if (clk_set_parent(&exynos5_clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos5_clk_mout_audss.clk.name);
