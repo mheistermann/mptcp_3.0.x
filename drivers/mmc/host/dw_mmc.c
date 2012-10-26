@@ -43,6 +43,8 @@
 /* mmc detect function */
 #ifdef CONFIG_ATH6KL_PLATFORM_DATA
 #define MMC_DETECT (1)
+#else
+#define MMC_DETECT (0)
 #endif
 
 /* Common flag combinations */
