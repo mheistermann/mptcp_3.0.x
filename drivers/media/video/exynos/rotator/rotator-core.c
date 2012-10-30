@@ -531,8 +531,7 @@ static void rot_vb2_buf_queue(struct vb2_buffer *vb)
 static void rot_vb2_lock(struct vb2_queue *vq)
 {
 	struct rot_ctx *ctx = vb2_get_drv_priv(vq);
-	if (mutex_is_locked(&ctx->rot_dev->lock) == 0)
-		mutex_lock(&ctx->rot_dev->lock);
+	mutex_lock(&ctx->rot_dev->lock);
 }
 
 static void rot_vb2_unlock(struct vb2_queue *vq)
