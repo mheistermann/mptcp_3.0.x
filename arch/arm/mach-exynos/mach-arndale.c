@@ -77,6 +77,10 @@
 #include <linux/ath6kl.h>
 #endif 
 
+#ifdef CONFIG_GPS_POWER
+#include <mach/gcontrol.h>
+#endif
+
 #include <plat/media.h>
 
 #include "board-smdk5250.h"
@@ -727,6 +731,22 @@ static struct notifier_block exynos5_reboot_notifier = {
 	.notifier_call = exynos5_notifier_call,
 };
 
+#ifdef CONFIG_GPS_POWER
+#define CUSTOM_GPIO_GPS_POWER_EN EXYNOS5_GPX0(7)
+
+struct csr_platform_data csr_platdata = {
+        .power = CUSTOM_GPIO_GPS_POWER_EN,
+};
+
+static struct platform_device csr_gps = {
+        .name           = "csrgps",
+	.id		= -1,
+        .dev = {
+		.platform_data = &csr_platdata,
+        },
+};
+#endif
+
 static struct platform_device *arndale_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c2,
@@ -812,6 +832,9 @@ static struct platform_device *arndale_devices[] __initdata = {
 //#ifdef CONFIG_RFKILL
 	&arndale_device_bluetooth,
 //#endif
+#ifdef CONFIG_GPS_POWER
+        &csr_gps,
+#endif
 };
 
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
