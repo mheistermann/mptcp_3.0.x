@@ -64,6 +64,7 @@
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <plat/devs.h>
 #include <plat/pd.h>
+extern void kbase_update_platform_config(void);
 #endif
 
 #define	JOB_IRQ_TAG	0
@@ -2391,8 +2392,11 @@ static int __init kbase_driver_init(void)
 	{
 		return -ENOMEM;
 	}
+#ifdef CONFIG_VITHAR
+	kbase_update_platform_config();
 #ifdef CONFIG_VITHAR_RT_PM
 	mali_device->dev.parent = &exynos5_device_pd[PD_G3D].dev;
+#endif
 #endif
 
 	kbasep_config_parse_io_resources(config->io_resources, resources);

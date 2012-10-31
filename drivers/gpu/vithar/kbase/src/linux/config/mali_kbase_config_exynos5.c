@@ -23,6 +23,7 @@
 #include <linux/pm_runtime.h>
 #include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#include <linux/mm.h>
 
 #define HZ_IN_MHZ                           (1000000)
 
@@ -183,4 +184,17 @@ kbase_platform_config platform_config =
 		.midgard_type              = KBASE_MALI_T604
 };
 
+void kbase_update_platform_config(void)
+{
+	int i = 0;
+
+	while (config_attributes[i].id != KBASE_CONFIG_ATTR_END) {
+		if (config_attributes[i].id == KBASE_CONFIG_ATTR_MEMORY_OS_SHARED_MAX) {
+			config_attributes[i].data = num_physpages << PAGE_SHIFT;
+			break;
+		}
+		i++;
+	}
+	return;
+}
 
