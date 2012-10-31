@@ -66,7 +66,6 @@ static unsigned int exynos_get_safe_armvolt(unsigned int old_index, unsigned int
 {
 	unsigned int safe_arm_volt = 0;
 	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
-	unsigned int *volt_table = exynos_info->volt_table;
 
 	/*
 	 * ARM clock source will be changed APLL to MPLL temporary
@@ -94,7 +93,6 @@ static int exynos_target(struct cpufreq_policy *policy,
 	unsigned int arm_volt, safe_arm_volt = 0;
 	int ret = 0;
 	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
-	unsigned int *volt_table = exynos_info->volt_table;
 
 	mutex_lock(&set_freq_lock);
 
