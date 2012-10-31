@@ -312,6 +312,14 @@ static void s3c_rtc_enable(struct platform_device *pdev, int en)
 				base + S3C2410_RTCCON);
 		}
 
+                if ((readw(base+S3C2410_RTCCON) & S3C64XX_RTCCON_CLKOUTEN) == 0) {
+                        dev_info(&pdev->dev, "rtc clk out disabled, re-enabling\n");
+
+                        tmp = readw(base + S3C2410_RTCCON);
+                        writew(tmp | S3C64XX_RTCCON_CLKOUTEN,
+                                base + S3C2410_RTCCON);
+                }
+
 		if ((readw(base + S3C2410_RTCCON) & S3C2410_RTCCON_CNTSEL)) {
 			dev_info(&pdev->dev, "removing RTCCON_CNTSEL\n");
 
