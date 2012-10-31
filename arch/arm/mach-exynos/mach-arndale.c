@@ -1198,28 +1198,6 @@ static inline void exynos_sysmmu_init(void)
 }
 #endif
 
-static int smdk5250_uhostphy_reset(void)
-{
-	int err;
-	err = gpio_request(EXYNOS5_GPX3(5), "GPX3");
-	if (!err) {
-		gpio_direction_output(EXYNOS5_GPX3(5), 1);
-		gpio_set_value(EXYNOS5_GPX3(5), 1);
-		s3c_gpio_setpull(EXYNOS5_GPX3(5), S3C_GPIO_PULL_UP);
-		gpio_free(EXYNOS5_GPX3(5));
-	}
-	
-	err = gpio_request(EXYNOS5_GPD1(7), "GPD1");
-	if (!err) {
-		gpio_direction_output(EXYNOS5_GPD1(7), 1);
-		gpio_set_value(EXYNOS5_GPD1(7), 1);
-		s3c_gpio_setpull(EXYNOS5_GPD1(7), S3C_GPIO_PULL_UP);
-		gpio_free(EXYNOS5_GPD1(7));
-	}
-
-	return 0;
-}
-
 #define SMDK5250_REV_0_0_ADC_VALUE 0
 #define SMDK5250_REV_0_2_ADC_VALUE 500
 
@@ -1483,8 +1461,6 @@ static void __init arndale_machine_init(void)
 //#ifdef CONFIG_RFKILL
 	arndale_bt_setup();
 //#endif
-
-	smdk5250_uhostphy_reset();
 
 	register_reboot_notifier(&exynos5_reboot_notifier);
 }
