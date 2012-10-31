@@ -451,7 +451,7 @@ static void mali_dvfs_event_proc(struct work_struct *w)
 		kbase_platform_dvfs_set_level(dvfs_status.kbdev, dvfs_status.step);
 
 #if MALI_GATOR_SUPPORT
-	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_CHANGED, ACTIVITY_DVFS) |((unsigned int)clk_get_rate(dvfs_status.kbdev->sclk_g3d)/1000000));
+	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_CHANGED, ACTIVITY_DVFS) |((unsigned int)clk_get_rate(platform->sclk_g3d)/1000000));
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(ACTIVITY_DVFS_UTILISATION_CHANGED, ACTIVITY_DVFS_UTILISATION) | dvfs_status.utilisation);
 #endif
 

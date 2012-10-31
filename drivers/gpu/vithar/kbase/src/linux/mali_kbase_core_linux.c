@@ -2600,13 +2600,13 @@ MODULE_LICENSE("Proprietary");
 void kbase_trace_mali_job_slots_event(u32 event)
 {
 	//trace_mali_job_slots_event(event);
-	trace_mali_timeline_event(event, 0, 0, 0, 0, 0);
+	trace_mali_timeline_event(event);
 }
 
 
 void kbase_trace_mali_timeline_event(u32 event)
 {
-	trace_mali_timeline_event(event, 0, 0, 0, 0, 0);
+	trace_mali_timeline_event(event);
 }
 
 #endif
