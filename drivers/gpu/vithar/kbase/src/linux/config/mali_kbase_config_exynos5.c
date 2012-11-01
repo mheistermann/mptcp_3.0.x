@@ -90,9 +90,17 @@ kbase_platform_funcs_conf platform_funcs =
 static int pm_callback_power_on(kbase_device *kbdev)
 {
 	/* Nothing is needed on VExpress, but we may have destroyed GPU state (if the below HARD_RESET code is active) */
+	int ret_val;
 	struct kbase_os_device *osdev = &kbdev->osdev;
+
+
+	if (osdev->dev->power.runtime_status == RPM_SUSPENDED)
+		ret_val = 1;
+	else
+		ret_val = 0;
+
 	kbase_device_runtime_get_sync(osdev->dev);
-	return 0;
+	return ret_val;
 }
 
 static void pm_callback_power_off(kbase_device *kbdev)
