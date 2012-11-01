@@ -74,7 +74,8 @@ int umpp_phys_commit(umpp_allocation * alloc)
 	for (i = 0; i < alloc->blocksCount; i++)
 	{
 		void * mp;
-		struct page * page = alloc_page(GFP_HIGHUSER | __GFP_NORETRY | __GFP_NOWARN | __GFP_COLD);
+		struct page *page = alloc_page(GFP_HIGHUSER | __GFP_NOWARN | __GFP_COLD);
+
 		if (NULL == page)
 		{
 			break;
