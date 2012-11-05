@@ -448,6 +448,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPH0(3), 1, S3C_GPIO_SFN(2));
 
 	/* Camera A reset*/
+#if 0
 	ret = gpio_request(EXYNOS5_GPX1(2), "GPX1");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPX1_2 ####\n");
@@ -456,6 +457,7 @@ void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev)
 	gpio_direction_output(EXYNOS5_GPX1(2), 0);
 	gpio_direction_output(EXYNOS5_GPX1(2), 1);
 	gpio_free(EXYNOS5_GPX1(2));
+#endif
 	/* CAM B port */
 	ret = gpio_request(EXYNOS5_GPG2(1), "GPG2");
 	if (ret)

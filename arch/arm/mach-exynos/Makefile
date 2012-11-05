@@ -69,6 +69,13 @@ obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-usb.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-input.o
 obj-$(CONFIG_MACH_SMDK5250)		+= board-smdk5250-spi.o
 
+obj-$(CONFIG_MACH_ARNDALE)		+= mach-arndale.o
+obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-mmc.o
+obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-display.o
+obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-power.o
+obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-usb.o
+obj-$(CONFIG_MACH_ARNDALE)		+= board-smdk5250-input.o
+
 # device support
 
 obj-$(CONFIG_ARCH_EXYNOS)		+= dev-audio.o

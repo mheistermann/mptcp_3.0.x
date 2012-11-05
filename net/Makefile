@@ -48,7 +48,11 @@ endif
 obj-$(CONFIG_IP_DCCP)		+= dccp/
 obj-$(CONFIG_IP_SCTP)		+= sctp/
 obj-$(CONFIG_RDS)		+= rds/
-obj-$(CONFIG_WIRELESS)		+= wireless/
+ifeq ($(CONFIG_ATH6KL_PLATFORM_DATA),)
+obj-$(CONFIG_WIRELESS)          += wireless/
+else
+obj-$(CONFIG_WIRELESS)          += wireless_a51h/
+endif
 obj-$(CONFIG_MAC80211)		+= mac80211/
 obj-$(CONFIG_TIPC)		+= tipc/
 obj-$(CONFIG_NETLABEL)		+= netlabel/

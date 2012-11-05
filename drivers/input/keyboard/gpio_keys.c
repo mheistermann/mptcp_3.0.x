@@ -25,6 +25,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
+#include <linux/wakelock.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -43,6 +44,8 @@ struct gpio_keys_drvdata {
 	void (*disable)(struct device *dev);
 	struct gpio_button_data data[0];
 };
+
+struct wake_lock gpio_key_wake_lock;
 
 /*
  * SYSFS interface for enabling/disabling keys and switches:
@@ -473,6 +476,8 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	ddata->n_buttons = pdata->nbuttons;
 	ddata->enable = pdata->enable;
 	ddata->disable = pdata->disable;
+	wake_lock_init(&gpio_key_wake_lock, WAKE_LOCK_SUSPEND, "gpio-keys");
+
 	mutex_init(&ddata->disable_lock);
 
 	platform_set_drvdata(pdev, ddata);
@@ -532,6 +537,8 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
+	wake_lock(&gpio_key_wake_lock);
+
 	return 0;
 
  fail3:
@@ -548,6 +555,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
  fail1:
 	input_free_device(input);
+	wake_unlock(&gpio_key_wake_lock);
 	kfree(ddata);
 
 	return error;
@@ -574,6 +582,7 @@ static int __devexit gpio_keys_remove(struct platform_device *pdev)
 	}
 
 	input_unregister_device(input);
+	wake_lock_destroy(&gpio_key_wake_lock);
 
 	return 0;
 }

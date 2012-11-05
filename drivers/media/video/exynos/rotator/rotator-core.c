@@ -537,7 +537,8 @@ static void rot_vb2_lock(struct vb2_queue *vq)
 static void rot_vb2_unlock(struct vb2_queue *vq)
 {
 	struct rot_ctx *ctx = vb2_get_drv_priv(vq);
-	mutex_unlock(&ctx->rot_dev->lock);
+	if (mutex_is_locked(&ctx->rot_dev->lock))
+		mutex_unlock(&ctx->rot_dev->lock);
 }
 
 static int rot_vb2_start_streaming(struct vb2_queue *vq)
@@ -712,6 +713,8 @@ static int rot_open(struct file *file)
 		goto err_ctx;
 	}
 
+	mutex_init(&ctx->rot_dev->lock);
+
 	return 0;
 
 err_ctx:
@@ -737,6 +740,7 @@ static int rot_release(struct file *file)
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	atomic_dec(&rot->m2m.in_use);
+	mutex_destroy(&ctx->rot_dev->lock);
 	kfree(ctx);
 
 	return 0;

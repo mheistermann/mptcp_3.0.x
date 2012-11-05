@@ -233,3 +233,27 @@ config SND_SOC_SPEYSIDE
 	select SND_SAMSUNG_I2S
 	select SND_SOC_WM8915
 	select SND_SOC_WM9081
+
+config SND_SOC_ARNDALE_AK4678
+	tristate "Audio support for AK4678 on Arndale Board"
+	depends on SND_SOC_SAMSUNG
+	select SND_SAMSUNG_I2S
+	select SND_SOC_AK4678
+	help
+	  Say Y if you want to add support for SoC audio on the Arndale Board.
+
+config SND_SOC_ARNDALE_RT5631
+	tristate "SoC I2S Audio support for RT5631 on ARNDALE board"
+	depends on SND_SOC_SAMSUNG
+	select SND_SAMSUNG_I2S
+	select SND_SOC_ALC5631
+	help
+	  Say Y if you want to add support for SoC audio on the Arndale board.
+
+config SND_SOC_ARNDALE_WM1811
+	tristate "SoC I2S Audio support for WM1811 on Arndale board"
+	depends on SND_SOC_SAMSUNG && MACH_ARNDALE
+	select SND_SOC_WM8994
+	select SND_SAMSUNG_I2S
+	help
+		Say Y if you want to add support for SoC audio on the Arndale board.

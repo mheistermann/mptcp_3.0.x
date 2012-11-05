@@ -24,5 +24,6 @@ extern int samsung_board_rev;
 
 #define samsung_board_rev_is_0_0() (samsung_board_rev == SAMSUNG_BOARD_REV_0_0)
 #define samsung_board_rev_is_0_1() (samsung_board_rev == SAMSUNG_BOARD_REV_0_1)
+#define samsung_board_rev_is_0_2() (samsung_board_rev == SAMSUNG_BOARD_REV_0_2)
 
 #endif /* __ASM_ARCH_BOARD_REV_H */

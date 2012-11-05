@@ -19,16 +19,98 @@
 #include <plat/iic.h>
 
 #include <mach/irqs.h>
+#include <mach/board_rev.h>
 
 #include "board-smdk5250.h"
 
 struct gpio_keys_button smdk5250_button[] = {
+#if defined(CONFIG_MACH_ARNDALE)
+	{
+		.code = KEY_MENU,
+		.gpio = EXYNOS5_GPX1(4),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_HOME,
+		.gpio = EXYNOS5_GPX1(5),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_VOLUMEUP,
+		.gpio = EXYNOS5_GPX1(6),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_VOLUMEDOWN,
+		.gpio = EXYNOS5_GPX1(7),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_BACK,
+		.gpio = EXYNOS5_GPX2(0),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_SEARCH,
+		.gpio = EXYNOS5_GPX2(1),
+		.active_low = 1,
+		.wakeup = 0,
+	},
 	{
 		.code = KEY_POWER,
-		.gpio = EXYNOS5_GPX0(0),
+		.gpio = EXYNOS5_GPX1(3),
 		.active_low = 1,
 		.wakeup = 1,
 	},
+#else
+	{
+		.code = KEY_MENU,
+		.gpio = EXYNOS5_GPX1(4),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_HOME,
+		.gpio = EXYNOS5_GPX1(5),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_VOLUMEUP,
+		.gpio = EXYNOS5_GPX1(6),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_VOLUMEDOWN,
+		.gpio = EXYNOS5_GPX1(7),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_BACK,
+		.gpio = EXYNOS5_GPX2(0),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_SEARCH,
+		.gpio = EXYNOS5_GPX2(1),
+		.active_low = 1,
+		.wakeup = 0,
+	},
+	{
+		.code = KEY_POWER,
+		.gpio = EXYNOS5_GPX1(3),
+		.active_low = 1,
+		.wakeup = 1,
+	},
+#endif
 };
 
 struct gpio_keys_platform_data smdk5250_gpiokeys_platform_data = {
@@ -43,6 +125,14 @@ static struct platform_device smdk5250_gpio_keys = {
 	},
 };
 
+#ifdef CONFIG_MACH_ARNDALE
+static struct i2c_board_info i2c_devs7[] __initdata = {
+	{
+		I2C_BOARD_INFO("unidisplay_ts", 0x41),
+		.irq		= IRQ_EINT(9),
+	},
+};
+#else
 struct egalax_i2c_platform_data {
 	unsigned int gpio_int;
 	unsigned int gpio_en;
@@ -60,6 +150,7 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 		.platform_data	= &exynos5_egalax_data,
 	},
 };
+#endif
 
 static struct platform_device *smdk5250_input_devices[] __initdata = {
 	&s3c_device_i2c7,
@@ -91,4 +182,6 @@ void __init exynos5_smdk5250_input_init(void)
 
 	platform_add_devices(smdk5250_input_devices,
 			ARRAY_SIZE(smdk5250_input_devices));
+
+	s3c_gpio_setpull(EXYNOS5_GPX1(3), S3C_GPIO_PULL_UP);
 }

@@ -129,6 +129,64 @@ static int smdk5250_dwmci_get_ro(u32 slot_id)
 	return 0;
 }
 
+
+static void exynos_dwmci1_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS5_GPC2(0); gpio < EXYNOS5_GPC2(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+	}
+
+#if 0
+	switch (width) {
+	case MMC_BUS_WIDTH_4:
+		for (gpio = EXYNOS5_GPC2(3); gpio <= EXYNOS5_GPC2(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+		}
+		break;
+	case MMC_BUS_WIDTH_1:
+		gpio = EXYNOS5_GPC2(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+	default:
+		break;
+	}
+#else
+		for (gpio = EXYNOS5_GPC2(3); gpio <= EXYNOS5_GPC2(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+		}
+#endif
+
+	gpio = EXYNOS5_GPC2(2);
+	s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
+	s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+	s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
+}
+
+struct block_settings bs;
+
+static struct dw_mci_board smdk5250_dwmci1_pdata __initdata = {
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_HIGHSPEED,
+	.caps			= MMC_CAP_4_BIT_DATA | MMC_CAP_CMD23,
+//	.caps2			= MMC_CAP2_NO_MULTI_READ ,
+	.bus_hz			= 200 * 1000 * 1000,
+	.fifo_depth     = 0x80,
+	.detect_delay_ms	= 200,
+	.hclk_name		= "dwmci",
+	.cclk_name		= "sclk_dwmci",
+	.blk_settings	= &bs,
+	.cfg_gpio		= exynos_dwmci1_cfg_gpio,
+};
+
 static void exynos_dwmci2_cfg_gpio(int width)
 {
 	unsigned int gpio;
@@ -144,7 +202,7 @@ static void exynos_dwmci2_cfg_gpio(int width)
 		for (gpio = EXYNOS5_GPC3(3); gpio <= EXYNOS5_GPC3(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(2));
 			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
-			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
 		}
 		break;
 	case MMC_BUS_WIDTH_1:
@@ -215,14 +273,14 @@ static struct platform_device *smdk5250_mmc_devices_rev0[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
-#ifdef CONFIG_S3C_DEV_HSMMC1
-	&s3c_device_hsmmc1,
-#endif
 #ifdef CONFIG_S3C_DEV_HSMMC2
 	&s3c_device_hsmmc2,
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	&s3c_device_hsmmc1,
 #endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
@@ -233,6 +291,7 @@ static struct platform_device *smdk5250_mmc_devices_rev1[] __initdata = {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci0,
 	&exynos_device_dwmci2,
+	&exynos_device_dwmci1,
 #endif
 };
 
@@ -246,6 +305,13 @@ void __init exynos5_smdk5250_mmc_init(void)
 			&exynos_device_dwmci0.dev);
 		clk_add_alias("sclk_dwmci", "dw_mmc.0", "sclk_mmc",
 			&exynos_device_dwmci0.dev);
+
+		exynos_dwmci_set_platdata(&smdk5250_dwmci1_pdata, 1);
+		dev_set_name(&exynos_device_dwmci1.dev, "s3c-sdhci.1");
+		clk_add_alias("dwmci", "dw_mmc.1", "hsmmc",
+			&exynos_device_dwmci1.dev);
+		clk_add_alias("sclk_dwmci", "dw_mmc.1", "sclk_mmc",
+			&exynos_device_dwmci1.dev);
 
 		exynos_dwmci_set_platdata(&smdk5250_dwmci2_pdata, 2);
 		dev_set_name(&exynos_device_dwmci2.dev, "s3c-sdhci.2");
@@ -265,14 +331,14 @@ void __init exynos5_smdk5250_mmc_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk5250_hsmmc0_pdata);
 #endif
-#ifdef CONFIG_S3C_DEV_HSMMC1
-	s3c_sdhci1_set_platdata(&smdk5250_hsmmc1_pdata);
-#endif
 #ifdef CONFIG_S3C_DEV_HSMMC2
 	s3c_sdhci2_set_platdata(&smdk5250_hsmmc2_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk5250_hsmmc3_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	s3c_sdhci1_set_platdata(&smdk5250_hsmmc1_pdata);
 #endif
 	platform_add_devices(smdk5250_mmc_devices_rev0,
 			ARRAY_SIZE(smdk5250_mmc_devices_rev0));
