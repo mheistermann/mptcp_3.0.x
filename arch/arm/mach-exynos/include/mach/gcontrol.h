@@ -4,6 +4,7 @@
 
 struct csr_platform_data {
 	unsigned int power;
+	unsigned int reset;
 };
 
 #endif 

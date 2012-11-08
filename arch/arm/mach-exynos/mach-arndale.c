@@ -733,17 +733,28 @@ static struct notifier_block exynos5_reboot_notifier = {
 
 #ifdef CONFIG_GPS_POWER
 #define CUSTOM_GPIO_GPS_POWER_EN EXYNOS5_GPX0(7)
+#define CUSTOM_GPIO_GPS_RESET EXYNOS5_GPB1(2)
+//#define CUSTOM_GPIO_GPS_RESET_TMP EXYNOS5_GPA1(5)
 
 struct csr_platform_data csr_platdata = {
-        .power = CUSTOM_GPIO_GPS_POWER_EN,
+	.power = CUSTOM_GPIO_GPS_POWER_EN,
+	.reset = CUSTOM_GPIO_GPS_RESET,
 };
 
 static struct platform_device csr_gps = {
-        .name           = "csrgps",
+	.name           = "csrgps",
 	.id		= -1,
-        .dev = {
+	.dev = {
+	.platform_data = &csr_platdata,
+	},
+};
+
+static struct platform_device csr_gps_reset = {
+	.name           = "csrgpsreset",
+	.id				= -1,
+	.dev = {
 		.platform_data = &csr_platdata,
-        },
+	},
 };
 #endif
 
@@ -833,7 +844,8 @@ static struct platform_device *arndale_devices[] __initdata = {
 	&arndale_device_bluetooth,
 //#endif
 #ifdef CONFIG_GPS_POWER
-        &csr_gps,
+	&csr_gps,
+	&csr_gps_reset,
 #endif
 };
 
