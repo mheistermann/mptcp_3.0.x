@@ -41,9 +41,11 @@
 #include "dw_mmc.h"
 
 /* mmc detect function */
-#ifdef CONFIG_ATH6KL_PLATFORM_DATA
+#if defined (CONFIG_ATH6KL_PLATFORM_DATA)
 #define MMC_DETECT (1)
-#else
+#elif defined (CONFIG_MTK_COMBO)
+#define MMC_DETECT (1)
+#else 
 #define MMC_DETECT (0)
 #endif
 
@@ -71,8 +73,13 @@ struct idmac_desc {
 #define IDMAC_DES0_OWN	BIT(31)
 
 	u32		des1;	/* Buffer sizes */
+#ifdef CONFIG_MTK_COMBO
+#define IDMAC_SET_BUFFER1_SIZE(d, s) \
+	((d)->des1 = ((d)->des1 & 0x03ffc000) | ((s) & 0x1fff))
+#else
 #define IDMAC_SET_BUFFER1_SIZE(d, s) \
 	((d)->des1 = ((d)->des1 & 0x03ffc000) | ((s) & 0x3fff))
+#endif
 
 	u32		des2;	/* buffer 1 physical address */
 
@@ -1869,6 +1876,10 @@ static int __init dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 	mmc->max_segs = host->ring_size;
 	mmc->max_blk_size = 65536;
 	mmc->max_seg_size = 0x1000;
+#ifdef CONFIG_MTK_COMBO
+	if (host->pdata->blk_settings)
+		mmc->max_seg_size = 0x3fe00;
+#endif
 	mmc->max_req_size = mmc->max_seg_size * host->ring_size;
 	mmc->max_blk_count = mmc->max_req_size / 512;
 #else

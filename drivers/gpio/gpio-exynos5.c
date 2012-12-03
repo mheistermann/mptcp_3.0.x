@@ -65,7 +65,12 @@ static struct s3c_gpio_cfg gpio_cfg_noint = {
  * Note: The initialization of 'base' member of s3c_gpio_chip structure
  * uses the above macro and depends on the banks being listed in order here.
  */
+#ifdef CONFIG_MTK_COMBO
+#include <linux/module.h>
+struct s3c_gpio_chip exynos5_gpio_common_4bit[] = {
+#else
 static struct s3c_gpio_chip exynos5_gpio_common_4bit[] = {
+#endif
 	{
 		.base	= S5P_VA_GPIO1,
 		.eint_offset = 0x0,
@@ -406,6 +411,9 @@ static struct s3c_gpio_chip exynos5_gpio_common_4bit[] = {
 		},
 	},
 };
+#ifdef CONFIG_MTK_COMBO
+EXPORT_SYMBOL(exynos5_gpio_common_4bit);
+#endif
 
 static struct s3c_gpio_chip exynos5_gpio_no_pm_4bit[] = {
 {

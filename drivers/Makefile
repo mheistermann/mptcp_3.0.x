@@ -124,3 +124,5 @@ obj-y				+= clk/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/
+
+obj-$(CONFIG_MTK_COMBO)		+= mtk_combo/

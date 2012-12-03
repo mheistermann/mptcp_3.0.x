@@ -130,4 +130,6 @@ source "drivers/clocksource/Kconfig"
 
 source "drivers/iommu/Kconfig"
 
+source "drivers/mtk_combo/Kconfig"
+
 endmenu

@@ -65,8 +65,14 @@ static int samsung_gpiolib_4bit_input(struct gpio_chip *chip,
 	return 0;
 }
 
+#ifdef CONFIG_MTK_COMBO
+#include <linux/module.h>
+int samsung_gpiolib_4bit_output(struct gpio_chip *chip,
+				       unsigned int offset, int value)
+#else
 static int samsung_gpiolib_4bit_output(struct gpio_chip *chip,
 				       unsigned int offset, int value)
+#endif
 {
 	struct s3c_gpio_chip *ourchip = to_s3c_gpio(chip);
 	void __iomem *base = ourchip->base;
@@ -97,6 +103,10 @@ static int samsung_gpiolib_4bit_output(struct gpio_chip *chip,
 
 	return 0;
 }
+#ifdef CONFIG_MTK_COMBO
+EXPORT_SYMBOL(samsung_gpiolib_4bit_output);
+#endif
+
 
 /* The next set of routines are for the case where the GPIO configuration
  * registers are 4 bits per GPIO but there is more than one register (the

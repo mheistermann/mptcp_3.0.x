@@ -124,8 +124,14 @@ int mmc_io_rw_extended(struct mmc_card *card, int write, unsigned fn,
 	struct mmc_request mrq = {0};
 	struct mmc_command cmd = {0};
 	struct mmc_data data = {0};
+#ifdef CONFIG_MTK_COMBO
+	struct scatterlist *sg;
+	struct sg_table sgtable;
+	unsigned int nents, left_size;
+	int i;
+#else
 	struct scatterlist sg;
-
+#endif
 	BUG_ON(!card);
 	BUG_ON(fn > 7);
 	BUG_ON(blocks == 1 && blksz > 512);
@@ -153,10 +159,31 @@ int mmc_io_rw_extended(struct mmc_card *card, int write, unsigned fn,
 	data.blksz = blksz;
 	data.blocks = blocks;
 	data.flags = write ? MMC_DATA_WRITE : MMC_DATA_READ;
+
+#ifdef CONFIG_MTK_COMBO
+	left_size = blksz * blocks;
+	if(left_size == 0)
+		return 0;
+	nents = (left_size - 1) / 4096 + 1;
+
+	if (sg_alloc_table(&sgtable, nents, GFP_KERNEL)) {
+		return -ENOMEM;
+	}
+
+	data.sg = sgtable.sgl;
+	data.sg_len = nents;
+
+	for_each_sg(data.sg, sg, data.sg_len - 1, i) {
+		sg_set_page(sg, virt_to_page(buf + (i * 4096)), 4096, offset_in_page(buf + (i * 4096)));
+		left_size = left_size - 4096;
+	}
+	sg_set_page(sg, virt_to_page(buf + (i * 4096)), left_size, offset_in_page(buf + (i * 4096)));
+#else
 	data.sg = &sg;
 	data.sg_len = 1;
 
 	sg_init_one(&sg, buf, blksz * blocks);
+#endif
 
 	mmc_set_data_timeout(&data, card);
 
