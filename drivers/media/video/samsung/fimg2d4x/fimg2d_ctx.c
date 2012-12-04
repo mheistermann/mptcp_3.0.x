@@ -474,19 +474,22 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 
 		if (copy_from_user(&cmd->image[i], buf[i],
 					sizeof(struct fimg2d_image))) {
+//printk("%s:%d i=%d width=%d, height=%d, addr.start=0x%08lX, plane2.start=0x%08lX\n", __func__, __LINE__, i, buf[i]->width, buf[i]->height, buf[i]->addr.start, buf[i]->plane2.start);
 			ret = -EFAULT;
+printk("%s:%d ret=%d\n", __func__, __LINE__, ret);
 			goto err_user;
 		}
 	}
 
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
-	fimg2d_dump_command(cmd);
+//	fimg2d_dump_command(cmd);
 #endif
 
 	if (fimg2d_check_params(cmd)) {
 		printk(KERN_ERR "[%s] invalid params\n", __func__);
 		fimg2d_dump_command(cmd);
 		ret = -EINVAL;
+printk("%s:%d ret=%d\n", __func__, __LINE__, ret);
 		goto err_user;
 	}
 
@@ -494,6 +497,7 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 
 	if (fimg2d_check_dma_sync(cmd)) {
 		ret = -EFAULT;
+printk("%s:%d ret=%d\n", __func__, __LINE__, ret);
 		goto err_user;
 	}
 
@@ -503,6 +507,7 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 		fimg2d_debug("fimg2d suspended, do sw fallback\n");
 		spin_unlock(&info->bltlock);
 		ret = -EFAULT;
+printk("%s:%d ret=%d\n", __func__, __LINE__, ret);
 		goto err_user;
 	}
 	atomic_inc(&ctx->ncmd);
