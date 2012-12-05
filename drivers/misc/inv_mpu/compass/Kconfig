@@ -45,15 +45,6 @@ config MPU_SENSORS_AMI30X
 	  Specifying more that one compass in the board file will result
 	  in runtime errors.
 
-config MPU_SENSORS_AMI306
-	tristate "Aichi Steel ami306"
-	help
-	  This enables support for the Aichi Steel ami306 compass
-	  This support is for integration with the MPU3050 or MPU6050 gyroscope
-	  device driver.  Only one compass can be registered at a time.
-	  Specifying more that one compass in the board file will result
-	  in runtime errors.
-
 config MPU_SENSORS_HMC5883
 	tristate "Honeywell hmc5883"
 	help

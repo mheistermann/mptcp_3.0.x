@@ -4,9 +4,6 @@
 obj-$(CONFIG_MPU_SENSORS_AMI30X) += inv_mpu_ami30x.o
 inv_mpu_ami30x-objs +=	ami30x.o
 
-obj-$(CONFIG_MPU_SENSORS_AMI306) += inv_mpu_ami306.o
-inv_mpu_ami306-objs +=	ami306.o
-
 obj-$(CONFIG_MPU_SENSORS_HMC5883) += inv_mpu_hmc5883.o
 inv_mpu_hmc5883-objs +=	hmc5883.o
 
