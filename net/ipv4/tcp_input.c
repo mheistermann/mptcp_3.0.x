@@ -3915,7 +3915,7 @@ static int tcp_parse_aligned_timestamp(struct tcp_sock *tp, struct tcphdr *th)
  * If it is wrong it falls back on tcp_parse_options().
  */
 static bool tcp_fast_parse_options(const struct sk_buff *skb,
-				   const struct tcphdr *th,
+				   struct tcphdr *th,
 				   struct tcp_sock *tp, const u8 **hvpp)
 {
 	/* In the spirit of fast parsing, compare doff directly to constant
