@@ -2742,6 +2742,18 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	case TCP_USER_TIMEOUT:
 		val = jiffies_to_msecs(icsk->icsk_user_timeout);
 		break;
+#ifdef CONFIG_MPTCP
+	case TCP_MULTIPATH_CONNID: {
+		struct mptcp_cb *mpcb = tp->mpcb;
+		if (!mpcb)
+			return -EINVAL;
+		if (put_user(sizeof(mpcb->mptcp_loc_token), optlen))
+			return -EFAULT;
+		if (put_user(mpcb->mptcp_loc_token, (__u32 __user *) optval))
+			return -EFAULT;
+		return 0;
+	}
+#endif
 	default:
 		return -ENOPROTOOPT;
 	}
