@@ -107,6 +107,7 @@ enum {
 #define TCP_THIN_DUPACK         17      /* Fast retrans. after 1 dupack */
 #define TCP_USER_TIMEOUT	18	/* How long for loss retry before timeout */
 #define TCP_MULTIPATH_CONNID 50	/* Get unique conn. identifier, cf. RFC6897 */
+#define TCP_MULTIPATH_SUBFLOWS	51	/* Get subflow list, cf. RFC6897 */
 
 /* for TCP_INFO socket option */
 #define TCPI_OPT_TIMESTAMPS	1
