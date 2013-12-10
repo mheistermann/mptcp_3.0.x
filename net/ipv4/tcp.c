@@ -2747,7 +2747,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	case TCP_MULTIPATH_CONNID: {
 		struct mptcp_cb *mpcb = tp->mpcb;
 		if (!mpcb)
-			return -EINVAL;
+			return -EOPNOTSUPP;
 		if (put_user(sizeof(mpcb->mptcp_loc_token), optlen))
 			return -EFAULT;
 		if (put_user(mpcb->mptcp_loc_token, (__u32 __user *) optval))
@@ -2763,7 +2763,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		if (get_user(len, optlen))
 			return -EFAULT;
 		if (!mpcb)
-			return -EINVAL;
+			return -EOPNOTSUPP;
 		mptcp_for_each_sk(mpcb, sk) {
 			struct inet_sock *isk = inet_sk(sk);
 			if (len < bytes_written + sizeof subflow)
