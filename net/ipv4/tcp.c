@@ -2771,8 +2771,8 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 			memset(&subflow, 0, sizeof subflow);
 
 			subflow.family = sk->sk_family;
-			subflow.sport = ntohs(isk->inet_sport);
-			subflow.dport = ntohs(isk->inet_dport);
+			subflow.sport = isk->inet_sport;
+			subflow.dport = isk->inet_dport;
 
 			if (sk->sk_family == AF_INET ||
 					mptcp_v6_is_v4_mapped(sk)) {
