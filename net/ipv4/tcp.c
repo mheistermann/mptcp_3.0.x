@@ -256,6 +256,7 @@
 #include <linux/scatterlist.h>
 #include <linux/splice.h>
 #include <linux/net.h>
+#include <linux/in6.h>
 #include <linux/socket.h>
 #include <linux/random.h>
 #include <linux/bootmem.h>
@@ -2750,6 +2751,49 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		if (put_user(sizeof(mpcb->mptcp_loc_token), optlen))
 			return -EFAULT;
 		if (put_user(mpcb->mptcp_loc_token, (__u32 __user *) optval))
+			return -EFAULT;
+		return 0;
+	}
+	case TCP_MULTIPATH_SUBFLOWS: {
+		// TODO: how to behave for non-mptcp? return 1 subflow or error?
+		struct mptcp_cb *mpcb = tp->mpcb;
+		struct sock *sk;
+		struct mptcp_subflow subflow;
+		int bytes_written = 0;
+		if (get_user(len, optlen))
+			return -EFAULT;
+		if (!mpcb)
+			return -EINVAL;
+		mptcp_for_each_sk(mpcb, sk) {
+			struct inet_sock *isk = inet_sk(sk);
+			if (len < bytes_written + sizeof subflow)
+				break;
+			memset(&subflow, 0, sizeof subflow);
+
+			subflow.family = sk->sk_family;
+			subflow.sport = ntohs(isk->inet_sport);
+			subflow.dport = ntohs(isk->inet_dport);
+
+			if (sk->sk_family == AF_INET ||
+					mptcp_v6_is_v4_mapped(sk)) {
+				subflow.daddr.s_addr = isk->inet_daddr;
+				subflow.saddr.s_addr = isk->inet_saddr;
+			} else if(sk->sk_family == AF_INET6) {
+				memcpy(&subflow.saddr6, &isk->pinet6->saddr,
+						sizeof(subflow.saddr6));
+				memcpy(&subflow.daddr6, &isk->pinet6->daddr,
+						sizeof(subflow.daddr6));
+			} else {
+				printk(KERN_WARNING "setsockopt() on mptcp socket encountered"
+				                    "socket of unknown family.");
+				continue;
+			}
+			// TODO: maybe add more information? e.g. window state, ...?
+			if (copy_to_user(optval + bytes_written, &subflow, sizeof subflow))
+				return -EFAULT;
+			bytes_written += sizeof subflow;
+		}
+		if (put_user(bytes_written, optlen))
 			return -EFAULT;
 		return 0;
 	}

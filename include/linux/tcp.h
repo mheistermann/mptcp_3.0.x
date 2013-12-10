@@ -20,6 +20,8 @@
 #include <linux/types.h>
 #include <asm/byteorder.h>
 #include <linux/socket.h>
+#include <linux/in.h>
+#include <linux/in6.h>
 
 struct tcphdr {
 	__be16	source;
@@ -203,6 +205,23 @@ struct tcp_cookie_transactions {
 	__u16	tcpct_s_data_desired;		/* bytes of variable data */
 	__u16	tcpct_used;			/* bytes in value */
 	__u8	tcpct_value[TCP_MSS_DEFAULT];
+};
+
+/* TCP_MULTIPATH_SUBFLOWS data */
+struct mptcp_subflow {
+	unsigned short family; // AF_INET or AF_INET6
+	__be16 dport;
+	__be16 sport;
+	union {
+		struct {
+			struct in_addr daddr;
+			struct in_addr saddr;
+		};
+		struct {
+			struct in6_addr daddr6;
+			struct in6_addr saddr6;
+		};
+	};
 };
 
 #ifdef __KERNEL__
